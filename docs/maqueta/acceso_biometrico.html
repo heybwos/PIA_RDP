@@ -1,0 +1,1138 @@
+<title>Acceso Biométrico PIA</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Concepto: instrumento de laboratorio oscuro. Los datos van en paneles opacos;
+   el vidrio solo en lo que flota (barra superior, selector de modo, pie de explicación). */
+:root{
+  color-scheme: dark;
+  --bg:#080D0B; --bg-2:#0C1310;
+  --surface:#101814; --surface-2:#15201B; --inset:#0B110E;
+  --line:#1F2C26; --line-2:#2C3D35;
+  --fg:#E3ECE7; --muted:#90A199; --faint:#5E6E67;
+  --verde-fime:#1F9F5C;   /* provisional: confirmar con el manual de identidad de la FIME */
+  --verde-claro:#62D394;
+  --ok:#43C982; --no:#EA5A50; --espera:#E6A63E;
+  --glass:rgba(16,26,22,.58); --glass-line:rgba(255,255,255,.10);
+  --sans:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --r-lg:20px; --r-md:14px; --r-sm:10px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--sans);font-size:14px;line-height:1.45;
+  padding-left:max(16px, env(safe-area-inset-left,0px));
+  padding-right:max(16px, env(safe-area-inset-right,0px));
+  padding-block:0 96px; min-height:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:#0C1411}
+.atmos{position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(900px 520px at 12% -8%, rgba(31,159,92,.16), transparent 70%),
+    radial-gradient(700px 480px at 96% 18%, rgba(31,159,92,.08), transparent 70%),
+    linear-gradient(var(--bg), var(--bg-2));}
+.atmos::after{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:32px 32px;mask-image:linear-gradient(#000,transparent 85%)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--verde-claro);outline-offset:2px}
+
+/* vidrio */
+.glass{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%);
+  border:1px solid var(--glass-line);box-shadow:0 10px 36px rgba(0,0,0,.42)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.glass{background:rgba(14,22,19,.96)}}
+@media (prefers-reduced-transparency: reduce){.glass{background:rgba(14,22,19,.97);-webkit-backdrop-filter:none;backdrop-filter:none}}
+.specular{position:relative}
+.specular::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,.34),rgba(255,255,255,.03) 40%,rgba(255,255,255,.03) 62%,rgba(255,255,255,.16));
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+
+/* barra superior */
+.top{position:sticky;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:20;margin-top:10px;border-radius:var(--r-lg);
+  display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:12px 16px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand-mark{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--verde-fime);color:#04140B}
+.brand strong{display:block;font-size:15px;font-weight:600;letter-spacing:.01em}
+.brand .sub{display:block;font-size:11px;color:var(--muted);letter-spacing:.04em}
+.modes{display:flex;padding:4px;border-radius:999px;background:rgba(0,0,0,.28);border:1px solid var(--glass-line)}
+.modes button{border:0;background:transparent;padding:8px 18px;min-height:36px;border-radius:999px;color:var(--muted);cursor:pointer;font-weight:500;transition:background .2s,color .2s}
+.modes button[aria-pressed="true"]{background:var(--fg);color:#0A120E}
+.phases{list-style:none;display:flex;gap:6px;margin:0;padding:0;flex-wrap:wrap;align-items:center}
+.phases li{display:flex;align-items:center;gap:7px;padding:6px 11px 6px 7px;border-radius:999px;font-size:12px;color:var(--faint);border:1px solid transparent;transition:color .25s,border-color .25s,background .25s}
+.phases li .n{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:11px;border:1px solid var(--line-2)}
+.phases li.done{color:var(--muted)}
+.phases li.done .n{background:rgba(31,159,92,.25);border-color:transparent;color:var(--verde-claro)}
+.phases li.on{color:var(--fg);border-color:rgba(98,211,148,.4);background:rgba(31,159,92,.12)}
+.phases li.on .n{background:var(--verde-fime);border-color:transparent;color:#04140B}
+.factor{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.status{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:5px 10px;border-radius:999px;font-size:12px;border:1px solid var(--line-2);color:var(--muted);background:rgba(0,0,0,.2);white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+.dot.ok{background:var(--ok)} .dot.no{background:var(--no)} .dot.wait{background:var(--espera)}
+
+/* controles */
+.wrap{max-width:1440px;margin:0 auto}
+.controls{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:end;margin:18px 0 16px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>span{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+select{background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r-sm);padding:9px 12px;min-height:40px;max-width:100%}
+.seg{display:flex;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r-sm);padding:3px}
+.seg button{border:0;background:transparent;padding:6px 11px;min-height:32px;border-radius:7px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface-2);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line-2)}
+.btn{border:1px solid var(--line-2);background:var(--surface-2);padding:10px 18px;min-height:42px;border-radius:var(--r-sm);cursor:pointer;font-weight:500;transition:background .2s,border-color .2s,opacity .2s}
+.btn:hover{border-color:var(--faint)}
+.btn.primary{background:var(--verde-fime);border-color:transparent;color:#03130A}
+.btn.primary:hover{background:#25B068}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.controls .spacer{flex:1}
+.esp{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;width:100%;padding:14px 16px;border-radius:var(--r-md)}
+.esp p{margin:0;color:var(--muted);flex:1 1 280px}
+.esp p strong{color:var(--fg);font-weight:500}
+
+/* rejilla */
+.grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);grid-template-areas:"frontal" "huella" "rostro" "decision" "bitacora"}
+@media (min-width:860px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"frontal decision" "huella huella" "rostro rostro" "bitacora bitacora"}}
+@media (min-width:1240px){.grid{grid-template-columns:minmax(300px,.86fr) minmax(0,1fr) minmax(0,1fr);grid-template-areas:"frontal huella huella" "rostro rostro decision" "bitacora bitacora bitacora"}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;min-width:0;position:relative;transition:border-color .35s, box-shadow .35s}
+.panel[data-state="active"]{border-color:rgba(98,211,148,.45);box-shadow:0 0 0 1px rgba(98,211,148,.12),0 18px 50px -24px rgba(31,159,92,.45)}
+.panel-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-bottom:14px}
+.panel-head h2{margin:0;font-size:15px;font-weight:600}
+.panel-head .meta{font-size:11px;color:var(--faint)}
+.panel-head .st{margin-left:auto;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.p-frontal{grid-area:frontal}.p-huella{grid-area:huella}.p-rostro{grid-area:rostro}.p-decision{grid-area:decision}.p-bitacora{grid-area:bitacora}
+.label{font-size:11px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
+.cap{font-size:12px;color:var(--muted)}
+.cap b{color:var(--fg);font-weight:500}
+
+/* panel frontal */
+.oled-row{display:flex;gap:14px;align-items:center}
+.oled-bezel{flex:1;min-width:0;background:#050807;border:1px solid #1A2420;border-radius:12px;padding:10px}
+.oled-bezel canvas{display:block;width:100%;max-width:384px;aspect-ratio:2/1;image-rendering:pixelated;margin:0 auto}
+.leds{display:flex;flex-direction:column;gap:12px;align-items:center}
+.led{width:18px;height:18px;border-radius:50%;border:1px solid #2a3a33;transition:background .25s, box-shadow .25s}
+.led.g{background:#10301F}.led.r{background:#3A1513}
+.led.g.on{background:#5DF09A;box-shadow:0 0 14px 3px rgba(93,240,154,.55)}
+.led.r.on{background:#FF6B5E;box-shadow:0 0 14px 3px rgba(255,107,94,.55)}
+.leds small{font-size:10px;color:var(--faint)}
+.slots{display:flex;gap:18px;margin:16px 0 12px;flex-wrap:wrap}
+.slotgrp{display:flex;flex-direction:column;gap:6px}
+.slotrow{display:flex;gap:6px}
+.slot{width:34px;height:42px;border-radius:9px;background:var(--inset);border:1px solid var(--line-2);display:grid;place-items:center;font-family:var(--mono);font-size:18px;transition:border-color .2s, background .2s}
+.slot.fill{border-color:rgba(98,211,148,.55);background:rgba(31,159,92,.10)}
+.slot.err{border-color:rgba(234,90,80,.7);background:rgba(234,90,80,.10)}
+.keypad{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;max-width:300px;padding:12px;background:#0A0F0D;border-radius:14px;border:1px solid var(--line)}
+.key{aspect-ratio:1/0.82;min-height:44px;border-radius:10px;border:1px solid #2A3832;background:linear-gradient(#1A2520,#141D19);font-family:var(--mono);font-size:17px;cursor:pointer;transition:transform .12s, background .2s, border-color .2s, box-shadow .2s}
+.key.fn{color:var(--muted)}
+.key.hit{transform:scale(.93);background:var(--verde-fime);border-color:transparent;color:#03130A;box-shadow:0 0 0 4px rgba(31,159,92,.22)}
+.key:disabled{cursor:default}
+.kp-row{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.kp-side{flex:1 1 140px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.toggle{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);cursor:pointer}
+.toggle input{accent-color:var(--verde-fime);width:16px;height:16px}
+.users{font-size:12px;border-collapse:collapse;width:100%}
+.users td{padding:3px 0;color:var(--muted)}
+.users td:first-child{color:var(--fg);font-family:var(--mono);width:30px}
+.serial{margin-top:14px;background:var(--inset);border:1px solid var(--line);border-radius:12px;padding:10px 12px;height:150px;overflow:auto;font-family:var(--mono);font-size:11px;line-height:1.6}
+.serial div{white-space:nowrap}
+.serial .dir{color:var(--faint);display:inline-block;width:92px}
+.serial .in{color:var(--verde-claro)} .serial .out{color:#9FC6E8}
+.serial .note{color:var(--faint)}
+
+/* huella */
+.fp-body{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:700px){.fp-body{grid-template-columns:minmax(0,1fr) 220px}}
+.fp-pair{position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.fp-cell{display:flex;flex-direction:column;gap:8px;min-width:0}
+.fp-cell canvas{width:100%;height:auto;aspect-ratio:256/288;border-radius:12px;background:#0A0F0D;border:1px solid var(--line);display:block}
+.fp-overlay{position:absolute;inset:0;pointer-events:none;width:100%;height:100%}
+.strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:14px}
+.thumb{display:flex;flex-direction:column;gap:5px;border:0;background:none;padding:0;cursor:pointer;text-align:left;min-width:0}
+.thumb canvas{width:100%;aspect-ratio:256/288;border-radius:8px;border:1px solid var(--line);background:#0A0F0D;transition:border-color .25s, opacity .25s;opacity:.35}
+.thumb span{font-size:10px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thumb.done canvas{opacity:1}
+.thumb.done span{color:var(--muted)}
+.thumb.cur canvas{border-color:var(--verde-claro)}
+.thumb.cur span{color:var(--fg)}
+.metrics{display:flex;flex-direction:column;gap:12px}
+.metric{padding:12px;border-radius:12px;background:var(--inset);border:1px solid var(--line)}
+.metric .v{font-family:var(--mono);font-size:22px;font-variant-numeric:tabular-nums;line-height:1.2;margin-top:2px}
+.metric .v small{font-size:12px;color:var(--muted)}
+.legend{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;margin-right:7px;vertical-align:-1px}
+.lg-end{border:2px solid var(--verde-claro);border-radius:50%}
+.lg-bif{border:2px solid var(--espera)}
+.bar{position:relative;height:8px;background:#1A2621;border-radius:99px;overflow:hidden;margin-top:8px}
+.bar>i{position:absolute;inset:0 auto 0 0;width:0;background:var(--verde-claro);border-radius:99px}
+.bar>b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--fg)}
+
+/* rostro */
+.face-grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:700px){.face-grid{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}}
+.cam{position:relative}
+.cam canvas{width:100%;height:auto;aspect-ratio:4/3;border-radius:12px;display:block;border:1px solid var(--line);background:#0A0F0D}
+.cam .tag{position:absolute;left:10px;top:10px;font-size:11px;padding:4px 8px;border-radius:999px;background:rgba(0,0,0,.55);color:var(--muted)}
+.fsteps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.fstep{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fstep .box{aspect-ratio:1;border-radius:10px;overflow:hidden;background:#0A0F0D;border:1px solid var(--line);display:grid;place-items:center}
+.fstep canvas{width:100%;height:100%;image-rendering:auto;display:block;transition:transform .9s cubic-bezier(.2,.8,.2,1)}
+.hist svg,.chart svg{display:block;width:100%;height:auto}
+.eig{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+.eig canvas{width:100%;aspect-ratio:1;border-radius:6px;border:1px solid var(--line);background:#0A0F0D;opacity:0;transform:scale(.9);transition:opacity .35s, transform .35s}
+.eig canvas.in{opacity:1;transform:none}
+.face-low{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);margin-top:16px}
+@media (min-width:700px){.face-low{grid-template-columns:minmax(0,1.2fr) 150px minmax(0,1fr)}}
+.recon{display:flex;flex-direction:column;gap:6px}
+.recon .box{aspect-ratio:1;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#0A0F0D}
+.recon canvas{width:100%;height:100%;display:block}
+.sect{display:flex;flex-direction:column;gap:8px;min-width:0}
+
+/* decisión */
+.fuse{display:flex;flex-direction:column;gap:14px}
+.fz-row .top-l{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.fz-row .top-l b{font-family:var(--mono);color:var(--fg);font-weight:500}
+.fz-bar{position:relative;height:10px;border-radius:99px;background:#1A2621;margin-top:7px}
+.fz-bar>i{position:absolute;inset:0 auto 0 0;width:0;border-radius:99px;background:var(--verde-claro)}
+.fz-bar>i.low{background:var(--no)}
+.fz-bar>b{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--muted)}
+.fz-bar.big{height:16px}
+.verdict{display:flex;align-items:center;gap:14px;padding:16px;border-radius:14px;border:1px solid var(--line-2);background:var(--inset);transition:border-color .3s, background .3s}
+.verdict .ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--surface-2);flex:none}
+.verdict strong{display:block;font-size:16px}
+.verdict span{font-size:12px;color:var(--muted)}
+.verdict.ok{border-color:rgba(67,201,130,.55);background:rgba(67,201,130,.08)}
+.verdict.ok .ic{background:var(--ok);color:#03130A}
+.verdict.no{border-color:rgba(234,90,80,.55);background:rgba(234,90,80,.08)}
+.verdict.no .ic{background:var(--no);color:#1A0503}
+.comp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:4px}
+.comp figure{margin:0;padding:12px;border-radius:14px;background:var(--inset);border:1px solid var(--line);display:flex;flex-direction:column;gap:6px;min-width:0}
+.comp svg{width:100%;height:auto;display:block}
+.comp figcaption{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.comp figcaption b{color:var(--fg);font-weight:500}
+.arm{transition:transform .6s cubic-bezier(.3,.7,.2,1)}
+.lid{transition:transform .8s cubic-bezier(.3,.7,.2,1) .25s}
+.pill{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line-2);color:var(--muted)}
+.pill.ok{border-color:rgba(67,201,130,.6);color:var(--ok)}
+
+/* bitácora */
+.tbl-wrap{overflow-x:auto}
+table.log{width:100%;border-collapse:collapse;font-size:12px;min-width:720px}
+table.log th{text-align:left;font-weight:500;color:var(--faint);font-size:11px;letter-spacing:.05em;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid var(--line)}
+table.log td{padding:9px 10px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+table.log td.m{font-family:var(--mono)}
+table.log tr.new{animation:rowin .6s ease-out}
+@keyframes rowin{from{background:rgba(31,159,92,.18)}to{background:transparent}}
+.res{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;font-size:11px}
+.res.ok{background:rgba(67,201,130,.14);color:var(--ok)}
+.res.no{background:rgba(234,90,80,.14);color:var(--no)}
+
+/* pie de explicación */
+.caption{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:30;
+  width:min(860px, calc(100% - 32px));border-radius:999px;padding:10px 10px 10px 18px;display:flex;align-items:center;gap:12px}
+.caption p{margin:0;flex:1;min-width:0;font-size:13px}
+.caption .k{font-family:var(--mono);font-size:11px;color:var(--verde-claro);white-space:nowrap}
+.caption .dot{flex:none}
+.caption .dot.wait{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+@media (max-width:600px){.caption{border-radius:18px}.caption .k{display:none}}
+.empty{display:grid;place-items:center;text-align:center;color:var(--faint);font-size:12px;padding:20px}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{transition-duration:.01ms!important;animation:none!important}
+}
+</style>
+
+<div class="atmos" aria-hidden="true"></div>
+
+<header class="top glass specular">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3.5a8.5 8.5 0 0 0-8.5 8.5v1.5"/><path d="M20.5 12A8.5 8.5 0 0 0 16 4.5"/><path d="M12 7.5A4.5 4.5 0 0 0 7.5 12c0 3 .4 5.4 1.5 7.5"/><path d="M16.5 12c0 3.4-.5 5.9-1.6 8"/><path d="M12 11.5v2c0 2.8-.4 4.7-1 6.5"/><path d="M20.4 15.5c-.2 1.6-.6 3-1.2 4.2"/></svg>
+    </div>
+    <div><strong>Acceso biométrico</strong><span class="sub mono">PIA · RDP · FIME UANL</span></div>
+  </div>
+  <div class="modes" role="group" aria-label="Modo de operación">
+    <button id="mSim" aria-pressed="true">Simular</button>
+    <button id="mEsp" aria-pressed="false">ESP32</button>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4px">
+    <span class="factor" id="factor">Factor: —</span>
+    <ol class="phases" id="phases" aria-label="Fases del PIA">
+      <li data-p="1"><span class="n">1</span>Captura</li>
+      <li data-p="2"><span class="n">2</span>Preproceso</li>
+      <li data-p="3"><span class="n">3</span>Características</li>
+      <li data-p="4"><span class="n">4</span>Matching</li>
+      <li data-p="5"><span class="n">5</span>Actuación</li>
+    </ol>
+  </div>
+  <div class="status">
+    <span class="chip" title="Vista previa: huellas y rostros generados en el navegador. La app real usará FVC2002 y ORL/LFW."><span class="dot wait"></span>Datos sintéticos</span>
+    <span class="chip" id="connChip"><span class="dot ok"></span><span id="connTxt">Dispositivo simulado</span></span>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="controls" aria-label="Controles de la simulación">
+    <label class="field" for="scn"><span>Escenario</span>
+      <select id="scn">
+        <option value="l1">Usuario legítimo · nivel 1 (ID 07)</option>
+        <option value="l2" selected>Usuario legítimo · nivel 2 (ID 12)</option>
+        <option value="ih">Impostor de huella (dice ser ID 12)</option>
+        <option value="ir">Impostor de rostro (dice ser ID 07)</option>
+        <option value="pin">PIN incorrecto (ID 07)</option>
+      </select>
+    </label>
+    <div class="field"><span>Velocidad</span>
+      <div class="seg" id="speed" role="group" aria-label="Velocidad">
+        <button data-v="2" aria-pressed="false">2×</button>
+        <button data-v="1" aria-pressed="true">1×</button>
+        <button data-v="0.5" aria-pressed="false">0.5×</button>
+        <button data-v="paso" aria-pressed="false">Paso a paso</button>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" id="resetBtn">Reiniciar</button>
+    <button class="btn primary" id="runBtn">Iniciar verificación</button>
+    <div class="esp glass" id="espPanel" hidden>
+      <label class="field" for="port"><span>Puerto serie</span>
+        <select id="port" disabled><option>Ningún puerto detectado</option></select>
+      </label>
+      <button class="btn" id="scanBtn">Buscar ESP32</button>
+      <p id="espMsg">Conecta la placa por USB y pulsa <strong>Buscar ESP32</strong>. La app espera el saludo <span class="mono">HOLA:&lt;versión&gt;</span> a 921600 baudios.</p>
+    </div>
+  </section>
+
+  <div class="grid">
+    <!-- PANEL FRONTAL -->
+    <section class="panel p-frontal" id="pFrontal" aria-labelledby="hFrontal">
+      <div class="panel-head"><h2 id="hFrontal">Panel frontal</h2><span class="meta mono">OLED SSD1306 · teclado 4×4</span></div>
+      <div class="oled-row">
+        <div class="oled-bezel"><canvas id="oled" width="128" height="64" aria-label="Réplica de la pantalla OLED"></canvas></div>
+        <div class="leds"><div class="led g" id="ledG" title="LED verde"></div><small>OK</small><div class="led r" id="ledR" title="LED rojo"></div><small>NO</small></div>
+      </div>
+      <div class="slots">
+        <div class="slotgrp"><span class="label">ID</span><div class="slotrow" id="slotId"><div class="slot"></div><div class="slot"></div></div></div>
+        <div class="slotgrp"><span class="label">PIN</span><div class="slotrow" id="slotPin"><div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div></div></div>
+      </div>
+      <div class="kp-row">
+        <div class="keypad" id="keypad" aria-label="Teclado matricial"></div>
+        <div class="kp-side">
+          <label class="toggle" for="showDigits"><input type="checkbox" id="showDigits" checked>Mostrar dígitos (demo)</label>
+          <span class="cap">Puedes teclear aquí: ID, <b>#</b>, PIN, <b>#</b>. <b>*</b> borra, <b>D</b> cancela.</span>
+          <table class="users"><tbody>
+            <tr><td>07</td><td>Ana T. · Lector · PIN 4821</td></tr>
+            <tr><td>12</td><td>Luis G. · Editor · PIN 1593</td></tr>
+          </tbody></table>
+          <span class="cap">Usuarios de prueba.</span>
+        </div>
+      </div>
+      <div class="serial" id="serial" aria-label="Tráfico serie" role="log"></div>
+    </section>
+
+    <!-- HUELLA -->
+    <section class="panel p-huella" id="pHuella" aria-labelledby="hHuella">
+      <div class="panel-head"><h2 id="hHuella">Huella dactilar</h2><span class="meta mono">AS608 · 256 × 288 · 4 bits/px · UpImage 0x0A</span><span class="st" id="fpSt"></span></div>
+      <div class="fp-body">
+        <div>
+          <div class="fp-pair" id="fpPair">
+            <div class="fp-cell"><span class="label" id="fpLblL">Captura</span><canvas id="fpL" width="512" height="576"></canvas></div>
+            <div class="fp-cell"><span class="label" id="fpLblR">Plantilla registrada</span><canvas id="fpR" width="512" height="576"></canvas></div>
+            <canvas class="fp-overlay" id="fpO"></canvas>
+          </div>
+          <div class="strip" id="strip"></div>
+        </div>
+        <div class="metrics">
+          <div class="metric"><span class="label">Transferencia</span><div class="v" id="mBytes">0 <small>/ 36,864 B</small></div><div class="bar"><i id="mBytesBar"></i></div></div>
+          <div class="metric"><span class="label">Minucias</span><div class="v" id="mMin">—</div>
+            <div class="legend" style="margin-top:8px"><span><i class="lg-end"></i>Terminación</span><span><i class="lg-bif"></i>Bifurcación</span></div></div>
+          <div class="metric"><span class="label">Matching por grafos</span><div class="v" id="mScore">—</div><div class="bar"><i id="mScoreBar"></i><b id="mThr"></b></div><span class="cap" id="mPairs" style="margin-top:6px;display:block">Pares en correspondencia: —</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ROSTRO -->
+    <section class="panel p-rostro" id="pRostro" aria-labelledby="hRostro">
+      <div class="panel-head"><h2 id="hRostro">Rostro</h2><span class="meta mono">DroidCam · Viola-Jones · Eigenfaces (PCA)</span><span class="st" id="faceSt"></span></div>
+      <div class="face-grid">
+        <div class="cam"><canvas id="cam" width="448" height="336"></canvas><span class="tag mono" id="camTag">cámara · 224 × 168 gris</span></div>
+        <div class="sect">
+          <div class="fsteps">
+            <div class="fstep"><span class="label">Alineado</span><div class="box"><canvas id="fAlign" width="64" height="64"></canvas></div><span class="cap mono" id="fAlignCap">—</span></div>
+            <div class="fstep"><span class="label">Normalizado</span><div class="box"><canvas id="fNorm" width="64" height="64"></canvas></div><span class="cap">ecualización + máscara</span></div>
+            <div class="fstep"><span class="label">Histograma</span><div class="hist" id="fHist"></div><span class="cap">antes / después</span></div>
+          </div>
+          <div class="sect" style="margin-top:6px">
+            <span class="label">Cara media y eigenfaces</span>
+            <div class="eig" id="eig"></div>
+            <span class="cap mono" id="eigCap">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="face-low">
+        <div class="sect chart"><span class="label">Vector de pesos (primeros 16, en desviaciones σ)</span><div id="wChart"></div><span class="cap">Barras: captura. Contorno: promedio registrado del usuario.</span></div>
+        <div class="recon"><span class="label">Reconstrucción</span><div class="box"><canvas id="fRec" width="64" height="64"></canvas></div><span class="cap mono" id="recCap">—</span></div>
+        <div class="sect chart"><span class="label">Distancia euclidiana</span><div id="dChart"></div><span class="cap" id="dCap">—</span></div>
+      </div>
+    </section>
+
+    <!-- DECISIÓN -->
+    <section class="panel p-decision" id="pDecision" aria-labelledby="hDecision">
+      <div class="panel-head"><h2 id="hDecision">Decisión y actuación</h2><span class="meta mono">suma ponderada 0.5 / 0.5</span></div>
+      <div class="fuse">
+        <div class="fz-row"><div class="top-l"><span>Huella (normalizado)</span><b id="zH">—</b></div><div class="fz-bar"><i id="zHb"></i><b style="left:50%" title="Cada factor debe pasar su propio umbral"></b></div></div>
+        <div class="fz-row"><div class="top-l"><span>Rostro (normalizado)</span><b id="zR">—</b></div><div class="fz-bar"><i id="zRb"></i><b style="left:50%" title="Cada factor debe pasar su propio umbral"></b></div></div>
+        <div class="fz-row"><div class="top-l"><span>Puntaje fusionado · umbral 0.60</span><b id="zS">—</b></div><div class="fz-bar big"><i id="zSb"></i><b style="left:60%;background:var(--fg)"></b></div></div>
+        <div class="verdict" id="verdict"><div class="ic" id="vIc" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+          <div><strong id="vT">En espera</strong><span id="vS">Inicia una verificación.</span></div></div>
+        <div class="comp">
+          <figure><svg viewBox="0 0 160 112" id="c1"></svg><figcaption><b>1 · Lector</b><span class="pill" id="c1s">Bloqueado</span></figcaption></figure>
+          <figure><svg viewBox="0 0 160 112" id="c2"></svg><figcaption><b>2 · Editor (Compras)</b><span class="pill" id="c2s">Bloqueado</span></figcaption></figure>
+        </div>
+        <span class="cap">Servos SG90 en GPIO18 y GPIO19. Se mueve uno a la vez, con 300 ms entre ellos.</span>
+      </div>
+    </section>
+
+    <!-- BITÁCORA -->
+    <section class="panel p-bitacora" aria-labelledby="hLog">
+      <div class="panel-head"><h2 id="hLog">Bitácora</h2><span class="meta mono">SQLite · un registro por intento</span></div>
+      <div class="tbl-wrap"><table class="log"><thead><tr><th>Hora</th><th>ID</th><th>Usuario</th><th>PIN</th><th>Huella</th><th>Rostro (d)</th><th>Fusión</th><th>Resultado</th></tr></thead><tbody id="logBody"></tbody></table></div>
+    </section>
+  </div>
+</main>
+
+<div class="caption glass specular" role="status" aria-live="polite">
+  <span class="dot ok" id="capDot"></span><span class="k" id="capK">listo</span><p id="capText">Elige un escenario y pulsa Iniciar verificación, o teclea un ID y PIN en el teclado.</p>
+  <button class="btn primary" id="nextBtn" hidden>Siguiente</button>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   Utilidades
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const clamp = (v,a,b) => v<a?a:v>b?b:v;
+const PI = Math.PI;
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function gaussRnd(r){let u=0,v=0;while(u===0)u=r();v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*PI*v)}
+function makeNoise(seed, cell){
+  const r=mulberry32(seed), G=64, g=new Float32Array(G*G);
+  for(let i=0;i<G*G;i++) g[i]=r()*2-1;
+  return (x,y)=>{ x/=cell; y/=cell; const xi=Math.floor(x), yi=Math.floor(y); let fx=x-xi, fy=y-yi;
+    fx=fx*fx*(3-2*fx); fy=fy*fy*(3-2*fy);
+    const a=g[((yi&63)*G)+(xi&63)], b=g[((yi&63)*G)+((xi+1)&63)], c=g[(((yi+1)&63)*G)+(xi&63)], d=g[(((yi+1)&63)*G)+((xi+1)&63)];
+    return a+(b-a)*fx+(c-a)*fy+(a-b-c+d)*fx*fy; };
+}
+const angPi = a => ((a%PI)+PI)%PI;
+const dPi = (a,b) => { const d=angPi(a-b); return Math.min(d, PI-d); };
+const ease = t => 1-Math.pow(1-t,3);
+const fmt = (n,d=2) => n.toFixed(d);
+const CRC_T = (()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(bytes){let c=0xFFFFFFFF;for(let i=0;i<bytes.length;i++)c=CRC_T[(c^bytes[i])&255]^(c>>>8);return((c^0xFFFFFFFF)>>>0)}
+
+/* ============================================================
+   Huella: generación sintética (modelo de fase con vórtices)
+   ============================================================ */
+const FW=256, FH=288;
+function fingerParams(id){
+  const r=mulberry32(1000+id*7919);
+  const vort=[];
+  for(let i=0;i<34;i++){ const a=r()*2*PI, rr=Math.sqrt(r())*100; vort.push({x:Math.cos(a)*rr, y:Math.sin(a)*rr*1.2, s:r()<.5?-1:1}); }
+  return { cx:128+(r()-.5)*36, cy:146+(r()-.5)*40, ecc:.74+r()*.22, period:8.4+r()*1.0, loop:4+r()*10, loopPh:r()*2*PI,
+           vort, warpSeed:id*31+5, A:100+r()*10, B:124+r()*10 };
+}
+function renderFinger(P, imp){
+  const out=new Uint8Array(FW*FH), q4=new Uint8Array(FW*FH);
+  const rnd=mulberry32(imp.seed), warp=makeNoise(P.warpSeed,40), warp2=makeNoise(P.warpSeed+1,40);
+  const press=makeNoise(imp.seed+3,46), edge=makeNoise(imp.seed+9,22);
+  const c=Math.cos(imp.rot), s=Math.sin(imp.rot);
+  for(let y=0;y<FH;y++) for(let x=0;x<FW;x++){
+    const X=x-128-imp.dx, Y=y-144-imp.dy;
+    const u= c*X + s*Y, v= -s*X + c*Y;              // coordenadas del dedo
+    const du=u+128-P.cx, dv=v+144-P.cy;
+    const wu=du+5*warp(u+300,v+300), wv=dv+5*warp2(u+300,v+300);
+    const r=Math.hypot(wu, wv*P.ecc), th=Math.atan2(wv,wu);
+    let ph=2*PI*(r + P.loop*Math.sin(th+P.loopPh)*Math.exp(-r/70))/P.period;
+    for(const q of P.vort) ph += q.s*Math.atan2(wv-q.y, wu-q.x);
+    const ridge=.5+.5*Math.cos(ph);
+    const e=(u/P.A)**2 + ((v+144-150)/P.B)**2;
+    const m=clamp((1.03+.07*edge(u+500,v+500)-e)/.14,0,1);
+    const p=.62+.38*(press(u+700,v+700)*.5+.5);
+    let val=226 - m*(170*p*Math.pow(ridge,.85)) + gaussRnd(rnd)*11;
+    const q=clamp(Math.round(val/17),0,15);
+    q4[y*FW+x]=q; out[y*FW+x]=q*17;
+  }
+  return {img:out, q4};
+}
+
+/* ============================================================
+   Huella: fases 2 a 4
+   ============================================================ */
+const GAB_NB=24, GAB_R=7, GAB_SIG=4, GAB_F=1/8.9;
+const GAB_K=(()=>{const ks=[];const S=2*GAB_R+1;for(let b=0;b<GAB_NB;b++){const phi=b*PI/GAB_NB, c=Math.cos(phi), s=Math.sin(phi);const k=new Float32Array(S*S);let m=0;
+  for(let j=-GAB_R;j<=GAB_R;j++)for(let i=-GAB_R;i<=GAB_R;i++){const v=Math.exp(-(i*i+j*j)/(2*GAB_SIG*GAB_SIG))*Math.cos(2*PI*GAB_F*(i*c+j*s));k[(j+GAB_R)*S+i+GAB_R]=v;m+=v}
+  m/=S*S; for(let n=0;n<k.length;n++)k[n]-=m; ks.push(k)} return ks})();
+
+function processFinger(img){
+  const W=FW,H=FH,N=W*H,B=16,bw=W/B,bh=H/B;
+  const f=new Float32Array(N); let mean=0; for(let i=0;i<N;i++){f[i]=img[i]/255;mean+=f[i]} mean/=N;
+  let v=0; for(let i=0;i<N;i++) v+=(f[i]-mean)**2; const sd=Math.sqrt(v/N)||1;
+  const norm=new Float32Array(N); for(let i=0;i<N;i++) norm[i]=(f[i]-mean)/sd;
+  // segmentación por varianza de bloques
+  let bm=new Uint8Array(bw*bh);
+  for(let by=0;by<bh;by++)for(let bx=0;bx<bw;bx++){let s=0,s2=0;for(let y=by*B;y<by*B+B;y++)for(let x=bx*B;x<bx*B+B;x++){const q=f[y*W+x];s+=q;s2+=q*q}
+    const m=s/(B*B); bm[by*bw+bx]= (s2/(B*B)-m*m) > .0085 ? 1:0;}
+  for(let pass=0;pass<2;pass++){const nb=new Uint8Array(bw*bh);for(let by=0;by<bh;by++)for(let bx=0;bx<bw;bx++){let c=0,t=0;for(let j=-1;j<=1;j++)for(let i=-1;i<=1;i++){const X=bx+i,Y=by+j;if(X<0||Y<0||X>=bw||Y>=bh)continue;t++;c+=bm[Y*bw+X]}nb[by*bw+bx]=c*2>t?1:0}bm=nb}
+  const bmE=new Uint8Array(bw*bh);
+  for(let by=1;by<bh-1;by++)for(let bx=1;bx<bw-1;bx++){const i=by*bw+bx; bmE[i]=bm[i]&&bm[i-1]&&bm[i+1]&&bm[i-bw]&&bm[i+bw]?1:0}
+  const mask=new Uint8Array(N); for(let y=0;y<H;y++)for(let x=0;x<W;x++) mask[y*W+x]=bm[((y/B)|0)*bw+((x/B)|0)];
+  // gradientes de Sobel
+  const gx=new Float32Array(N), gy=new Float32Array(N);
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){const i=y*W+x,n=norm;
+    gx[i]=(n[i-W+1]+2*n[i+1]+n[i+W+1])-(n[i-W-1]+2*n[i-1]+n[i+W-1]);
+    gy[i]=(n[i+W-1]+2*n[i+W]+n[i+W+1])-(n[i-W-1]+2*n[i-W]+n[i-W+1]);}
+  // campo de orientación por bloque (ventana de 24 px)
+  const vx=new Float32Array(bw*bh), vy=new Float32Array(bw*bh);
+  for(let by=0;by<bh;by++)for(let bx=0;bx<bw;bx++){let a=0,b=0,e=0;
+    for(let y=Math.max(1,by*B-4);y<Math.min(H-1,by*B+B+4);y++)for(let x=Math.max(1,bx*B-4);x<Math.min(W-1,bx*B+B+4);x++){const i=y*W+x;a+=gx[i]*gx[i]-gy[i]*gy[i];b+=2*gx[i]*gy[i];e+=gx[i]*gx[i]+gy[i]*gy[i]}
+    vx[by*bw+bx]=a/(e||1); vy[by*bw+bx]=b/(e||1);}
+  const sx=new Float32Array(bw*bh), sy=new Float32Array(bw*bh), coh=new Float32Array(bw*bh), bphi=new Float32Array(bw*bh);
+  const kk=[1,2,1];
+  for(let by=0;by<bh;by++)for(let bx=0;bx<bw;bx++){let a=0,b=0,t=0;for(let j=-1;j<=1;j++)for(let i=-1;i<=1;i++){const X=bx+i,Y=by+j;if(X<0||Y<0||X>=bw||Y>=bh)continue;const w=kk[i+1]*kk[j+1];a+=vx[Y*bw+X]*w;b+=vy[Y*bw+X]*w;t+=w}
+    const k=by*bw+bx; sx[k]=a/t; sy[k]=b/t; coh[k]=Math.hypot(sx[k],sy[k]); bphi[k]=.5*Math.atan2(sy[k],sx[k]);}
+  // orientación por píxel (interpolación bilineal del campo 2θ)
+  const phi=new Float32Array(N);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let fx=clamp((x-8)/B,0,bw-1),fy=clamp((y-8)/B,0,bh-1);const x0=Math.min(bw-2,fx|0),y0=Math.min(bh-2,fy|0);fx-=x0;fy-=y0;
+    const k=y0*bw+x0; const a=sx[k]*(1-fx)*(1-fy)+sx[k+1]*fx*(1-fy)+sx[k+bw]*(1-fx)*fy+sx[k+bw+1]*fx*fy; const b=sy[k]*(1-fx)*(1-fy)+sy[k+1]*fx*(1-fy)+sy[k+bw]*(1-fx)*fy+sy[k+bw+1]*fx*fy;
+    phi[y*W+x]=.5*Math.atan2(b,a);}
+  // realce con banco de Gabor orientado
+  const gab=new Float32Array(N), S=2*GAB_R+1;
+  for(let y=GAB_R;y<H-GAB_R;y++)for(let x=GAB_R;x<W-GAB_R;x++){const i=y*W+x;if(!mask[i])continue;
+    const bin=Math.round(angPi(phi[i])/PI*GAB_NB)%GAB_NB, k=GAB_K[bin];let s=0,n=0;
+    for(let j=-GAB_R;j<=GAB_R;j++){const row=(y+j)*W+x;for(let ii=-GAB_R;ii<=GAB_R;ii++){s+=k[n++]*norm[row+ii]}}
+    gab[i]=s;}
+  // binarización
+  const bin=new Uint8Array(N); for(let i=0;i<N;i++) bin[i]=mask[i]&&gab[i]<0?1:0;
+  // adelgazamiento (Zhang-Suen)
+  const skel=thin(bin,W,H);
+  // minucias por número de cruce
+  let cand=[];
+  for(let y=12;y<H-12;y++)for(let x=12;x<W-12;x++){const i=y*W+x;if(!skel[i])continue;
+    if(!bmE[((y/B)|0)*bw+((x/B)|0)])continue;
+    const P=[skel[i-W],skel[i-W+1],skel[i+1],skel[i+W+1],skel[i+W],skel[i+W-1],skel[i-1],skel[i-W-1]];
+    let cn=0;for(let k=0;k<8;k++)cn+=Math.abs(P[k]-P[(k+1)%8]);cn/=2;
+    if(cn===1||cn===3) cand.push({x,y,type:cn===1?'T':'B',t:angPi(phi[i]+PI/2)});}
+  const kill=new Uint8Array(cand.length);
+  for(let a=0;a<cand.length;a++)for(let b=a+1;b<cand.length;b++){if(Math.hypot(cand[a].x-cand[b].x,cand[a].y-cand[b].y)<9){kill[a]=1;kill[b]=1}}
+  const minu=cand.filter((_,i)=>!kill[i]);
+  return {img,norm,mask,bm,bw,bh,bphi,coh,gab,bin,skel,minu};
+}
+function thin(b,W,H){
+  const im=Uint8Array.from(b); let changed=true; const del=[];
+  while(changed){changed=false;
+    for(let pass=0;pass<2;pass++){del.length=0;
+      for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){const i=y*W+x;if(!im[i])continue;
+        const p2=im[i-W],p3=im[i-W+1],p4=im[i+1],p5=im[i+W+1],p6=im[i+W],p7=im[i+W-1],p8=im[i-1],p9=im[i-W-1];
+        const Bn=p2+p3+p4+p5+p6+p7+p8+p9; if(Bn<2||Bn>6)continue;
+        const A=(!p2&&p3)+(!p3&&p4)+(!p4&&p5)+(!p5&&p6)+(!p6&&p7)+(!p7&&p8)+(!p8&&p9)+(!p9&&p2); if(A!==1)continue;
+        if(pass===0){if(p2&&p4&&p6)continue;if(p4&&p6&&p8)continue}else{if(p2&&p4&&p8)continue;if(p2&&p6&&p8)continue}
+        del.push(i);}
+      for(const d of del)im[d]=0; if(del.length)changed=true;}}
+  return im;
+}
+// Matching por grafos: estructuras locales (k vecinos) + consolidación global
+function knn(M,K){return M.map((m,i)=>M.map((n,j)=>({j,d:Math.hypot(n.x-m.x,n.y-m.y)})).filter(o=>o.j!==i).sort((a,b)=>a.d-b.d).slice(0,K))}
+function matchMinutiae(A,B){
+  const K=4; if(A.length<K+1||B.length<K+1) return {score:0,pairs:[],edgesA:[],edgesB:[]};
+  const nA=knn(A,K), nB=knn(B,K);
+  const desc=(M,N)=>M.map((m,i)=>N[i].map(o=>{const n=M[o.j];return{d:o.d,a:angPi(Math.atan2(n.y-m.y,n.x-m.x)-m.t),o:angPi(n.t-m.t)}}));
+  const dA=desc(A,nA), dB=desc(B,nB);
+  const cands=[];
+  for(let i=0;i<A.length;i++)for(let j=0;j<B.length;j++){if(A[i].type!==B[j].type)continue;let c=0;
+    for(let k=0;k<K;k++){const p=dA[i][k],q=dB[j][k];c+=Math.abs(p.d-q.d)/8+dPi(p.a,q.a)/.35+dPi(p.o,q.o)/.35}
+    cands.push({i,j,c});}
+  cands.sort((a,b)=>a.c-b.c);
+  let best={m:0,pairs:[]};
+  for(const cd of cands.slice(0,40)){const a0=A[cd.i],b0=B[cd.j];
+    for(const flip of [0,PI]){const rot=b0.t-a0.t+flip,c=Math.cos(rot),s=Math.sin(rot);
+      const used=new Uint8Array(B.length),pairs=[];
+      for(let i=0;i<A.length;i++){const a=A[i],X=a.x-a0.x,Y=a.y-a0.y,x=c*X-s*Y+b0.x,y=s*X+c*Y+b0.y;
+        let bj=-1,bd=10;for(let j=0;j<B.length;j++){if(used[j])continue;const d=Math.hypot(B[j].x-x,B[j].y-y);if(d<bd&&dPi(a.t+rot,B[j].t)<.3){bd=d;bj=j}}
+        if(bj>=0){used[bj]=1;pairs.push([i,bj])}}
+      if(pairs.length>best.m)best={m:pairs.length,pairs};}}
+  const edges=N=>{const e=[];N.forEach((l,i)=>l.slice(0,3).forEach(o=>{if(i<o.j||!N[o.j].slice(0,3).some(q=>q.j===i))e.push([i,o.j])}));return e};
+  return {score:best.m*best.m/(A.length*B.length),pairs:best.pairs,edgesA:edges(nA),edgesB:edges(nB)};
+}
+
+/* imágenes de cada etapa (256 × 288) */
+function mkCanvas(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c}
+function grayCanvas(fn){const c=mkCanvas(FW,FH),x=c.getContext('2d'),d=x.createImageData(FW,FH);
+  for(let i=0;i<FW*FH;i++){const [r,g,b]=fn(i);d.data[i*4]=r;d.data[i*4+1]=g;d.data[i*4+2]=b;d.data[i*4+3]=255}x.putImageData(d,0,0);return c}
+function stageCanvases(F){
+  let gs=0,gn=0;for(let i=0;i<F.gab.length;i++)if(F.mask[i]){gs+=F.gab[i]*F.gab[i];gn++}const gsd=Math.sqrt(gs/(gn||1))||1;
+  F.c={
+    raw:grayCanvas(i=>{const v=F.img[i];return[v,v,v]}),
+    seg:grayCanvas(i=>{const v=clamp(128+F.norm[i]*55,0,255);return F.mask[i]?[v,v,v]:[v*.16+6,v*.16+22,v*.16+14]}),
+    dim:grayCanvas(i=>{const v=F.img[i]*.32+8;return[v,v+3,v+1]}),
+    gab:grayCanvas(i=>{if(!F.mask[i])return[12,18,15];const v=clamp(128+62*F.gab[i]/gsd,0,255);return[v,v,v]}),
+    bin:grayCanvas(i=>!F.mask[i]?[12,18,15]:F.bin[i]?[16,22,19]:[232,238,234]),
+    skel:grayCanvas(i=>F.skel[i]?[98,211,148]:F.bin[i]?[24,40,32]:[10,15,13]),
+  };
+}
+const STAGES=[['raw','Captura'],['seg','Segmentación'],['ori','Orientación'],['gab','Gabor'],['bin','Binaria'],['skel','Esqueleto'],['min','Minucias']];
+function drawMinutia(x,m,s,alpha=1){
+  const X=m.x*s,Y=m.y*s,L=9*s,dx=Math.cos(m.t)*L,dy=Math.sin(m.t)*L;
+  x.globalAlpha=alpha; x.lineWidth=Math.max(1,1.4*s);
+  x.strokeStyle=m.type==='T'?'#62D394':'#E6A63E';
+  x.beginPath(); if(m.type==='T') x.arc(X,Y,3.6*s,0,2*PI); else x.rect(X-3.4*s,Y-3.4*s,6.8*s,6.8*s); x.stroke();
+  x.beginPath(); x.moveTo(X,Y); x.lineTo(X+dx,Y+dy); x.stroke(); x.globalAlpha=1;
+}
+function drawStage(ctx,F,stage,p=1,sc){
+  const s=sc||ctx.canvas.width/FW, W=FW*s, H=FH*s; ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+  ctx.imageSmoothingEnabled=true;
+  const img=c=>ctx.drawImage(c,0,0,W,H);
+  switch(stage){
+    case 'raw': img(F.c.raw); break;
+    case 'seg': img(F.c.raw); ctx.globalAlpha=p; img(F.c.seg); ctx.globalAlpha=1;
+      ctx.strokeStyle='rgba(98,211,148,.5)';ctx.lineWidth=Math.max(1,s*.8);
+      for(let by=0;by<F.bh;by++)for(let bx=0;bx<F.bw;bx++){if(!F.bm[by*F.bw+bx])continue;const B=16*s;
+        if(bx===0||!F.bm[by*F.bw+bx-1]){ctx.beginPath();ctx.moveTo(bx*B,by*B);ctx.lineTo(bx*B,by*B+B);ctx.stroke()}
+        if(bx===F.bw-1||!F.bm[by*F.bw+bx+1]){ctx.beginPath();ctx.moveTo(bx*B+B,by*B);ctx.lineTo(bx*B+B,by*B+B);ctx.stroke()}
+        if(by===0||!F.bm[(by-1)*F.bw+bx]){ctx.beginPath();ctx.moveTo(bx*B,by*B);ctx.lineTo(bx*B+B,by*B);ctx.stroke()}
+        if(by===F.bh-1||!F.bm[(by+1)*F.bw+bx]){ctx.beginPath();ctx.moveTo(bx*B,by*B+B);ctx.lineTo(bx*B+B,by*B+B);ctx.stroke()}}
+      break;
+    case 'ori': { img(F.c.dim); const B=16*s, tot=F.bw*F.bh, lim=Math.floor(p*tot); ctx.lineCap='round';
+      for(let k=0;k<lim;k++){if(!F.bm[k])continue;const bx=k%F.bw,by=(k/F.bw)|0,t=F.bphi[k]+PI/2,L=6.2*s,cx=bx*B+B/2,cy=by*B+B/2;
+        ctx.strokeStyle=`rgba(98,211,148,${.35+.65*clamp(F.coh[k],0,1)})`;ctx.lineWidth=Math.max(1,1.6*s);
+        ctx.beginPath();ctx.moveTo(cx-Math.cos(t)*L,cy-Math.sin(t)*L);ctx.lineTo(cx+Math.cos(t)*L,cy+Math.sin(t)*L);ctx.stroke();}
+      break; }
+    case 'gab': img(F.c.dim); ctx.save(); ctx.beginPath(); ctx.rect(0,0,W*p,H); ctx.clip(); img(F.c.gab); ctx.restore();
+      if(p<1){ctx.fillStyle='rgba(98,211,148,.8)';ctx.fillRect(W*p-1,0,2,H)} break;
+    case 'bin': img(F.c.gab); ctx.globalAlpha=p; img(F.c.bin); ctx.globalAlpha=1; break;
+    case 'skel': img(F.c.bin); ctx.globalAlpha=.85; ctx.fillStyle='#0A0F0D'; ctx.fillRect(0,0,W,H*p); ctx.globalAlpha=1;
+      ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H*p); ctx.clip(); img(F.c.skel); ctx.restore(); break;
+    case 'min': { img(F.c.skel); const n=Math.floor(p*F.minu.length); for(let i=0;i<n;i++) drawMinutia(ctx,F.minu[i],s); break; }
+  }
+}
+
+/* ============================================================
+   Rostro: generación sintética, Viola-Jones (posiciones conocidas), PCA
+   ============================================================ */
+const FS=64;
+function faceParams(id){
+  const r=mulberry32(5000+id*104729);
+  return {fw:.56+r()*.2, fh:.80+r()*.15, tone:.55+r()*.25, es:.23+r()*.12, ey:-.17+r()*.14, eyeR:.055+r()*.022,
+    browOff:.11+r()*.08, browW:.08+r()*.07, browDark:.18+r()*.28, ny:.18+r()*.18, mw:.13+r()*.15, my:.42+r()*.18,
+    mouthDark:.22+r()*.26, hair:.45+r()*.4, hairDark:.08+r()*.24, nose:.06+r()*.1};
+}
+function faceVar(seed,maxAng=0){
+  const r=mulberry32(seed);
+  return {lphi:r()*2*PI, L:.03+r()*.1, bright:.95+r()*.1, smile:(r()-.4)*.1, eyeOpen:.9+r()*.15, dx:(r()-.5)*.03, dy:(r()-.5)*.03,
+          ang:(r()<.5?-1:1)*(maxAng*.5+r()*maxAng*.5), seed:seed+17};
+}
+function faceValue(P,V,u,v,bg){
+  u-=V.dx; v-=V.dy;
+  const hu=u/P.fw, hv=(v-.05)/P.fh, e=hu*hu+hv*hv;
+  const inside=clamp((1.03-e)/.06,0,1);
+  const neck=(Math.abs(u)<.26*P.fw/.66 && v>.6)?clamp((.26*P.fw/.66-Math.abs(u))/.05,0,1):0;
+  const shoulders=v>1.18?clamp((v-1.18)/.06,0,1):0;
+  const hairM=clamp((1.13-e)/.05,0,1)*clamp((-P.hair+.05-(v-.25*u*u))/.1,0,1);
+  if(inside<=0 && neck<=0 && shoulders<=0 && hairM<=0) return bg;
+  const shade=1-.38*Math.pow(Math.min(e,1),1.6);
+  let val=P.tone*shade;
+  for(const sx of [-1,1]){const dx=u-sx*P.es, dy=(v-P.ey)/V.eyeOpen;
+    val-=.40*Math.exp(-(dx*dx+dy*dy*2.2)/(2*P.eyeR*P.eyeR));
+    val-=.16*Math.exp(-(dx*dx+dy*dy)/(2*.022*.022));
+    const by=v-(P.ey-P.browOff)+.9*dx*dx;
+    val-=P.browDark*Math.exp(-(dx*dx/(2*P.browW*P.browW)+by*by/(2*.02*.02)));}
+  const nwin=clamp((v-P.ey-.04)/.05,0,1)*clamp((P.ny-v)/.04,0,1);
+  val-=.10*Math.exp(-((u-.05)**2)/(2*.02*.02))*nwin;
+  for(const sx of [-1,1]) val-=.22*Math.exp(-((u-sx*.065)**2+(v-P.ny)**2)/(2*.024*.024));
+  val+=P.nose*Math.exp(-(u*u+(v-P.ny+.05)**2)/(2*.04*.04));
+  const mdy=v-(P.my-V.smile*(u/P.mw)**2*.5);
+  val-=P.mouthDark*Math.exp(-(u*u/(2*(P.mw*.6)**2)+mdy*mdy/(2*.022*.022)));
+  let skin=val*inside + P.tone*.78*(1-inside)*neck;
+  let out = inside>0||neck>0 ? skin : bg;
+  if(shoulders>0 && inside<=0) out=out*(1-shoulders)+.2*shoulders;
+  if(hairM>0) out=out*(1-hairM)+P.hairDark*hairM;
+  return out*V.bright*(1+V.L*(u*Math.cos(V.lphi)+v*Math.sin(V.lphi)));
+}
+function renderCanonical(P,V){
+  const out=new Float32Array(FS*FS), r=mulberry32(V.seed);
+  for(let y=0;y<FS;y++)for(let x=0;x<FS;x++){const u=(x-FS/2+.5)/(FS/2), v=(y-FS/2+.5)/(FS/2)*1.0+.08;
+    out[y*FS+x]=clamp(faceValue(P,V,u,v,.12)+gaussRnd(r)*.006,0,1);}
+  return out;
+}
+const CW=224, CH=168;
+function renderCamera(P,V){
+  const out=new Float32Array(CW*CH), r=mulberry32(V.seed+5), Sc=50, cx=116, cy=78, ca=Math.cos(V.ang), sa=Math.sin(V.ang);
+  for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){
+    let bg=.30+.12*(x/CW)-.10*(y/CH); if(x>20&&x<29)bg-=.1; if(x>168&&x<212&&y>14&&y<62)bg+=.24; if(x>168&&x<212&&(y===14||y===62||x===190))bg-=.15;
+    const X=(x-cx)/Sc, Y=(y-cy)/Sc, u=ca*X+sa*Y, v=-sa*X+ca*Y;
+    out[y*CW+x]=clamp(faceValue(P,V,u,v,bg)+gaussRnd(r)*.02,0,1);}
+  const fwd=(u,v)=>[cx+Sc*(ca*(u+V.dx)-sa*(v+V.dy)), cy+Sc*(sa*(u+V.dx)+ca*(v+V.dy))];
+  const center=fwd(0,.1), half=Sc*.84;
+  return {img:out, eyes:[fwd(-P.es,P.ey),fwd(P.es,P.ey)], box:[center[0]-half,center[1]-half,half*2,half*2]};
+}
+const EMASK=(()=>{const m=new Uint8Array(FS*FS);for(let y=0;y<FS;y++)for(let x=0;x<FS;x++){const u=(x-FS/2+.5)/(FS/2),v=(y-FS/2+.5)/(FS/2);m[y*FS+x]=(u/.8)**2+(v/.97)**2<=1?1:0}return m})();
+function normalizeFace(raw){
+  const hb=new Float32Array(32), ha=new Float32Array(32), hist=new Float32Array(256); let n=0;
+  for(let i=0;i<raw.length;i++)if(EMASK[i]){const q=Math.round(raw[i]*255);hist[q]++;hb[q>>3]++;n++}
+  const cdf=new Float32Array(256);let acc=0,cmin=-1;for(let q=0;q<256;q++){acc+=hist[q];cdf[q]=acc;if(cmin<0&&acc>0)cmin=acc}
+  const out=new Float32Array(raw.length);
+  for(let i=0;i<raw.length;i++){if(!EMASK[i]){out[i]=.5;continue}const q=Math.round(raw[i]*255);out[i]=(cdf[q]-cmin)/((n-cmin)||1);ha[Math.min(31,Math.floor(out[i]*31.999))]++}
+  return {img:out,hb,ha};
+}
+function jacobi(Ain,n){
+  const A=Float64Array.from(Ain), V=new Float64Array(n*n); for(let i=0;i<n;i++)V[i*n+i]=1;
+  for(let sweep=0;sweep<60;sweep++){let off=0;for(let p=0;p<n;p++)for(let q=p+1;q<n;q++)off+=A[p*n+q]**2; if(off<1e-18)break;
+    for(let p=0;p<n;p++)for(let q=p+1;q<n;q++){const apq=A[p*n+q]; if(Math.abs(apq)<1e-14)continue;
+      const th=(A[q*n+q]-A[p*n+p])/(2*apq), t=Math.sign(th||1)/(Math.abs(th)+Math.sqrt(th*th+1)), c=1/Math.sqrt(t*t+1), s=t*c;
+      for(let k=0;k<n;k++){const akp=A[k*n+p],akq=A[k*n+q];A[k*n+p]=c*akp-s*akq;A[k*n+q]=s*akp+c*akq}
+      for(let k=0;k<n;k++){const apk=A[p*n+k],aqk=A[q*n+k];A[p*n+k]=c*apk-s*aqk;A[q*n+k]=s*apk+c*aqk}
+      for(let k=0;k<n;k++){const vkp=V[k*n+p],vkq=V[k*n+q];V[k*n+p]=c*vkp-s*vkq;V[k*n+q]=s*vkp+c*vkq}}}
+  const vals=[];for(let i=0;i<n;i++)vals.push(A[i*n+i]); return {vals,V};
+}
+const GALLERY_IDS=[1,2,3,4,5,6,7,8,9,10,11,12], PER_ID=6;
+function trainPCA(){
+  const samples=[]; for(const id of GALLERY_IDS){const P=faceParams(id);for(let s=0;s<PER_ID;s++){const V=faceVar(id*100+s);samples.push({id,x:normalizeFace(renderCanonical(P,V)).img})}}
+  const n=samples.length, D=FS*FS, mean=new Float32Array(D);
+  for(const s of samples)for(let i=0;i<D;i++)mean[i]+=s.x[i]/n;
+  const A=samples.map(s=>{const a=new Float32Array(D);for(let i=0;i<D;i++)a[i]=s.x[i]-mean[i];return a});
+  const L=new Float64Array(n*n); for(let i=0;i<n;i++)for(let j=i;j<n;j++){let d=0;const a=A[i],b=A[j];for(let k=0;k<D;k++)d+=a[k]*b[k];L[i*n+j]=L[j*n+i]=d}
+  const {vals,V}=jacobi(L,n); const order=vals.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]);
+  const tot=order.reduce((s,o)=>s+Math.max(0,o[0]),0); let acc=0,k=0; for(const o of order){acc+=Math.max(0,o[0]);k++;if(acc/tot>=.95)break}
+  const U=[]; for(let c=0;c<k;c++){const j=order[c][1],u=new Float32Array(D);for(let i=0;i<n;i++){const w=V[i*n+j];if(w===0)continue;const a=A[i];for(let d=0;d<D;d++)u[d]+=w*a[d]}
+    let nn=0;for(let d=0;d<D;d++)nn+=u[d]*u[d];nn=Math.sqrt(nn);for(let d=0;d<D;d++)u[d]/=nn;U.push(u)}
+  const varExp=acc/tot;
+  const proj=x=>U.map(u=>{let s=0;for(let d=0;d<D;d++)s+=u[d]*(x[d]-mean[d]);return s});
+  samples.forEach(s=>s.w=proj(s.x));
+  const sig=U.map((_,c)=>Math.sqrt(samples.reduce((a,s)=>a+s.w[c]*s.w[c],0)/n)||1);
+  const dist=(a,b)=>Math.sqrt(a.reduce((s,v,i)=>s+(v-b[i])**2,0));
+  const gen=[],imp=[];
+  for(let i=0;i<n;i++){let g=Infinity;const by={};for(let j=0;j<n;j++){if(i===j)continue;const d=dist(samples[i].w,samples[j].w);
+      if(samples[j].id===samples[i].id)g=Math.min(g,d);else by[samples[j].id]=Math.min(by[samples[j].id]??Infinity,d)}
+    gen.push(g);for(const k2 in by)imp.push(by[k2]);}
+  let thr=0,bestGap=Infinity; const mx=Math.max(...imp,...gen);
+  for(let t=0;t<=mx;t+=mx/400){const frr=gen.filter(d=>d>t).length/gen.length,far=imp.filter(d=>d<=t).length/imp.length;const g=Math.abs(frr-far);if(g<bestGap){bestGap=g;thr=t}}
+  const eer=(gen.filter(d=>d>thr).length/gen.length+imp.filter(d=>d<=thr).length/imp.length)/2;
+  return {mean,U,k,varExp,samples,proj,dist,gen,imp,thr,eer,dmax:mx,sig};
+}
+
+/* ============================================================
+   Estado, usuarios y escenarios
+   ============================================================ */
+const USERS={'07':{nombre:'Ana T.',nivel:1,pin:'4821',finger:3,face:3},'12':{nombre:'Luis G.',nivel:2,pin:'1593',finger:7,face:7}};
+const SCN={
+  l1:{id:'07',pin:'4821',finger:3,face:3},
+  l2:{id:'12',pin:'1593',finger:7,face:7},
+  ih:{id:'12',pin:'1593',finger:21,face:7},
+  ir:{id:'07',pin:'4821',finger:3,face:20},
+  pin:{id:'07',pin:'4812',finger:3,face:3},
+};
+const THR_H=.30, FLOOR=.5, THR_S=.6, W_H=.5, W_R=.5;
+const S={speed:1,step:false,mode:'sim',running:false,runId:0,instant:false,showDigits:true,typed:{phase:'id',id:'',pin:''},runs:0,lastF:null};
+const ABORT=Symbol('abort');
+let PCA=null; const TPL={};
+function template(fid){ if(!TPL[fid]){const F=processFinger(renderFinger(fingerParams(fid),{rot:0,dx:0,dy:0,seed:fid*13+1}).img); stageCanvases(F); TPL[fid]=F;} return TPL[fid]; }
+
+/* ============================================================
+   Tiempo y animación
+   ============================================================ */
+const guard=id=>{if(id!==S.runId)throw ABORT};
+function wait(ms,id){ if(S.instant) return Promise.resolve(); return new Promise(r=>setTimeout(r,ms/S.speed)).then(()=>guard(id)); }
+function anim(ms,fn,id){
+  if(S.instant){fn(1,1);return Promise.resolve()}
+  return new Promise((res,rej)=>{const t0=performance.now(),D=ms/S.speed;
+    const f=now=>{if(id!==S.runId){rej(ABORT);return}const t=Math.min(1,(now-t0)/D);fn(ease(t),t);if(t<1)requestAnimationFrame(f);else res()};requestAnimationFrame(f)});
+}
+let nextResolver=null;
+function caption(k,text,state='wait'){ $('#capK').textContent=k; $('#capText').textContent=text; $('#capDot').className='dot '+state; }
+async function beat(k,text,ms,id){
+  caption(k,text);
+  if(S.instant) return;
+  if(S.step){ $('#nextBtn').hidden=false; await new Promise(r=>nextResolver=r); $('#nextBtn').hidden=true; guard(id); }
+  else await wait(ms,id);
+}
+
+/* ============================================================
+   Elementos de la interfaz
+   ============================================================ */
+const KEYS=['1','2','3','A','4','5','6','B','7','8','9','C','*','0','#','D'];
+const keyEls={};
+KEYS.forEach(k=>{const b=document.createElement('button');b.className='key'+(/[A-D*#]/.test(k)?' fn':'');b.textContent=k;b.type='button';b.setAttribute('aria-label','Tecla '+k);
+  b.addEventListener('click',()=>manualKey(k));keyEls[k]=b;$('#keypad').appendChild(b)});
+function flashKey(k){const b=keyEls[k];if(!b)return;b.classList.add('hit');setTimeout(()=>b.classList.remove('hit'),S.instant?0:170)}
+
+const thumbs=[];
+STAGES.forEach(([key,label],i)=>{const b=document.createElement('button');b.className='thumb';b.type='button';b.dataset.stage=key;
+  const c=mkCanvas(128,144);b.appendChild(c);const sp=document.createElement('span');sp.textContent=label;b.appendChild(sp);
+  b.addEventListener('click',()=>{if(!S.lastF||S.running||!b.classList.contains('done'))return;showStage(key)});
+  thumbs.push({key,b,c});$('#strip').appendChild(b)});
+function showStage(key){drawStage($('#fpL').getContext('2d'),S.lastF,key,1);thumbs.forEach(t=>t.b.classList.toggle('cur',t.key===key));
+  $('#fpLblL').textContent='Captura · '+STAGES.find(s=>s[0]===key)[1].toLowerCase()}
+function thumbDone(key,F){const t=thumbs.find(t=>t.key===key);drawStage(t.c.getContext('2d'),F,key,1);t.b.classList.add('done');thumbs.forEach(x=>x.b.classList.toggle('cur',x.key===key))}
+
+/* OLED: texto rasterizado a 1 bit, como la pantalla real */
+const oledCtx=$('#oled').getContext('2d'), oledTmp=mkCanvas(128,64).getContext('2d',{willReadFrequently:true});
+let oledState={l1:'',l2:'',prog:-1};
+function oled(l1,l2='',prog=-1){
+  oledState={l1,l2,prog};
+  const t=oledTmp;t.fillStyle='#000';t.fillRect(0,0,128,64);t.fillStyle='#fff';t.textBaseline='alphabetic';
+  t.font='500 9px "IBM Plex Mono", monospace';t.fillText('PIA RDP',1,8);t.fillText(S.mode==='sim'?'SIM':'USB',109,8);t.fillRect(0,11,128,1);
+  t.font='600 12px "IBM Plex Mono", monospace';t.fillText(l1,1,30);t.fillText(l2,1,47);
+  if(prog>=0){t.fillRect(0,54,128,1);t.fillRect(0,63,128,1);t.fillRect(0,54,1,10);t.fillRect(127,54,1,10);t.fillRect(2,56,Math.round(124*prog),6)}
+  const d=t.getImageData(0,0,128,64),o=oledCtx.createImageData(128,64);
+  for(let i=0;i<128*64;i++){const on=d.data[i*4]>118;o.data[i*4]=on?214:3;o.data[i*4+1]=on?236:6;o.data[i*4+2]=on?255:8;o.data[i*4+3]=255}
+  oledCtx.putImageData(o,0,0);
+}
+function leds(g,r){$('#ledG').classList.toggle('on',g);$('#ledR').classList.toggle('on',r)}
+function serial(dir,txt){const el=$('#serial'),d=document.createElement('div');
+  const cls=dir==='in'?'in':dir==='out'?'out':'note';
+  d.innerHTML=dir==='note'?`<span class="note">${txt}</span>`:`<span class="dir">${dir==='in'?'ESP32 → PC':'PC → ESP32'}</span><span class="${cls}">${txt}</span>`;
+  el.appendChild(d);while(el.children.length>40)el.removeChild(el.firstChild);el.scrollTop=el.scrollHeight}
+function setSlots(id,pin,err){
+  [...$('#slotId').children].forEach((s,i)=>{s.textContent=id[i]??'';s.className='slot'+(id[i]?' fill':'')});
+  [...$('#slotPin').children].forEach((s,i)=>{s.textContent=pin[i]?(S.showDigits?pin[i]:'•'):'';s.className='slot'+(pin[i]?(err?' err':' fill'):'')});
+}
+function setPhase(p,factor){ if(factor) $('#factor').textContent='Factor: '+factor;
+  document.querySelectorAll('#phases li').forEach(li=>{const n=+li.dataset.p;li.classList.toggle('on',n===p);li.classList.toggle('done',n<p)}); }
+function panel(id,state){$(id).dataset.state=state}
+
+/* compartimentos con servo */
+function compSVG(n){return `
+  <rect x="4" y="16" width="152" height="92" rx="8" fill="#0F1714" stroke="#2C3D35"/>
+  <g class="lid" id="lid${n}" style="transform-origin:150px 16px"><rect x="4" y="10" width="152" height="8" rx="3" fill="#24332C" stroke="#3B5047"/><rect x="86" y="18" width="10" height="34" fill="#3B5047"/><rect x="86" y="48" width="22" height="6" rx="1.5" fill="#3B5047"/></g>
+  <circle cx="148" cy="14" r="3" fill="#90A199"/>
+  <rect x="16" y="66" width="48" height="24" rx="3" fill="#1A2925" stroke="#2C3D35"/>
+  <text x="40" y="82" text-anchor="middle" font-size="8" fill="#5E6E67" font-family="IBM Plex Mono, monospace">SG90</text>
+  <circle cx="54" cy="62" r="5" fill="#90A199"/>
+  <g class="arm" id="arm${n}" style="transform-origin:54px 62px"><rect x="52" y="58" width="56" height="8" rx="4" fill="#C9D6CF"/></g>
+  <circle cx="54" cy="62" r="2" fill="#0F1714"/>
+  <text x="128" y="100" text-anchor="end" font-size="8" fill="#5E6E67" font-family="IBM Plex Mono, monospace">GPIO${n===1?18:19}</text>`}
+$('#c1').innerHTML=compSVG(1); $('#c2').innerHTML=compSVG(2);
+function servo(n,open){ $('#arm'+n).style.transform=open?'rotate(90deg)':'rotate(0deg)'; $('#lid'+n).style.transform=open?'rotate(-14deg)':'rotate(0deg)';
+  const s=$('#c'+n+'s'); s.textContent=open?'Liberado':'Bloqueado'; s.className='pill'+(open?' ok':''); }
+
+/* dibujo de rostro */
+function drawGray(cv,data,w,h,norm){const x=cv.getContext('2d'),d=x.createImageData(w,h);let mn=0,mx=1;
+  if(norm){mn=Infinity;mx=-Infinity;for(const v of data){if(v<mn)mn=v;if(v>mx)mx=v}}
+  for(let i=0;i<w*h;i++){const v=clamp(Math.round((data[i]-mn)/((mx-mn)||1)*255),0,255);d.data[i*4]=v;d.data[i*4+1]=v;d.data[i*4+2]=v;d.data[i*4+3]=255}x.putImageData(d,0,0)}
+const camCtx=$('#cam').getContext('2d'), camBase=mkCanvas(CW,CH);
+function camDraw(Fc,p){ // p: {box:0..1, eyes:0..1, line:0..1}
+  camCtx.imageSmoothingEnabled=true; camCtx.clearRect(0,0,448,336); camCtx.drawImage(camBase,0,0,448,336);
+  const s=2;
+  if(p.box>0){const [x,y,w,h]=Fc.box, cx=x+w/2, cy=y+h/2, k=.4+.6*p.box;
+    camCtx.strokeStyle=`rgba(98,211,148,${p.box})`;camCtx.lineWidth=2;camCtx.strokeRect((cx-w*k/2)*s,(cy-h*k/2)*s,w*k*s,h*k*s);
+    camCtx.fillStyle=`rgba(98,211,148,${p.box})`;camCtx.font='500 13px "IBM Plex Mono", monospace';camCtx.fillText('rostro',(cx-w*k/2)*s+2,(cy-h*k/2)*s-6);}
+  if(p.eyes>0){camCtx.strokeStyle=`rgba(230,166,62,${p.eyes})`;camCtx.lineWidth=2;
+    for(const [ex,ey] of Fc.eyes){camCtx.strokeRect((ex-9)*s,(ey-6)*s,18*s,12*s)}}
+  if(p.line>0){const [a,b]=Fc.eyes;camCtx.strokeStyle=`rgba(230,166,62,${p.line})`;camCtx.setLineDash([6,5]);camCtx.beginPath();camCtx.moveTo(a[0]*s,a[1]*s);camCtx.lineTo(b[0]*s,b[1]*s);camCtx.stroke();camCtx.setLineDash([])}
+}
+function histSVG(hb,ha,p=1){const mb=Math.max(...hb),ma=Math.max(...ha),W=160,H=70,bw=W/32;let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Histograma antes y después">`;
+  for(let i=0;i<32;i++){const h=hb[i]/mb*(H-6);s+=`<rect x="${i*bw+.5}" y="${H-h}" width="${bw-1}" height="${h}" fill="#2C3D35"/>`}
+  let d='';for(let i=0;i<32;i++){const h=ha[i]/ma*(H-6)*p;d+=(i?'L':'M')+(i*bw+bw/2).toFixed(1)+' '+(H-h).toFixed(1)}
+  s+=`<path d="${d}" fill="none" stroke="#62D394" stroke-width="1.6"/></svg>`;return s}
+function weightsSVG(w,ref,p=1){const n=Math.min(16,w.length),W=320,H=110,mid=H/2,bw=W/n,m=Math.max(...w.slice(0,n).map(Math.abs),...ref.slice(0,n).map(Math.abs))||1;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Vector de pesos"><line x1="0" x2="${W}" y1="${mid}" y2="${mid}" stroke="#2C3D35"/>`;
+  for(let i=0;i<n;i++){const q=clamp(p*n-i,0,1);const h=w[i]/m*(mid-6)*q,hr=ref[i]/m*(mid-6);
+    s+=`<rect x="${i*bw+3}" y="${Math.min(mid,mid-hr)}" width="${bw-6}" height="${Math.abs(hr)}" fill="none" stroke="#90A199" stroke-dasharray="2 2"/>`;
+    s+=`<rect x="${i*bw+5}" y="${Math.min(mid,mid-h)}" width="${bw-10}" height="${Math.abs(h)}" fill="#62D394" rx="1.5"/>`;}
+  return s+'</svg>'}
+function distSVG(d,p=1){const {gen,imp,thr,dmax}=PCA,W=320,H=120,base=88,nb=28,X=v=>8+clamp(v/dmax,0,1)*(W-16);
+  const hg=new Array(nb).fill(0),hi=new Array(nb).fill(0);gen.forEach(v=>hg[Math.min(nb-1,Math.floor(v/dmax*nb))]++);imp.forEach(v=>hi[Math.min(nb-1,Math.floor(v/dmax*nb))]++);
+  const mg=Math.max(...hg),mi=Math.max(...hi),bw=(W-16)/nb;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Distancia frente a distribuciones">`;
+  for(let i=0;i<nb;i++){const a=hi[i]/mi*58,b=hg[i]/mg*58;
+    s+=`<rect x="${8+i*bw+.5}" y="${base-a}" width="${bw-1}" height="${a}" fill="rgba(234,90,80,.35)"/>`;
+    s+=`<rect x="${8+i*bw+.5}" y="${base-b}" width="${bw-1}" height="${b}" fill="rgba(98,211,148,.45)"/>`;}
+  s+=`<line x1="8" x2="${W-8}" y1="${base}" y2="${base}" stroke="#2C3D35"/>`;
+  s+=`<line x1="${X(thr)}" x2="${X(thr)}" y1="18" y2="${base+4}" stroke="#E3ECE7" stroke-dasharray="3 3"/><text x="${X(thr)+4}" y="26" font-size="9" fill="#90A199" font-family="IBM Plex Mono, monospace">umbral ${thr.toFixed(2)}</text>`;
+  if(d!=null){const x=X(d*p);s+=`<path d="M${x} ${base+4} l-6 10 h12 z" fill="${d<=thr?'#43C982':'#EA5A50'}"/><text x="${clamp(x,20,W-30)}" y="${H-2}" text-anchor="middle" font-size="10" fill="#E3ECE7" font-family="IBM Plex Mono, monospace">d = ${(d*p).toFixed(2)}</text>`}
+  s+=`<text x="8" y="12" font-size="9" fill="#62D394" font-family="IBM Plex Mono, monospace">genuinos</text><text x="64" y="12" font-size="9" fill="#EA5A50" font-family="IBM Plex Mono, monospace">impostores</text>`;
+  return s+'</svg>'}
+
+/* superposición del matching */
+const fpO=$('#fpO'); let overlayState=null;
+function drawOverlay(){
+  const r=$('#fpPair').getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+  fpO.width=Math.round(r.width*dpr); fpO.height=Math.round(r.height*dpr); const x=fpO.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,r.width,r.height);
+  if(!overlayState) return;
+  const {F,T,M,p}=overlayState, lr=$('#fpL').getBoundingClientRect(), rr=$('#fpR').getBoundingClientRect();
+  const L=(m)=>[lr.left-r.left+m.x*lr.width/FW, lr.top-r.top+m.y*lr.height/FH], R=(m)=>[rr.left-r.left+m.x*rr.width/FW, rr.top-r.top+m.y*rr.height/FH];
+  x.lineWidth=1; x.strokeStyle=`rgba(144,161,153,${.5*Math.min(1,p*3)})`;
+  for(const [a,b] of M.edgesA){const P=L(F.minu[a]),Q=L(F.minu[b]);x.beginPath();x.moveTo(...P);x.lineTo(...Q);x.stroke()}
+  for(const [a,b] of M.edgesB){const P=R(T.minu[a]),Q=R(T.minu[b]);x.beginPath();x.moveTo(...P);x.lineTo(...Q);x.stroke()}
+  const n=Math.floor(clamp((p-.25)/.75,0,1)*M.pairs.length);
+  for(let i=0;i<n;i++){const [a,b]=M.pairs[i],P=L(F.minu[a]),Q=R(T.minu[b]);
+    x.strokeStyle='rgba(98,211,148,.75)';x.lineWidth=1.2;x.beginPath();x.moveTo(...P);x.lineTo(...Q);x.stroke();
+    x.fillStyle='#62D394';x.beginPath();x.arc(...P,2.6,0,2*PI);x.arc(...Q,2.6,0,2*PI);x.fill();}
+}
+new ResizeObserver(()=>drawOverlay()).observe($('#fpPair'));
+
+/* ============================================================
+   Reinicio
+   ============================================================ */
+function resetUI(keepKeys){
+  if(!keepKeys) setSlots('','');
+  leds(false,false); servo(1,false); servo(2,false); setPhase(0); $('#factor').textContent='Factor: —';
+  ['#pFrontal','#pHuella','#pRostro','#pDecision'].forEach(p=>panel(p,'idle'));
+  ['#fpL','#fpR'].forEach(c=>{const x=$(c).getContext('2d');x.clearRect(0,0,512,576)});
+  thumbs.forEach(t=>{t.b.classList.remove('done','cur');t.c.getContext('2d').clearRect(0,0,128,144)});
+  overlayState=null; drawOverlay();
+  $('#mBytes').innerHTML='0 <small>/ 36,864 B</small>'; $('#mBytesBar').style.width='0%'; $('#mMin').textContent='—'; $('#mScore').textContent='—'; $('#mScoreBar').style.width='0%'; $('#mPairs').textContent='Pares en correspondencia: —';
+  $('#mThr').style.left=(THR_H*100)+'%'; $('#fpSt').textContent=''; $('#faceSt').textContent=''; $('#fpLblL').textContent='Captura'; $('#fpLblR').textContent='Plantilla registrada';
+  camCtx.clearRect(0,0,448,336); ['#fAlign','#fNorm','#fRec'].forEach(c=>$(c).getContext('2d').clearRect(0,0,64,64)); $('#fAlign').style.transform='none';
+  $('#fAlignCap').textContent='—'; $('#fHist').innerHTML=''; $('#eig').innerHTML=''; $('#eigCap').textContent='—'; $('#wChart').innerHTML=''; $('#recCap').textContent='—';
+  $('#dChart').innerHTML=distSVG(null); $('#dCap').textContent='—';
+  ['zH','zR','zS'].forEach(k=>{$('#'+k).textContent='—';$('#'+k+'b').style.width='0%';$('#'+k+'b').className=''});
+  verdict(null);
+}
+function verdict(v){const el=$('#verdict');el.className='verdict'+(v?(v.ok?' ok':' no'):'');
+  $('#vT').textContent=v?v.t:'En espera'; $('#vS').textContent=v?v.s:'Inicia una verificación.';
+  $('#vIc').innerHTML=!v?'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>'
+    : v.ok?'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
+    :'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg>';}
+
+/* ============================================================
+   Verificación completa
+   ============================================================ */
+async function typeKeys(seq,onKey,id){for(const k of seq){await wait(k==='#'?380:300+((k.charCodeAt(0)*37)%140),id);flashKey(k);onKey(k);
+  serial('in','TECLA:'+(S.showDigits||'#*D'.includes(k)?k:'•'))}}
+
+function logRow(r){const tr=document.createElement('tr');if(!S.instant)tr.className='new';
+  tr.innerHTML=`<td class="m">${r.hora}</td><td class="m">${r.id}</td><td>${r.user}</td><td>${r.pin?'Correcto':'Incorrecto'}</td><td class="m">${r.h??'—'}</td><td class="m">${r.r??'—'}</td><td class="m">${r.s??'—'}</td><td><span class="res ${r.ok?'ok':'no'}">${r.res}</span></td>`;
+  $('#logBody').prepend(tr)}
+
+async function run(scn,opts={}){
+  const id=++S.runId; S.running=true; S.runs++; updateButtons();
+  const seed=opts.seed ?? (Math.floor(Math.random()*1e6)+S.runs*977);
+  const rnd=mulberry32(seed);
+  resetUI(!!opts.typed);
+  if(!opts.typed) $('#serial').innerHTML='';
+  const user=USERS[scn.id];
+  const hora=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  try{
+    /* ---------- PIN ---------- */
+    setPhase(1,'PIN'); panel('#pFrontal','active');
+    if(!opts.typed){
+      oled('Teclea tu ID','y presiona #'); caption('fase 1','El usuario escribe su ID de 2 dígitos y presiona #.');
+      let idb='',pinb='';
+      await typeKeys([...scn.id,'#'],k=>{if(k!=='#'){idb+=k;setSlots(idb,'')}},id);
+      oled('ID '+scn.id,'PIN y #'); caption('fase 1','Ahora el PIN de 4 dígitos y #.');
+      await typeKeys([...scn.pin,'#'],k=>{if(k!=='#'){pinb+=k;setSlots(idb,pinb);oled('ID '+scn.id,'PIN '+'*'.repeat(pinb.length))}},id);
+    }
+    serial('in',`PIN:${scn.id}:${'•'.repeat(scn.pin.length)}`);
+    const pinOk=!!user && user.pin===scn.pin;
+    if(!pinOk){
+      setSlots(scn.id,scn.pin,true);
+      await beat('fase 1',user?'PIN incorrecto. Se niega el acceso sin pedir huella ni rostro.':'ID no registrado. Se niega el acceso.',900,id);
+      setPhase(5,'decisión'); serial('out','ACCESO:0'); oled('Acceso negado',user?'PIN incorrecto':'ID no existe'); leds(false,true);
+      verdict({ok:false,t:'Acceso negado',s:user?'PIN incorrecto para el ID '+scn.id+'.':'El ID '+scn.id+' no está registrado.'});
+      caption('fase 5','Acceso negado: el PIN es una condición obligatoria.','no');
+      logRow({hora,id:scn.id,user:user?user.nombre:'—',pin:false,ok:false,res:'Negado · PIN'});
+      return;
+    }
+    panel('#pFrontal','done');
+    await beat('fase 1',`PIN correcto. Huella y rostro se comparan solo contra el usuario ${scn.id} (verificación 1:1).`,900,id);
+
+    /* ---------- HUELLA ---------- */
+    panel('#pHuella','active'); setPhase(1,'huella');
+    const T=template(user.finger);
+    const probeRaw=renderFinger(fingerParams(scn.finger),{rot:(rnd()-.5)*.24,dx:(rnd()-.5)*14,dy:(rnd()-.5)*14,seed});
+    const F=processFinger(probeRaw.img); stageCanvases(F); S.lastF=F;
+    const M=matchMinutiae(F.minu,T.minu);
+    const bytes=new Uint8Array(36864); for(let i=0;i<36864;i++) bytes[i]=(probeRaw.q4[2*i]<<4)|probeRaw.q4[2*i+1];
+    const crc=crc32(bytes).toString(16).toUpperCase().padStart(8,'0');
+    drawStage($('#fpR').getContext('2d'),T,'min',1); $('#fpLblR').textContent=`Plantilla registrada · ID ${scn.id}`;
+    serial('out','MSG:Coloca el dedo|en el sensor'); serial('out','PEDIR_HUELLA');
+    oled('Coloca el dedo','en el sensor'); $('#fpSt').innerHTML='<span class="dot wait"></span>esperando dedo';
+    await beat('fase 1','La OLED pide la huella. El AS608 toma la imagen (GenImg) y la manda con UpImage.',1000,id);
+    serial('in',`IMG:36864:${crc}`); $('#fpSt').innerHTML='<span class="dot wait"></span>recibiendo';
+    caption('fase 1','La imagen llega por partes: 256 × 288 píxeles a 4 bits, 36,864 bytes a 115200 baudios.');
+    const lctx=$('#fpL').getContext('2d');
+    await anim(3200,(e,t)=>{const rows=Math.floor(t*FH);lctx.clearRect(0,0,512,576);lctx.drawImage(F.c.raw,0,0,FW,rows,0,0,512,rows*2);
+      if(t<1){lctx.fillStyle='rgba(98,211,148,.85)';lctx.fillRect(0,rows*2-1,512,2)}
+      const b=rows*128; $('#mBytes').innerHTML=`${b.toLocaleString('en-US')} <small>/ 36,864 B</small>`; $('#mBytesBar').style.width=(t*100)+'%';
+      if(!S.instant && (rows%8===0)) oled('Leyendo huella',`${Math.round(t*100)}%`,t);},id);
+    oled('Huella recibida','Procesando...'); serial('in','IMG:FIN'); serial('note',`CRC32 ${crc} verificado`);
+    $('#fpSt').innerHTML='<span class="dot ok"></span>imagen completa'; thumbDone('raw',F);
+    await beat('fase 1','Huella recibida completa y con CRC correcto.',500,id);
+
+    setPhase(2,'huella');
+    const stageAnim=async(key,ms,k,txt)=>{caption(k,txt);await anim(ms,e=>drawStage(lctx,F,key,e),id);thumbDone(key,F);$('#fpLblL').textContent='Captura · '+STAGES.find(s=>s[0]===key)[1].toLowerCase();await beat(k,txt,450,id)};
+    await stageAnim('seg',700,'fase 2','Normalización y segmentación: los bloques de 16 px con poca varianza son fondo.');
+    await stageAnim('ori',1100,'fase 2','Campo de orientación: gradientes de Sobel por bloque, suavizado sobre el doble del ángulo.');
+    await stageAnim('gab',1200,'fase 2','Realce con filtros de Gabor orientados según el campo (24 orientaciones, σ = 4 px).');
+    await stageAnim('bin',600,'fase 2','Binarización: cresta donde la respuesta del filtro es negativa.');
+    await stageAnim('skel',1000,'fase 2','Adelgazamiento de Zhang-Suen: crestas de 1 píxel de ancho.');
+    setPhase(3,'huella');
+    const nT=F.minu.filter(m=>m.type==='T').length,nB=F.minu.length-nT;
+    await stageAnim('min',1300,'fase 3',`Minucias por número de cruce: ${nT} terminaciones y ${nB} bifurcaciones, cada una con posición y orientación.`);
+    $('#mMin').innerHTML=`${F.minu.length} <small>${nT} T · ${nB} B</small>`;
+
+    setPhase(4,'huella'); $('#fpLblL').textContent='Captura · minucias';
+    caption('fase 4','Matching por grafos: cada minucia se describe por sus 4 vecinas más cercanas (distancias y ángulos relativos).');
+    overlayState={F,T,M,p:0};
+    await anim(2200,e=>{overlayState.p=e;drawOverlay();const sc=M.score*clamp((e-.25)/.75,0,1);
+      $('#mScore').innerHTML=`${fmt(sc)} <small>umbral ${fmt(THR_H)}</small>`;$('#mScoreBar').style.width=clamp(sc*100,0,100)+'%';
+      $('#mPairs').textContent=`Pares en correspondencia: ${Math.floor(clamp((e-.25)/.75,0,1)*M.pairs.length)} de ${F.minu.length} / ${T.minu.length}`},id);
+    const hOk=M.score>=THR_H;
+    $('#mScoreBar').style.background=hOk?'var(--verde-claro)':'var(--no)';
+    $('#fpSt').innerHTML=`<span class="dot ${hOk?'ok':'no'}"></span>${hOk?'coincide':'no coincide'}`;
+    panel('#pHuella','done');
+    await beat('fase 4',`Puntaje de huella ${fmt(M.score)} contra umbral ${fmt(THR_H)}: ${hOk?'coincide':'no coincide'}.`,1000,id);
+
+    /* ---------- ROSTRO ---------- */
+    panel('#pRostro','active'); setPhase(1,'rostro');
+    const fp=faceParams(scn.face), fv=faceVar(seed+3,.16);
+    const cam=renderCamera(fp,fv); drawGray(camBase,cam.img,CW,CH);
+    const aligned=renderCanonical(fp,fv), nz=normalizeFace(aligned), w=PCA.proj(nz.img);
+    const mine=PCA.samples.filter(s=>s.id===user.face);
+    const dists=mine.map(s=>PCA.dist(w,s.w)), d=Math.min(...dists);
+    const ref=w.map((_,i)=>mine.reduce((a,s)=>a+s.w[i],0)/mine.length);
+    serial('out','MSG:Mira a la|camara'); oled('Mira a la','camara'); $('#faceSt').innerHTML='<span class="dot wait"></span>capturando';
+    await anim(600,e=>{camCtx.globalAlpha=e;camDraw(cam,{box:0,eyes:0,line:0});camCtx.globalAlpha=1},id);
+    await beat('fase 1','La PC toma un cuadro de DroidCam y lo pasa a escala de grises.',700,id);
+    setPhase(2,'rostro');
+    caption('fase 2','Viola-Jones: el cascade de Haar encuentra el rostro y luego los ojos.');
+    await anim(800,e=>camDraw(cam,{box:e,eyes:0,line:0}),id);
+    await anim(500,e=>camDraw(cam,{box:1,eyes:e,line:0}),id);
+    await beat('fase 2','Rostro y ojos detectados.',500,id);
+    const angDeg=Math.atan2(cam.eyes[1][1]-cam.eyes[0][1],cam.eyes[1][0]-cam.eyes[0][0])*180/PI;
+    await anim(500,e=>camDraw(cam,{box:1,eyes:1,line:e}),id);
+    drawGray($('#fAlign'),aligned,FS,FS); const fa=$('#fAlign');
+    fa.style.transition='none'; fa.style.transform=`rotate(${angDeg}deg) scale(.86)`; void fa.offsetWidth;
+    fa.style.transition=''; requestAnimationFrame(()=>{fa.style.transform='none'});
+    $('#fAlignCap').textContent=`${angDeg>=0?'+':''}${angDeg.toFixed(1)}° → 0°`;
+    await beat('fase 2',`Alineación: se gira ${Math.abs(angDeg).toFixed(1)}° para dejar los ojos horizontales y se recorta a 64 × 64.`,1100,id);
+    drawGray($('#fNorm'),nz.img,FS,FS);
+    await anim(700,e=>{$('#fHist').innerHTML=histSVG(nz.hb,nz.ha,e)},id);
+    await beat('fase 2','Normalización fotométrica: ecualización del histograma dentro de una máscara elíptica.',800,id);
+
+    setPhase(3,'rostro');
+    caption('fase 3',`PCA: la cara se proyecta en ${PCA.k} eigenfaces, que explican el ${(PCA.varExp*100).toFixed(1)} % de la varianza.`);
+    const eig=$('#eig'); eig.innerHTML='';
+    const ec=[PCA.mean,...PCA.U.slice(0,7)].map((u,i)=>{const c=mkCanvas(FS,FS);drawGray(c,u,FS,FS,i>0);c.title=i?`Eigenface ${i}`:'Cara media';eig.appendChild(c);return c});
+    for(let i=0;i<ec.length;i++){await wait(110,id);ec[i].classList.add('in')}
+    if(S.instant) ec.forEach(c=>c.classList.add('in'));
+    $('#eigCap').textContent=`k = ${PCA.k} · ${(PCA.varExp*100).toFixed(1)} % de varianza · ${PCA.samples.length} imágenes de entrenamiento`;
+    const ws=w.map((v,i)=>v/PCA.sig[i]), rs=ref.map((v,i)=>v/PCA.sig[i]);
+    await anim(900,e=>{$('#wChart').innerHTML=weightsSVG(ws,rs,e)},id);
+    const rec=new Float32Array(FS*FS);
+    const recAt=n=>{for(let i=0;i<FS*FS;i++){let v=PCA.mean[i];for(let c=0;c<n;c++)v+=w[c]*PCA.U[c][i];rec[i]=v}let err=0;for(let i=0;i<FS*FS;i++)err+=(rec[i]-nz.img[i])**2;return Math.sqrt(err/(FS*FS))};
+    caption('fase 3','Reconstrucción con 1, 2, … k componentes: el vector de pesos basta para recuperar la cara.');
+    if(S.instant){const er=recAt(PCA.k);drawGray($('#fRec'),rec,FS,FS);$('#recCap').textContent=`n = ${PCA.k} / ${PCA.k} · error ${er.toFixed(3)}`}
+    else for(let n=1;n<=PCA.k;n++){const er=recAt(n);drawGray($('#fRec'),rec,FS,FS);$('#recCap').textContent=`n = ${n} / ${PCA.k} · error ${er.toFixed(3)}`;await wait(Math.max(40,1400/PCA.k),id)}
+    await beat('fase 3','Vector de pesos listo.',600,id);
+
+    setPhase(4,'rostro');
+    caption('fase 4',`Distancia euclidiana contra las ${mine.length} muestras registradas del usuario ${scn.id}.`);
+    await anim(1200,e=>{$('#dChart').innerHTML=distSVG(d,e)},id);
+    const rOk=d<=PCA.thr;
+    $('#dCap').innerHTML=`Mínima <b class="mono">${d.toFixed(2)}</b> · umbral <b class="mono">${PCA.thr.toFixed(2)}</b> (EER ${(PCA.eer*100).toFixed(1)} %)`;
+    $('#faceSt').innerHTML=`<span class="dot ${rOk?'ok':'no'}"></span>${rOk?'coincide':'no coincide'}`;
+    panel('#pRostro','done');
+    await beat('fase 4',`Distancia ${d.toFixed(2)} contra umbral ${PCA.thr.toFixed(2)}: ${rOk?'coincide':'no coincide'}.`,1000,id);
+
+    /* ---------- DECISIÓN ---------- */
+    panel('#pDecision','active'); setPhase(5,'decisión');
+    const sH=clamp(M.score/(2*THR_H),0,1), sR=clamp(1-d/(2*PCA.thr),0,1), Sf=W_H*sH+W_R*sR;
+    const ok=Sf>=THR_S && sH>=FLOOR && sR>=FLOOR;
+    caption('fase 5','Fusión: los puntajes se normalizan y se combinan con pesos 0.5 y 0.5. Cada factor debe pasar su propio umbral (0.50 normalizado) y la suma, 0.60.');
+    await anim(900,e=>{
+      $('#zH').textContent=fmt(sH*e);$('#zHb').style.width=(sH*e*100)+'%';$('#zHb').className=sH<FLOOR?'low':'';
+      $('#zR').textContent=fmt(sR*e);$('#zRb').style.width=(sR*e*100)+'%';$('#zRb').className=sR<FLOOR?'low':'';},id);
+    await anim(700,e=>{$('#zS').textContent=fmt(Sf*e);$('#zSb').style.width=(Sf*e*100)+'%';$('#zSb').className=ok?'':'low'},id);
+    const why=!ok?(sH<FLOOR&&sR<FLOOR?'ni huella ni rostro pasan su umbral':sH<FLOOR?'la huella no pasa su umbral':sR<FLOOR?'el rostro no pasa su umbral':'el puntaje fusionado no llega a 0.60'):'';
+    serial('out','ACCESO:'+(ok?user.nivel:0));
+    if(ok){
+      leds(true,false); oled('Acceso nivel '+user.nivel,user.nivel===2?'Editor':'Lector');
+      verdict({ok:true,t:`Acceso concedido · nivel ${user.nivel}`,s:`${user.nombre} · ${user.nivel===2?'Editor: compartimentos 1 y 2':'Lector: compartimento 1'}`});
+      caption('fase 5',`Acceso concedido. Se libera ${user.nivel===2?'el compartimento 1 y, 300 ms después, el 2':'el compartimento 1'}.`,'ok');
+      servo(1,true); if(user.nivel===2){await wait(300,id);servo(2,true)}
+    }else{
+      leds(false,true); oled('Acceso negado',sH<FLOOR?'Huella':'Rostro');
+      verdict({ok:false,t:'Acceso negado',s:'Motivo: '+why+'.'});
+      caption('fase 5','Acceso negado: '+why+'. Los compartimentos siguen bloqueados.','no');
+    }
+    panel('#pDecision','done');
+    logRow({hora,id:scn.id,user:user.nombre,pin:true,h:fmt(M.score),r:d.toFixed(2),s:fmt(Sf),ok,res:ok?'Nivel '+user.nivel:'Negado'});
+    S.lastResult={pin:true,score:M.score,nMin:F.minu.length,nTpl:T.minu.length,pairs:M.pairs.length,d,thr:PCA.thr,sH,sR,Sf,ok};
+  }catch(e){ if(e!==ABORT) {console.error(e); caption('error','Algo falló en la simulación: '+e.message,'no');} }
+  finally{ if(id===S.runId){S.running=false;S.typed={phase:'id',id:'',pin:''};updateButtons()} }
+}
+
+/* teclado manual */
+function manualKey(k){
+  if(S.mode!=='sim'||S.running) return;
+  flashKey(k); const t=S.typed;
+  if(t.phase==='id'&&!t.id&&!t.pin){ $('#serial').innerHTML=''; resetUI(); }
+  serial('in','TECLA:'+(S.showDigits||'#*D'.includes(k)?k:'•'));
+  if(k==='D'){S.typed={phase:'id',id:'',pin:''};setSlots('','');oled('Cancelado','Teclea tu ID');caption('listo','Captura cancelada.','ok');return}
+  if(k==='*'){if(t.phase==='id')t.id=t.id.slice(0,-1);else t.pin=t.pin.slice(0,-1)}
+  else if(k==='#'){
+    if(t.phase==='id'&&t.id.length===2){t.phase='pin';oled('ID '+t.id,'PIN y #');caption('fase 1','Ahora el PIN de 4 dígitos y #.')}
+    else if(t.phase==='pin'&&t.pin.length===4){const u=USERS[t.id];
+      run({id:t.id,pin:t.pin,finger:u?u.finger:30,face:u?u.face:30},{typed:true});return}
+  }
+  else if(/[0-9]/.test(k)){if(t.phase==='id'&&t.id.length<2)t.id+=k;else if(t.phase==='pin'&&t.pin.length<4)t.pin+=k}
+  setSlots(t.id,t.pin); panel('#pFrontal','active'); setPhase(1,'PIN');
+  if(t.phase==='id'){oled('ID '+t.id,'y presiona #');caption('fase 1','Escribe el ID de 2 dígitos y presiona #.')}
+  else oled('ID '+t.id,'PIN '+'*'.repeat(t.pin.length));
+}
+
+/* ============================================================
+   Controles
+   ============================================================ */
+function updateButtons(){
+  const sim=S.mode==='sim';
+  $('#runBtn').disabled=!sim; $('#runBtn').textContent=S.running?'Reiniciar verificación':'Iniciar verificación';
+  Object.values(keyEls).forEach(b=>b.disabled=!sim||S.running);
+}
+$('#runBtn').addEventListener('click',()=>{ S.instant=false; run(SCN[$('#scn').value]); });
+$('#resetBtn').addEventListener('click',()=>{ S.runId++; S.running=false; S.typed={phase:'id',id:'',pin:''}; $('#nextBtn').hidden=true; resetUI(); $('#serial').innerHTML='';
+  oled('Listo','Teclea tu ID'); caption('listo','Elige un escenario y pulsa Iniciar verificación, o teclea un ID y PIN en el teclado.','ok'); updateButtons(); });
+$('#nextBtn').addEventListener('click',()=>{ if(nextResolver){const r=nextResolver;nextResolver=null;r()} });
+document.querySelectorAll('#speed button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#speed button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  const v=b.dataset.v; S.step=v==='paso'; S.speed=S.step?1:+v;
+  if(!S.step && nextResolver){const r=nextResolver;nextResolver=null;$('#nextBtn').hidden=true;r()}
+}));
+$('#showDigits').addEventListener('change',e=>{S.showDigits=e.target.checked; const sl=[...$('#slotPin').children]; sl.forEach(s=>{if(s.textContent)s.textContent=S.showDigits?(s.dataset.v||s.textContent):'•'})});
+function setMode(m){
+  S.mode=m; $('#mSim').setAttribute('aria-pressed',m==='sim'); $('#mEsp').setAttribute('aria-pressed',m==='esp32');
+  $('#espPanel').hidden=m!=='esp32';
+  if(m==='esp32'){ S.runId++; S.running=false; $('#nextBtn').hidden=true;
+    $('#connChip').querySelector('.dot').className='dot no'; $('#connTxt').textContent='ESP32 · sin conexión';
+    oled('Sin conexion','con la PC'); caption('ESP32','Modo ESP32: conecta la placa por USB y búscala para empezar.','no');
+  } else {
+    $('#connChip').querySelector('.dot').className='dot ok'; $('#connTxt').textContent='Dispositivo simulado';
+    oled('Listo','Teclea tu ID'); caption('listo','Elige un escenario y pulsa Iniciar verificación, o teclea un ID y PIN en el teclado.','ok');
+  }
+  updateButtons();
+}
+$('#mSim').addEventListener('click',()=>setMode('sim'));
+$('#mEsp').addEventListener('click',()=>setMode('esp32'));
+$('#scanBtn').addEventListener('click',()=>{
+  const b=$('#scanBtn'); b.disabled=true; b.textContent='Buscando…'; $('#espMsg').innerHTML='Revisando los puertos COM y esperando <span class="mono">HOLA</span>…';
+  setTimeout(()=>{b.disabled=false;b.textContent='Buscar ESP32';
+    $('#espMsg').innerHTML='<strong>No se encontró ningún ESP32.</strong> Revisa el cable USB (que sea de datos), instala el driver CP210x o CH340 y cierra el monitor serie de PlatformIO si está abierto.'},1400);
+});
+
+/* ============================================================
+   Arranque: una verificación ya resuelta para que la vista no empiece vacía
+   ============================================================ */
+(async function boot(){
+  oled('Preparando','Eigenfaces...');
+  caption('inicio','Entrenando la base de Eigenfaces con 72 imágenes sintéticas…');
+  await (document.fonts?document.fonts.ready:Promise.resolve());
+  await new Promise(r=>setTimeout(r,30));
+  PCA=trainPCA();
+  S.instant=true; await run(SCN.l2,{seed:4242}); S.instant=false;
+  caption('listo','Esta es una verificación ya resuelta. Pulsa Iniciar verificación para verla paso a paso.','ok');
+  window.__pia={S,PCA,SCN,run,template,renderFinger,processFinger,matchMinutiae,fingerParams};
+})();
+</script>

@@ -111,7 +111,7 @@ Los parámetros que dependen de la resolución (tamaño de bloque, frecuencia es
 
 - El PIN es una condición obligatoria. Se guarda con hash PBKDF2 (`hashlib`) y sal; nunca en texto plano.
 - Los puntajes de huella y rostro se normalizan con lo obtenido en la calibración y se combinan con pesos configurables (por defecto 0.5 y 0.5).
-- Se concede acceso si el PIN es correcto, el puntaje fusionado supera el umbral y cada factor supera un piso mínimo. El nivel concedido es el del usuario.
+- Se concede acceso si el PIN es correcto, **cada factor pasa su propio umbral** (0.50 normalizado) y la suma ponderada llega a 0.60. El nivel concedido es el del usuario. (En la maqueta, la regla anterior, con un piso de 0.35 y una fusión de 0.50, dejaba pasar a un impostor de rostro cuando su huella era buena.)
 - Cada intento va a la bitácora (SQLite) con: fecha, ID, resultado por factor, puntajes, decisión y modo (Simular o ESP32).
 
 ### Calibración
@@ -150,7 +150,7 @@ Si no existen, sigue las reglas de abajo, que ya las resumen. No te detengas a p
    - El estado de la conexión: puerto, versión del firmware, sensor y OLED.
    - Un indicador por pasos de las 5 fases del PIA.
 
-   Debajo, los paneles de cada factor, que se activan en orden.
+   Debajo, los paneles de cada factor, que se activan en orden. Un control **"Vista: Completa | Por etapa"** permite ver todos los paneles a la vez o solo la etapa actual (PIN → Huella → Rostro → Actuación), con transiciones entre etapas. El detalle está en la sección 4 de `docs/PROMPT_FABLE_REDISENO.md`.
 2. **Registro** de usuarios.
 3. **Bitácora**, con filtros.
 4. **Calibración**: distribuciones y curvas de FAR/FRR, EER y umbral actual sobre la curva.
@@ -178,16 +178,16 @@ Toda visualización muestra datos intermedios reales que manda el backend: imág
 
 ### Dirección visual
 
-- **Fondo oscuro**, casi negro con un matiz verde muy leve, y una retícula técnica fina y discreta.
-- **Verde FIME como único acento.** Defínelo como token (`--verde-fime`) con un valor provisional y un comentario de que hay que confirmar el valor oficial en el manual de identidad de la FIME; no lo presentes como oficial. Los estados usan colores propios y contenidos: verde para concedido, rojo para negado y ámbar para esperando. No los mezcles con el acento.
-- **Glassmorphism solo en lo que flota:** la barra superior, la píldora de controles Simular/ESP32, los modales y las tarjetas de estado.
-  - Las imágenes de huella y rostro van sobre superficies **opacas**, porque el vidrio les quita contraste.
-  - Para el modo oscuro: blur de 16 a 30 px con `-webkit-` incluido, opacidad de 0.15 a 0.35, borde de 1 px con `rgba(255,255,255,0.08–0.15)`, un borde especular solo en uno o dos elementos y radios de 16 a 28 px.
-  - Máximo dos capas de vidrio encimadas.
-  - Respaldo sin `backdrop-filter` y respeto a `prefers-reduced-transparency`.
-  - Nada de vidrio sobre canvas que se animan detrás: cuesta mucha GPU.
-- **Tipografía:** una sans para la interfaz y una mono para los datos (puntajes, bytes, coordenadas), las dos guardadas localmente. Números tabulares en todo lo que cambia.
-- **Espaciado** en una cuadrícula de 8 px. Controles de al menos 44 px de alto.
+La referencia visual es la maqueta `docs/maqueta/acceso_biometrico.html` después del rediseño de `docs/PROMPT_FABLE_REDISENO.md`. Si esa maqueta ya se rediseñó y la aprobé, la app sigue sus tokens, componentes y transiciones. Si no, aplica las reglas de las secciones 1 a 5 de ese prompt. En resumen:
+
+- **Lenguaje de Apple (HIG) en modo oscuro:**
+  - Grises neutros semánticos (`systemBackground`, `label`, `separator`…).
+  - El verde FIME como único color de acento, con valor provisional por confirmar.
+  - `systemGreen`, `systemRed` y `systemOrange` para los estados.
+- **Tipografía:** Inter y JetBrains Mono guardadas localmente (SF Pro no se puede usar en Windows).
+- **Forma:** radios concéntricos, controles en cápsula y objetivos de al menos 44 px.
+- **Vidrio solo en lo que flota:** barra superior, controles segmentados, navegador de etapas, píldora de explicación y modales. Los datos van sobre superficies opacas. Máximo dos capas de vidrio, con respaldo para `prefers-reduced-transparency`.
+- **Fondo:** estático, casi negro, con campos de color difuminados y poco saturados, y grano fino. Sin retícula.
 
 ### Animación
 
