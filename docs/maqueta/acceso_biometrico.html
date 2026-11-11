@@ -36,7 +36,7 @@
   /* Estados: colores de sistema de la HIG para modo oscuro (consultados el 11 nov 2026). */
   --ok:#30D158; --no:#FF4245; --aviso:#FF9230;
   /* Vidrio */
-  --vidrio:rgba(58,58,62,.32); --vidrio-barra:rgba(28,28,30,.72); --vidrio-flota:rgba(30,30,32,.62);
+  --vidrio:rgba(58,58,62,.32); --vidrio-barra:rgba(28,28,30,.75); --vidrio-flota:rgba(30,30,32,.75);
   --vidrio-linea:rgba(255,255,255,.11);
   --sans:"Inter",system-ui,"Segoe UI",Roboto,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
@@ -85,6 +85,8 @@ html[data-fondo="b"] .fondo{background-image:
 @media (prefers-reduced-transparency:reduce){
   .vidrio,.vidrio-barra,.vidrio-flota{background:rgba(30,30,32,.97);-webkit-backdrop-filter:none;backdrop-filter:none}
 }
+/* sobre vidrio el texto secundario sube de opacidad: debajo puede pasar contenido claro */
+.vidrio-barra,.vidrio-flota{--label-2:rgba(235,235,245,.82)}
 /* borde especular: solo en la barra y en el navegador */
 .especular{position:relative}
 .especular::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;pointer-events:none;
@@ -108,7 +110,7 @@ html[data-fondo="b"] .fondo{background-image:
 /* control segmentado en cápsula; el seleccionado lleva el acento */
 .seg{display:inline-flex;padding:4px;border-radius:22px;gap:2px}
 .barra .seg{background:var(--fill-2)}   /* dentro de la barra no lleva su propio blur: ya está sobre vidrio */
-.seg button{position:relative;border:0;background:transparent;padding:0 14px;min-height:36px;border-radius:18px;color:var(--label-2);cursor:pointer;font-size:14px;font-weight:500;white-space:nowrap;
+.seg button{position:relative;border:0;background:transparent;padding:0 14px;min-height:36px;min-width:44px;border-radius:18px;color:var(--label-2);cursor:pointer;font-size:14px;font-weight:500;white-space:nowrap;
   transition:background .2s var(--curva),color .2s var(--curva)}
 .seg button::after{content:"";position:absolute;inset:-4px 0}   /* objetivo táctil de 44 px */
 .seg button:hover{color:var(--label)}
@@ -117,7 +119,7 @@ html[data-fondo="b"] .fondo{background-image:
 /* navegador de etapas */
 .fila-nav{position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 12px}
 .etapas{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:min(100%,820px);padding:4px;border-radius:30px}
-.nav-ind{position:absolute;top:4px;left:0;height:calc(100% - 8px);width:0;border-radius:26px;background:var(--fill);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);pointer-events:none;
+.nav-ind{position:absolute;top:4px;left:0;height:calc(100% - 8px);width:0;border-radius:26px;background:rgba(120,120,128,.26);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);pointer-events:none;
   transition:transform .5s var(--curva),width .5s var(--curva)}
 html.vt .nav-ind,html.sin-anim .nav-ind{transition:none}
 .paso{position:relative;z-index:1;border:0;background:transparent;border-radius:26px;min-height:52px;padding:4px 14px 4px 10px;cursor:pointer;
@@ -128,6 +130,7 @@ html.vt .nav-ind,html.sin-anim .nav-ind{transition:none}
 .paso .nom{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .paso .dato{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--label-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .paso .dato:empty{display:none}
+.paso[aria-current="step"] .dato{color:var(--label)}
 /* estados: cada uno cambia de forma e icono, no solo de color */
 .paso[data-est="curso"] .fig{border-color:var(--acento-claro);color:var(--acento-claro)}
 .paso[data-est="curso"] .fig i{width:8px;height:8px;border-radius:4px;background:var(--acento-claro);animation:pulso 1.4s ease-in-out infinite}
@@ -334,7 +337,7 @@ table.log tr.new{animation:fila .8s ease-out}
 .grid[data-vista="etapa"] #pBitacora:not(.completa) tbody tr:not(:first-child){display:none}
 @media (min-width:1000px){
   /* las visualizaciones principales se ajustan al alto libre para que quepan sin scroll */
-  .grid[data-vista="etapa"]{--alto-vis:max(250px,calc(100vh - var(--cab-h) - 268px))}
+  .grid[data-vista="etapa"]{--alto-vis:max(250px,calc(100vh - var(--cab-h) - 276px))}
   .grid[data-vista="etapa"] .fr{grid-template-columns:minmax(0,1fr) minmax(280px,min(34vw,calc((100vh - var(--cab-h) - 262px)/.82))) minmax(0,1fr);
     grid-template-rows:auto 1fr;grid-template-areas:"a kp c" "lado kp c";gap:16px 24px;align-items:start}
   .grid[data-vista="etapa"] .kp-row{display:contents}
@@ -345,7 +348,7 @@ table.log tr.new{animation:fila .8s ease-out}
   .grid[data-vista="etapa"] .serial{height:var(--alto-vis)}
   .grid[data-vista="etapa"] .fp-body{grid-template-columns:min(64%,calc(var(--alto-vis)*512/288 + 16px)) minmax(0,1fr);grid-template-areas:"par lado";gap:24px}
   .grid[data-vista="etapa"] .fp-lado{grid-area:lado;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;align-content:start}
-  .grid[data-vista="etapa"] .strip{grid-template-columns:repeat(4,minmax(0,1fr));grid-area:auto}
+  .grid[data-vista="etapa"] .strip{grid-template-columns:repeat(auto-fill,minmax(64px,1fr));grid-area:auto}
   .grid[data-vista="etapa"] .metrics{grid-area:auto}
   .grid[data-vista="etapa"] .face-grid{grid-template-columns:min(46%,calc((var(--alto-vis) + 24px)*4/3)) minmax(0,1fr);gap:24px}
   .grid[data-vista="etapa"] .face-der{display:flex;flex-direction:column;gap:16px;min-width:0}
@@ -356,6 +359,7 @@ table.log tr.new{animation:fila .8s ease-out}
   .grid[data-vista="etapa"] .fuse-a{gap:16px}
   .grid[data-vista="etapa"] .comp svg{max-height:max(110px,calc(var(--alto-vis) - 210px))}
 }
+@media (min-width:1000px) and (max-height:800px){.grid[data-vista="etapa"] .oled-bezel canvas{max-width:260px}}
 @media (min-width:1280px){
   /* rostro en tres columnas: cámara, preproceso y eigenfaces, y pesos con reconstrucción y distancia */
   .grid[data-vista="etapa"] .face-der{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;align-items:start}

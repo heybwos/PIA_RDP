@@ -178,16 +178,17 @@ Toda visualización muestra datos intermedios reales que manda el backend: imág
 
 ### Dirección visual
 
-La referencia visual es la maqueta `docs/maqueta/acceso_biometrico.html` después del rediseño de `docs/PROMPT_FABLE_REDISENO.md`. Si esa maqueta ya se rediseñó y la aprobé, la app sigue sus tokens, componentes y transiciones. Si no, aplica las reglas de las secciones 1 a 5 de ese prompt. En resumen:
+La referencia visual de la fase 3 es la maqueta rediseñada `docs/maqueta/acceso_biometrico.html` (se abre con doble clic; capturas y video en `docs/maqueta/capturas/`). La app sigue sus tokens (`:root`), sus componentes y sus transiciones. Las decisiones de diseño, las mediciones y lo que quedó pendiente están en `docs/REVISION_REDISENO.md`; léelo antes de diseñar. Si la app necesita algo que la maqueta no tiene (Registro, Calibración, Ajustes), aplica las reglas de las secciones 1 a 5 de `docs/PROMPT_FABLE_REDISENO.md`. En resumen:
 
 - **Lenguaje de Apple (HIG) en modo oscuro:**
   - Grises neutros semánticos (`systemBackground`, `label`, `separator`…).
-  - El verde FIME como único color de acento, con valor provisional por confirmar.
-  - `systemGreen`, `systemRed` y `systemOrange` para los estados.
-- **Tipografía:** Inter y JetBrains Mono guardadas localmente (SF Pro no se puede usar en Windows).
+  - El verde FIME como único color de acento, con valor provisional por confirmar. Como relleno lleva texto oscuro; para texto y trazos finos se usa el acento claro derivado del mismo token.
+  - `systemGreen` (`#30D158`), `systemRed` (`#FF4245`) y `systemOrange` (`#FF9230`) para los estados, siempre con icono o texto además del color.
+- **Tipografía:** Inter y JetBrains Mono guardadas localmente (SF Pro no se puede usar en Windows). Reutiliza `docs/maqueta/fonts/` y los iconos de Lucide de `docs/maqueta/icons/`. El subconjunto `latin` no trae flechas ni letras griegas.
 - **Forma:** radios concéntricos, controles en cápsula y objetivos de al menos 44 px.
-- **Vidrio solo en lo que flota:** barra superior, controles segmentados, navegador de etapas, píldora de explicación y modales. Los datos van sobre superficies opacas. Máximo dos capas de vidrio, con respaldo para `prefers-reduced-transparency`.
-- **Fondo:** estático, casi negro, con campos de color difuminados y poco saturados, y grano fino. Sin retícula.
+- **Vidrio solo en lo que flota:** barra superior, controles segmentados, navegador de etapas, píldora de explicación y modales. Los datos van sobre superficies opacas. Máximo dos capas de vidrio, con respaldo para `prefers-reduced-transparency`. La barra, el navegador y el pie van al 75 % de opacidad para que el texto se lea cuando pasa contenido claro por debajo (contraste medido de 4.78:1 o más).
+- **Fondo:** estático, casi negro, con campos de color difuminados y poco saturados, y grano fino. Sin retícula. La variante elegida es la A (`data-fondo="a"`); la B queda como alternativa.
+- **Pendiente de la maqueta que la app debe resolver:** medir los cuadros por segundo de las transiciones en la laptop de la demo (en el contenedor sin GPU dieron 11 a 14), y que la etapa de Huella quepa completa sobre el pie a 1440 × 900.
 
 ### Animación
 
