@@ -70,7 +70,7 @@ Hecha con Playwright y Chromium sin interfaz en un contenedor Linux, el 11 de no
 | Teclado manual | 07 # 4821 # concede nivel 1; el ID 99 da "no está registrado"; la casilla "Mostrar dígitos" oculta y vuelve a mostrar. |
 | Modo ESP32 | Panel visible, botón de inicio y teclas desactivados, "Buscando…" y luego "No se encontró ningún ESP32"; el navegador de etapas sigue funcionando. |
 | Paso a paso | 16 pulsaciones de "Siguiente" para una verificación completa; sin pulsar no avanza; al cambiar a 2× continúa. "Reiniciar" deja todo en pendiente y en la etapa 1. |
-| `localStorage` | Por defecto Completa; recuerda "Por etapa" al recargar; con `localStorage` bloqueado arranca en Completa y no lanza errores. |
+| `localStorage` | Por defecto Completa; recuerda "Por etapa" al recargar; con `localStorage` bloqueado arranca en Completa y no lanza errores. (Desde el cierre, el valor por defecto es "Por etapa"; ver "Cierre en Windows".) |
 | Respaldo sin View Transitions (`?sinvt=1`) | Navega con opacidad y `transform` en 514 a 581 ms. |
 | Errores en la consola | 0 en todas las pruebas. |
 | Peticiones fuera de `file:` y `data:` | 0. Con la red cortada y recargando: las 6 fuentes cargan y la verificación corre. |
@@ -102,25 +102,62 @@ En la primera vuelta el texto secundario fallaba: 4.03 en el navegador en reposo
 
 Sobre superficies opacas (calculado): texto secundario 5.95 sobre `#1C1C1E` y 5.27 sobre `#2C2C2E`; acento claro 8.11 y 6.65; texto oscuro sobre verde FIME 5.66; `systemRed` 4.96; `systemGreen` 8.42; `systemOrange` 7.62.
 
-### Falló o quedó por debajo de la meta
+### Falló en el contenedor y quedó resuelto en el cierre
 
-| Prueba | Resultado |
-|---|---|
-| 60 cuadros por segundo en las transiciones | **No se cumple en este equipo: 11 a 14 cuadros por segundo** (cuadro más largo de 100 a 133 ms). Sin `backdrop-filter` dio 15 a 18, así que el costo principal aquí no es el vidrio sino componer la transición por software. En reposo, 60. Durante una verificación completa, 43 (vista por etapa) y 47 (vista completa). Hay que medirlo en la laptop de la demo. |
-| Que cada etapa quepa sin scroll sobre el pie | Etapa 2 a 1440 × 900: el panel baja 47 px por debajo del borde del pie (la métrica de matching queda parcialmente tapada hasta hacer scroll). Etapa 1 a 1366 × 768: 10 px. Las demás caben. En 390 × 844 todas requieren scroll, como es de esperar. |
+| Prueba | Resultado en el contenedor | Cierre en Windows |
+|---|---|---|
+| 60 cuadros por segundo en las transiciones | 11 a 14 cuadros por segundo (cuadro más largo de 100 a 133 ms), dibujando por software. | Cuadro más largo de 19 ms con GPU real. El problema era del contenedor. |
+| Que cada etapa quepa sin scroll sobre el pie | Etapa 2 a 1440 × 900: 47 px tapados. Etapa 1 a 1366 × 768: 10 px. | Todas caben en cinco tamaños; ver la tabla de abajo. |
+
+### Cierre en Windows (12 y 13 de noviembre de 2026)
+
+Hecho en Windows 11 con GPU real, en el navegador Chromium del panel de Claude, sobre un servidor local (`python -m http.server`). Fable 5.2 dio el plan, los criterios de aceptación y la verificación; Opus 5.5 hizo los cambios.
+
+**Hallazgos que cambiaron el plan:**
+- A 1280 × 800 la etapa 2 se pasaba 146 px y la 4, 32 px. A 1536 × 864 (laptop 1080p al 125 %), la 4 se pasaba 12 px. Se agregaron los dos tamaños a los criterios.
+- Causa de la etapa 2: `.fp-lado` necesita 476 px para poner tira y métricas en dos columnas. A 1440 y a 1280 medía unos 460 px, así que se apilaban.
+- `body` reservaba 96 px abajo: aunque la etapa cupiera, aparecía una barra de scroll vertical que movía el ancho 15 px entre etapas.
+- Con la pestaña oculta, `startViewTransition` se omite y su promesa `ready` se rechazaba sin que nadie la atrapara: un error en la consola por cada cambio de etapa. Pasaba si el presentador cambiaba de ventana durante una verificación.
+- Para medir con iframes hay que dejarlos dentro de la pantalla: fuera de ella Chromium no ejecuta el `ResizeObserver` y `--cab-h` se queda en 132 px en lugar de 140.
+
+**Cambios:**
+1. Encaje de la vista por etapa: margen inferior de 84 px solo en esa vista; `--alto-vis` y la columna del teclado con 10 px más de holgura; la huella deja al menos 524 px a la tira y las métricas; gráficas de compartimentos más bajas; bitácora compacta; y, con 800 px de alto o menos, rejilla, OLED, ranuras del PIN y columna de fusión más apretadas. Todo bajo `data-vista="etapa"` y 1000 px de ancho o más.
+2. "σ = 4 px" pasó a "desviación estándar de 4 px". La `θ` de un comentario pasó a `theta`.
+3. Pista de las flechas a la izquierda del navegador de etapas, desde 1280 px de ancho: dos teclas dibujadas con iconos de Lucide (`arrow-left` es nuevo) y el texto "Cambiar de etapa". El navegador lleva `aria-keyshortcuts` y `title`.
+4. La maqueta arranca en "Por etapa". `?vista=completa` o `?vista=etapa` en la URL mandan sobre lo guardado y no se guardan.
+5. `t.ready.catch(()=>{})` en la transición.
+
+**Encaje medido.** Distancia del borde inferior de la etapa al borde superior del pie (negativo = cabe), sin scroll vertical ni horizontal en ningún caso:
+
+| Viewport | Etapa 1 | Etapa 2 | Etapa 3 | Etapa 4 |
+|---|---|---|---|---|
+| 1280 × 800 | −17 | −20 | −16 | −57 |
+| 1366 × 768 | −12 | −17 | −13 | −24 |
+| 1440 × 900 | −17 | −30 | −45 | −69 |
+| 1536 × 864 | −17 | −17 | −16 | −58 |
+| 1920 × 1080 | −17 | −193 | −214 | −244 |
+
+**Comprobado además:**
+- Los 15 casos de regresión (5 escenarios × semillas 11, 4242 y 7) dan los mismos 13 valores que antes del cierre, al dígito.
+- La vista completa no cambió: los rectángulos de los 5 paneles son idénticos a 1366 × 768, 1440 × 900 y 1920 × 1080.
+- 0 caracteres fuera del subconjunto latin de las fuentes en el HTML, sin contar comentarios.
+- Arranque: sin nada guardado abre "Por etapa" en la etapa 4; con "completa" guardado abre la completa; `?vista=` manda y no escribe en `localStorage`.
+- La pista de las flechas no se encima con el navegador y la cabecera sigue midiendo 140 px.
+
+### Límites conocidos
+
+- Con menos de 768 px de alto de viewport (ventana sin maximizar) o con el panel del modo ESP32 abierto (unos 70 px más), las etapas necesitan scroll. La demo va en pantalla completa (F11).
+- En 390 × 844 todas las etapas requieren scroll, como es de esperar.
 
 ### No probado
 
-- Chrome y Edge en Windows, con GPU real. Todo se probó solo en Chromium sobre Linux.
-- El proyector de 1920 × 1080.
 - Un navegador sin `backdrop-filter` (la regla `@supports` está escrita pero no se ejecutó).
 - Lectores de pantalla y navegación completa con teclado, más allá de las flechas.
+- Edge en Windows: el cierre se midió en el Chromium del panel de Claude, con el mismo motor.
 - El video se grabó a 1280 × 720, no a 1440 × 900.
 
 ### Pendientes conocidos
 
-- Queda una `σ` en el texto del pie de la etapa de Gabor ("σ = 4 px"). El subconjunto `latin` de Inter no la trae y sale con la fuente del sistema.
-- Las flechas del teclado no se anuncian en la interfaz.
 - El verde FIME sigue siendo provisional.
 
 ### Evidencia

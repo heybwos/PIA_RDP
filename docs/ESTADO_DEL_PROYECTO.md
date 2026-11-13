@@ -16,7 +16,7 @@ Este archivo resume en qué va el proyecto: qué se decidió, qué está hecho y
 |---|---|
 | Contexto del proyecto | Listo (`docs/CONTEXTO_PIA_RDP.md`) |
 | Prompt para construir el sistema completo | Listo, sin ejecutar (`docs/PROMPT_FABLE_5_2.md`) |
-| Maqueta visual del modo Simular | Hecha y rediseñada al estilo Apple (`docs/maqueta/acceso_biometrico.html`) |
+| Maqueta visual del modo Simular | **Terminada.** Rediseñada al estilo Apple y cerrada con mediciones en Windows (`docs/maqueta/acceso_biometrico.html`) |
 | Revisión crítica del rediseño | Lista (`docs/REVISION_REDISENO.md`, 24 puntos) |
 | Sistema real (Python, firmware, app conectada) | **No empezado.** No hay código del sistema todavía, solo documentos y la maqueta. |
 | Pruebas con hardware | **No empezadas.** El hardware no se ha conectado. |
@@ -38,7 +38,8 @@ Resuelven lo que el contexto original dejaba pendiente. No hay que volver a disc
 | Firmware | **PlatformIO**, con entornos de prueba por módulo. |
 | Dónde se programa | Claude Code con **Fable 5.2**, en VS Code y Windows, **por fases**, deteniéndose al final de cada una para revisión. |
 | Estilo visual | Lenguaje de **Apple (HIG) en modo oscuro**, con grises neutros y el **verde FIME como único acento** (valor provisional). Vidrio solo en lo que flota; los datos van sobre superficies opacas. Letras Inter y JetBrains Mono, guardadas localmente. |
-| Vista por etapas | Control "Vista: Completa \| Por etapa". En "Por etapa" se ve solo la etapa actual: PIN → Huella → Rostro → Actuación, con transiciones animadas. |
+| Vista por etapas | Control "Vista: Completa \| Por etapa". En "Por etapa" se ve solo la etapa actual: PIN → Huella → Rostro → Actuación, con transiciones animadas. **La maqueta arranca en "Por etapa"**; recuerda la última vista elegida, y `?vista=completa` en la URL abre la completa sin guardarla. |
+| Pantalla de la demo | Navegador en **pantalla completa (F11)** y en modo Simular. El alto mínimo soportado sin scroll es 768 px de viewport. |
 
 ## 3. La maqueta (`docs/maqueta/acceso_biometrico.html`)
 
@@ -81,27 +82,28 @@ Es un solo HTML que se abre con doble clic, sin servidor ni internet. Muestra la
 
 **Link publicado:** https://claude.ai/artifact/ByghMje85waN9nQ8px4T8r. **Todavía muestra la versión anterior al rediseño.**
 
-## 4. Dónde se quedó Fable (rediseño)
+## 4. Estado de la maqueta (rediseño y cierre)
 
-Fable 5.2 terminó el rediseño y lo verificó; después se detuvo para cuidar el límite de uso. El detalle está en `docs/REVISION_REDISENO.md`.
+Fable 5.2 hizo el rediseño y lo verificó en un contenedor Linux sin GPU. El cierre se hizo en Windows con GPU real: Fable 5.2 dio el plan, los criterios y la verificación, y Opus 5.5 ejecutó los cambios. El detalle está en `docs/REVISION_REDISENO.md`, sección 4.
 
 **Hecho y probado:**
-- Los cinco escenarios dan el mismo resultado en las dos vistas, con los mismos números que la maqueta original.
-- Cero errores en la consola y cero peticiones externas.
-- Sin scroll horizontal a 1440×900, 1366×768 y 390×844.
-- Contraste del texto sobre vidrio: mínimo 4.78:1.
-- Los 39 controles miden 44 px o más.
-- Funciona con `prefers-reduced-motion` y `prefers-reduced-transparency`.
-- Evidencia: 9 capturas JPEG y un video de 43 s en `docs/maqueta/capturas/`.
+- Los cinco escenarios dan exactamente los mismos números que antes del cierre (15 casos: 5 escenarios × semillas 11, 4242 y 7).
+- **Transiciones fluidas en Windows:** el cuadro más largo dura 19 ms. Los 11–14 cuadros por segundo eran del contenedor sin GPU; no hace falta bajar el desenfoque.
+- **Todas las etapas caben sin scroll** en 1280×800, 1366×768, 1440×900, 1536×864 y 1920×1080 (el proyector), con al menos 12 px de margen sobre el pie.
+- La `σ` se cambió por texto; no queda ningún carácter fuera de las fuentes locales.
+- Las flechas del teclado se anuncian junto al navegador de etapas ("Cambiar de etapa", desde 1280 px de ancho).
+- La maqueta arranca en "Por etapa".
+- Cero errores en la consola, incluso con la pestaña oculta durante una verificación, y cero peticiones externas.
+- Sin scroll horizontal; la vista completa quedó idéntica al píxel.
+- Evidencia del rediseño: 9 capturas JPEG y un video de 43 s en `docs/maqueta/capturas/`.
 
-**Falló o quedó pendiente:**
-1. **Transiciones a 11–14 cuadros por segundo** en el servidor de pruebas, que no tiene tarjeta gráfica. Hay que medirlo en Windows con Chrome o Edge; si también se traba, lo primero es reducir el desenfoque del vidrio.
-2. **Dos etapas no caben completas en pantalla:** en la de huella a 1440×900, la píldora de abajo tapa 47 px de la métrica de matching; en la de PIN a 1366×768, 10 px.
-3. Queda una `σ` en un pie de texto que la fuente local no trae.
-4. Los atajos de flechas no se anuncian en la interfaz.
-5. Sin probar: proyector de 1920×1080, navegador sin `backdrop-filter` y lectores de pantalla.
-6. El verde FIME sigue provisional: hay que confirmar el valor oficial.
-7. Unos 28 PNG pesados (unos 15 MB) quedaron en el historial de git por un commit de punto de control. Ya no están en los archivos, pero siguen ocupando espacio al clonar.
+**Límites conocidos:**
+- Con menos de 768 px de alto de viewport (ventana sin maximizar) o con el panel del modo ESP32 abierto, las etapas necesitan scroll.
+- Sin probar: navegador sin `backdrop-filter` y lectores de pantalla.
+
+**Pendiente, fuera del código:**
+1. El verde FIME sigue provisional: hay que confirmar el valor oficial. Se cambia solo `--verde-fime` (línea 33) y hay que volver a medir el contraste del texto oscuro sobre el verde.
+2. Unos 28 PNG pesados (unos 15 MB) quedaron en el historial de git por un commit de punto de control. Ya no están en los archivos, pero siguen ocupando espacio al clonar. Recomendación: no reescribir la rama; usar squash al hacer el PR.
 
 **Decisiones que tomó Fable y conviene revisar:**
 - Texto oscuro sobre el verde FIME, porque el blanco daba 3.4:1.
@@ -110,6 +112,7 @@ Fable 5.2 terminó el rediseño y lo verificó; después se detuvo para cuidar e
 - El navegador de etapas también aparece en la vista completa.
 - Fases 1 a 4 dentro de cada panel (huella y rostro), en lugar de un solo indicador en la barra.
 - La vista por etapas arranca en la etapa 4, con la verificación de ejemplo ya resuelta.
+- En la vista por etapa la bitácora se compacta y, con poco alto (≤ 800 px), se reducen algunos márgenes y la OLED, para que todo quepa.
 - `systemRed` y `systemOrange` se ajustaron a la guía actual de Apple: `#FF4245` y `#FF9230`.
 
 ## 5. Archivos del repositorio
@@ -130,14 +133,13 @@ La rama de trabajo es `claude/exciting-davinci-aqy6kg` en `heybwos/PIA_RDP`. No 
 
 ## 6. Siguientes pasos, en orden
 
-1. **Revisar la maqueta en Windows:** que las transiciones vayan fluidas en Chrome o Edge, y arreglar las dos etapas que no caben. Es un ajuste chico.
-2. **Decidir** si la vista por etapas debe ser la vista inicial para la demo. Hoy arranca en "Completa".
-3. **Semana 1 del plan (hardware):** son las primeras pruebas y no dependen del software:
+1. **Semana 1 del plan (hardware):** son las primeras pruebas y no dependen del software:
    - Probar la imagen cruda del AS608 con SFGDemo.
    - Medir el TX del sensor contra GND antes de conectarlo al ESP32.
    - Leer el teclado, leer DroidCam desde Python y mover los servos sin que se reinicie el ESP32.
-4. **Ejecutar `docs/PROMPT_FABLE_5_2.md` desde la fase 0** (entorno y dependencias en Python 3.14). Revisar al final de cada fase.
-5. **Calibrar de nuevo los umbrales con huellas reales del AS608.** Los de los datasets no sirven tal cual para ese sensor.
+2. **Ejecutar `docs/PROMPT_FABLE_5_2.md` desde la fase 0** (entorno y dependencias en Python 3.14). Revisar al final de cada fase.
+3. **Calibrar de nuevo los umbrales con huellas reales del AS608.** Los de los datasets no sirven tal cual para ese sensor.
+4. **Confirmar el verde FIME** y, si cambia, volver a medir el contraste de la maqueta.
 
 ## 7. Riesgos abiertos
 
@@ -147,7 +149,7 @@ La rama de trabajo es `claude/exciting-davinci-aqy6kg` en `heybwos/PIA_RDP`. No 
 | El orden de los nibbles de la imagen de 4 bits | Sin confirmar. El prompt pide hacerlo configurable y detectarlo con una prueba. |
 | Algunas dependencias de Python no tienen wheel para 3.14 | Sin verificar. El prompt pide comprobarlo en la fase 0, con respaldo en Python 3.13. |
 | Viola-Jones no detecta las caras recortadas de ORL | Sin medir. El prompt pide medirlo y, si falla, usar LFW. |
-| Rendimiento del vidrio en la laptop de la demo | Pendiente de medir en Windows (punto 1 de la sección 4). |
+| Rendimiento del vidrio en la laptop de la demo | Medido en Windows con GPU: cuadro más largo de 19 ms en las transiciones. Si la laptop de la demo es otra, conviene repetir la prueba. |
 | El cerrojo del servo choca con el gancho si la tapa se cierra trabada | Sin revisar en el diseño 3D. |
 
 ## 8. Cómo retomar con Claude Code
@@ -164,4 +166,4 @@ Entra a la carpeta:
 cd PIA_RDP
 ```
 
-Abre la carpeta en VS Code e inicia Claude Code con Fable 5.2. Para empezar el sistema, pega `docs/PROMPT_FABLE_5_2.md`. Para pulir primero la maqueta, pide algo como: "Lee `docs/ESTADO_DEL_PROYECTO.md` y arregla los pendientes 1 a 4 de la sección 4".
+Abre la carpeta en VS Code e inicia Claude Code con Fable 5.2. Para empezar el sistema, pega `docs/PROMPT_FABLE_5_2.md`. La maqueta ya está terminada; para verla, abre `docs/maqueta/acceso_biometrico.html` con doble clic.
