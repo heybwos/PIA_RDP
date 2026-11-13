@@ -80,7 +80,7 @@ Es un solo HTML que se abre con doble clic, sin servidor ni internet. Muestra la
 
 **Cambiar de fondo:** en la línea 2 del HTML, `data-fondo="a"` pasa a `"b"`. Está elegido el A.
 
-**Link publicado:** https://claude.ai/artifact/ByghMje85waN9nQ8px4T8r. **Todavía muestra la versión anterior al rediseño.**
+**Link publicado:** https://claude.ai/artifact/ByghMje85waN9nQ8px4T8r. Muestra la versión final (rediseño y cierre), con las fuentes Inter y JetBrains Mono publicadas junto a la página. Es privado: para que otros lo abran hay que compartirlo desde el menú Share de la página.
 
 ## 4. Estado de la maqueta (rediseño y cierre)
 
