@@ -761,6 +761,17 @@ Solo las que cambian el plan. Cada una trae lo que se hará si no hay respuesta.
 3. **¿Puedes pasarle a la nube imágenes reales de tu propia huella?** Hacen falta unas 10 o 20 capturas del AS608 para ajustar los parámetros en N7. Son un dato biométrico tuyo y el repositorio está en GitHub: no las subas si el repositorio es público. **Si no:** el ajuste se hace en tu PC con `explorar_parametros.py`, que es más lento y más a ciegas. Las huellas de tus compañeros no salen de tu PC en ningún caso.
 4. **¿Cuántas personas van a aparecer en la demo y cuándo están disponibles para registrarse?** Lo ideal es registrarlas el domingo en la tarde. **Si no hay respuesta:** se registra solo a ti con dos IDs (nivel 1 con un dedo, nivel 2 con otro) y el impostor se demuestra con otro dedo y con la cara de otra persona.
 
+### Respuestas del usuario (13 de noviembre)
+
+1. **Hosts abiertos.** Esta sesión ya usa un entorno con acceso a los servidores de PlatformIO (comprobado: responde), a `ndownloader.figshare.com` y a `figshare.com` (comprobado: Olivetti/ORL se descarga). Para bajar Olivetti hace falta además el host de almacenamiento al que redirige figshare (`*.r2.cloudflarestorage.com`); hoy sí respondió. **FVC2002 sigue sin bajar:** `bias.csr.unibo.it` falla por su certificado TLS en https y no responde por http. Para FVC2002 sigue valiendo el plan: descarga manual en la PC o el banco sintético. No se desactiva la verificación TLS.
+2. **Hora de entrega:** sin confirmar. Se mantiene el plan: el código se congela el lunes a las 18:00.
+3. **El repositorio era público y el usuario lo hará privado.** Mientras sea público, no se suben huellas ni caras reales. Cuando sea privado, se pueden subir de 10 a 20 capturas de huella de un solo integrante que dé su permiso, en `pc/tests/fixtures/as608/`, para ajustar los parámetros. Los datos de los demás nunca salen de la PC.
+4. **Son 6 personas en la demo.**
+   - **Registro:** unos 2 minutos por persona (5 huellas y 15 cuadros), unos 15 minutos en total. Se hace el domingo en la tarde.
+   - **Prueba de aceptación P6:** 60 intentos genuinos y 60 de impostor, unos 40 minutos. Si no hay tiempo, 5 y 5 por persona.
+   - **Rostro:** con 6 personas, la estimación de FAR mejora, aunque sigue siendo débil.
+   - **IDs y niveles:** se reparten entre nivel 1 y nivel 2.
+
 ### Decisiones que tomé sin preguntar (y por qué)
 
 - **Dos compuertas en lugar de visto bueno por fase** (C2): cada parada cuesta horas.
