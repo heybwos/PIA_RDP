@@ -21,10 +21,23 @@ class CamaraError(RuntimeError):
         self.que_revisar = que_revisar
 
 
+ROTACIONES = {0: None, 90: cv2.ROTATE_90_CLOCKWISE, 180: cv2.ROTATE_180, 270: cv2.ROTATE_90_COUNTERCLOCKWISE}
+
+
+def rotar(img: np.ndarray, grados: int) -> np.ndarray:
+    """Gira en sentido horario. Con el celular en vertical, DroidCam suele mandar el cuadro de lado."""
+    r = ROTACIONES.get(int(grados) % 360)
+    return img if r is None else cv2.rotate(img, r)
+
+
 class Camara:
     fuente = "camara"
+    rotacion = 0
 
     def capturar(self) -> np.ndarray:
+        return rotar(self._capturar(), self.rotacion)
+
+    def _capturar(self) -> np.ndarray:
         raise NotImplementedError
 
     def cerrar(self) -> None:
@@ -64,6 +77,17 @@ def _leer_mjpeg(url: str, limite_s: float = 5.0) -> np.ndarray:
     raise TimeoutError("sin cuadro JPEG completo")
 
 
+def _ocupado(url: str) -> bool:
+    """DroidCam responde una página HTML "DroidCam is Busy" cuando ya tiene un cliente."""
+    try:
+        with urllib.request.urlopen(url, timeout=3) as r:
+            if "text/html" in r.headers.get("Content-Type", ""):
+                return b"Busy" in r.read(4096)
+    except Exception:  # noqa: BLE001
+        pass
+    return False
+
+
 class CamaraURL(Camara):
     """DroidCam: http://<IP>:4747/video. Se queda con el cuadro más reciente."""
 
@@ -71,7 +95,7 @@ class CamaraURL(Camara):
         self.url = url
         self.cap: cv2.VideoCapture | None = None
 
-    def capturar(self) -> np.ndarray:
+    def _capturar(self) -> np.ndarray:
         if self.cap is None:
             cap = cv2.VideoCapture(self.url)
             self.cap = cap if cap.isOpened() else False  # False = usar el lector propio
@@ -81,10 +105,16 @@ class CamaraURL(Camara):
             ok, img = self.cap.retrieve()
             if ok and img is not None:
                 return img
+            # DroidCam acepta un solo cliente: se suelta antes de probar el lector propio
+            self.cap.release()
+            self.cap = False
         try:
             return _leer_mjpeg(self.url)
         except Exception as e:  # noqa: BLE001
-            raise CamaraError(f"La cámara no responde en {self.url}: {e}",
+            ocupado = _ocupado(self.url)
+            raise CamaraError(f"La cámara no responde en {self.url}: {'DroidCam está ocupado' if ocupado else e}",
+                              "DroidCam acepta un solo cliente: cierra la pestaña del navegador o el cliente de "
+                              "PC que lo esté usando, o reinicia la app en el celular." if ocupado else
                               "Abre DroidCam en el celular, misma red WiFi, y revisa la IP y el puerto "
                               "en config.toml ([camara].url). Prueba la URL en el navegador.") from e
 
@@ -97,7 +127,7 @@ class CamaraIndice(Camara):
     def __init__(self, indice: int):
         self.cap = cv2.VideoCapture(indice)
 
-    def capturar(self) -> np.ndarray:
+    def _capturar(self) -> np.ndarray:
         ok, img = self.cap.read() if self.cap.isOpened() else (False, None)
         if not ok:
             raise CamaraError("La cámara por índice no entrega cuadros",
@@ -112,6 +142,6 @@ def desde_config(cfg) -> Camara:
     fuente = cfg.valor("camara.fuente", "url")
     if fuente == "archivo":  # pruebas: una imagen fija de un dataset
         return CamaraArchivo(cfg.valor("camara.archivo"), cfg.valor("camara.fuente_archivo", "orl"))
-    if fuente == "indice":
-        return CamaraIndice(int(cfg.valor("camara.indice", 0)))
-    return CamaraURL(cfg.valor("camara.url"))
+    cam = CamaraIndice(int(cfg.valor("camara.indice", 0))) if fuente == "indice" else CamaraURL(cfg.valor("camara.url"))
+    cam.rotacion = int(cfg.valor("camara.rotacion", 0))
+    return cam

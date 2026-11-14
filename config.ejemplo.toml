@@ -14,6 +14,7 @@ banco_simular = "fvc2002"  # "fvc2002" o "sintetico"
 fuente = "url"             # "url", "indice" o "dataset"
 url = "http://192.168.1.50:4747/video"
 indice = 1
+rotacion = 0              # 0, 90, 180 o 270 (horario). Celular en vertical con DroidCam: probar_camara.py la detecta
 rostro_simular = "dataset" # "dataset" o "camara"
 
 [decision]

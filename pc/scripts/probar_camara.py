@@ -39,14 +39,19 @@ def lamina(cuadro: np.ndarray, r: rostro.ResultadoRostro) -> np.ndarray:
     return np.hstack([img, np.vstack([cara, norm])])
 
 
-def guardar_url(url: str) -> None:
+def guardar_url(url: str, rotacion: int | None) -> None:
     ruta = config.RAIZ / "config.toml"
     config.cargar()  # crea config.toml desde el ejemplo si no existe
     texto = ruta.read_text("utf-8")
     texto = re.sub(r'(?m)^url\s*=\s*".*?"', f'url = "{url}"', texto, count=1)
     texto = re.sub(r'(?m)^fuente\s*=\s*"(url|indice|dataset|archivo)"', 'fuente = "url"', texto, count=1)
+    if rotacion is not None:
+        if re.search(r"(?m)^rotacion\s*=", texto):
+            texto = re.sub(r"(?m)^rotacion\s*=\s*\d+", f"rotacion = {rotacion}", texto, count=1)
+        else:
+            texto = re.sub(r"(?m)^(url\s*=.*)$", rf"\1\nrotacion = {rotacion}", texto, count=1)
     ruta.write_text(texto, "utf-8")
-    print(f"config.toml: [camara] url = {url}")
+    print(f"config.toml: [camara] url = {url}" + (f", rotacion = {rotacion}" if rotacion is not None else ""))
 
 
 def main() -> int:
@@ -55,7 +60,8 @@ def main() -> int:
     ap.add_argument("--url")
     ap.add_argument("--indice", type=int)
     ap.add_argument("--segundos", type=float, default=6.0)
-    ap.add_argument("--guardar-url", action="store_true")
+    ap.add_argument("--guardar-url", action="store_true", help="guarda la URL y la mejor rotación en config.toml")
+    ap.add_argument("--rotacion", type=int, choices=[0, 90, 180, 270], help="fija la rotación en lugar de probar las cuatro")
     args = ap.parse_args()
     cfg = config.cargar()
     if args.indice is not None:
@@ -64,38 +70,43 @@ def main() -> int:
         url = args.url or cfg.valor("camara.url")
         cam, origen = camara.CamaraURL(url), url
     print(f"Leyendo {origen} durante {args.segundos:.0f} s. Mira a la cámara de frente.")
-    n = con_rostro = con_ojos = 0
-    tiempos, ultimo = [], None
+    crudos, lecturas = [], []
     fin = time.monotonic() + args.segundos
     try:
         while time.monotonic() < fin:
             t0 = time.perf_counter()
-            cuadro = cam.capturar()
-            t1 = time.perf_counter()
-            r = rostro.procesar(cuadro, permitir_relleno=False)
-            n += 1
-            con_rostro += r.hay_rostro
-            con_ojos += len(r.deteccion.ojos) == 2
-            tiempos.append(((t1 - t0) * 1000, r.duracion_ms))
-            if r.hay_rostro or ultimo is None:
-                ultimo = (cuadro, r)
+            crudos.append(cam._capturar())  # sin rotar: se prueban las cuatro orientaciones abajo
+            lecturas.append((time.perf_counter() - t0) * 1000)
     except camara.CamaraError as e:
         print(f"ERROR: {e}\n  Qué revisar: {e.que_revisar}")
         return 2
     finally:
         cam.cerrar()
+    muestra = crudos[:: max(1, len(crudos) // 20)]  # hasta ~20 cuadros por orientación
+    mejor = None
+    print(f"Cuadros: {len(crudos)} de {crudos[0].shape[1]} x {crudos[0].shape[0]}. Por orientación ({len(muestra)} cuadros):")
+    for g in ([args.rotacion] if args.rotacion is not None else [0, 90, 180, 270]):
+        res = [rostro.procesar(camara.rotar(c, g), permitir_relleno=False) for c in muestra]
+        ojos = sum(len(r.deteccion.ojos) == 2 for r in res)
+        caras = sum(r.hay_rostro for r in res)
+        print(f"  rotación {g:3d}°: rostro {caras}/{len(res)}, con los dos ojos {ojos}/{len(res)}")
+        clave = (ojos, caras)
+        if mejor is None or clave > mejor[0]:
+            ultimo = next(((camara.rotar(c, g), r) for c, r in zip(muestra, res) if len(r.deteccion.ojos) == 2),
+                          next(((camara.rotar(c, g), r) for c, r in zip(muestra, res) if r.hay_rostro),
+                               (camara.rotar(muestra[-1], g), res[-1])))
+            mejor = (clave, g, np.mean([r.duracion_ms for r in res]))
+    (ojos, caras), rot, proc = mejor
     cuadro, r = ultimo
-    h, w = cuadro.shape[:2]
-    lect = np.mean([t[0] for t in tiempos])
-    proc = np.mean([t[1] for t in tiempos])
-    print(f"Cuadros: {n} de {w} x {h}. Con rostro: {con_rostro} ({con_rostro / n:.0%}). Con los dos ojos: {con_ojos}.")
-    print(f"Tiempo medio: lectura {lect:.0f} ms, Viola-Jones + alineación + normalización {proc:.0f} ms.")
+    print(f"Mejor orientación: {rot}° (rostro con ojos en {ojos} de {len(muestra)}).")
+    print(f"Tiempo medio: lectura {np.mean(lecturas):.0f} ms, Viola-Jones + alineación + normalización {proc:.0f} ms.")
+    con_rostro = caras
     destino = config.cargar().carpeta_datos / "pruebas" / f"camara_{datetime.now():%Y%m%d_%H%M%S}.png"
     destino.parent.mkdir(parents=True, exist_ok=True)
     cv2.imencode(".png", lamina(cuadro, r))[1].tofile(str(destino))
     print(f"Último cuadro con rostro: {destino}")
     if args.guardar_url and args.url:
-        guardar_url(args.url)
+        guardar_url(args.url, rot if ojos else None)
     return 0 if con_rostro else 1
 
 
