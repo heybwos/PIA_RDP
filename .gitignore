@@ -1,0 +1,16 @@
+# Datos biométricos y capturas: nunca van al repositorio
+datos/
+
+# Configuración local (se sube config.ejemplo.toml)
+config.toml
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# PlatformIO
+.pio/
+firmware/.pio/
+.vscode/.browse*

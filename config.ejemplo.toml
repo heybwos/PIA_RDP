@@ -1,0 +1,35 @@
+# Copia de ejemplo. Al arrancar, si no existe config.toml, se copia este archivo.
+# config.toml es local y no se sube a git.
+
+[serie]
+puerto = "auto"            # "COM5", "auto" o "socket://127.0.0.1:5333" (ESP32 falso)
+baudios = 921600           # si el adaptador USB falla, 115200 (y lo mismo en firmware/src/config.h)
+
+[huella]
+fuente_esp32 = "sensor"    # "sensor" o "banco" (plan B)
+nibble_alto_primero = true # se decide en la compuerta G1 mirando los dos PNG
+banco_simular = "fvc2002"  # "fvc2002" o "sintetico"
+
+[camara]
+fuente = "url"             # "url", "indice" o "dataset"
+url = "http://192.168.1.50:4747/video"
+indice = 1
+rostro_simular = "dataset" # "dataset" o "camara"
+
+[decision]
+peso_huella = 0.5
+peso_rostro = 0.5
+umbral_factor = 0.50
+umbral_fusion = 0.60
+
+[registro]
+capturas_huella = 5
+cuadros_rostro = 15
+
+[actuadores]
+ms_entre_servos = 300
+ms_abierto = 8000
+
+[datos]
+carpeta = "datos"
+guardar_intentos = true
