@@ -256,6 +256,15 @@ Regla para la sesión de la nube: al terminar cada bloque, commit y push a `clau
   5. (PC) Activar la calibración (`--activar`) y hacer 10 intentos genuinos y 10 de impostor por persona. Anotar aciertos.
 - **Terminado cuando:** hay una calibración activa por factor para los dominios `as608` y `camara`, y en la tanda de 20 intentos no pasa ningún impostor. Se acepta un rechazo falso de hasta 2 de cada 10 (se reintenta en la demo).
 - **Recorte:** si el EER de huella con el AS608 sale mayor de 15 %, no se sigue afinando el algoritmo: se suben las capturas de registro a 5, se usa el máximo de los puntajes contra todas las plantillas y se elige el umbral con FAR = 0 en el banco, aceptando más rechazos falsos. Se reporta el número tal cual.
+- **Estado (14 de noviembre, hecho en la PC):** perfil `as608` ajustado con `explorar_parametros.py` (CLAHE, umbral de varianza 0.004, distancia mínima 6; EER 34 % → 16.7 %). Calibraciones activas: huella `as608` umbral 0.180 (FAR 0, FRR 33 %; banco de 6 dedos de **una sola persona**, 18 genuinos y 90 impostores) y rostro `camara` umbral 8.511 (FAR 0, FRR 10 %; 10 genuinos de la segunda tanda del usuario 21 y 160 impostores **de ORL**, no de cámara). Usuario 21 registrado (5 huellas, 15 caras).
+- **PENDIENTE: recalibrar cuando se sumen los compañeros.** Las dos calibraciones de arriba son provisionales: el banco de huellas es de una sola persona y los impostores de rostro son del dataset. Cuando el usuario diga que se agregan huellas y fotos de sus compañeros, en este orden:
+  1. Firmware `test_huella_imagen`. Banco: `python pc/scripts/capturar_banco.py --puerto COM4 --dedos <n> --capturas 8`, nombres `<persona>_<dedo>` (cada dedo es una identidad).
+  2. Revisar si el perfil sigue siendo el mejor: `python pc/scripts/explorar_parametros.py`. Si otra combinación gana con claridad, cambiar `as608` en `pc/pia/huella/parametros.py` y **volver a extraer las plantillas de los ya registrados** (`respaldo.py reprocesar`, todavía no existe: hasta entonces, borrar y volver a registrar).
+  3. `python pc/scripts/calibrar.py --factor huella --dominio as608 --activar` (con `--criterio far0` si el EER sigue arriba de 15 %).
+  4. Registrar a cada compañero: `python pc/scripts/registrar.py --id <ID> --nombre "<nombre>" --nivel <1|2> --puerto COM4 --fuente-rostro camara` (misma luz y lugar que la demo). Cada alta reentrena el modelo `camara` y deja la calibración de rostro "anterior al último modelo".
+  5. Segunda tanda de cada uno, minutos después: `python pc/scripts/capturar_rostros.py --id <ID>`.
+  6. `python pc/scripts/calibrar.py --factor rostro --dominio camara --criterio far0 --activar`: ahora los impostores incluyen caras reales de cámara (cada compañero contra los demás), no solo ORL.
+  7. Repetir la prueba de aceptación de P6 (10 intentos genuinos y 10 de impostor por persona) y anotar los números para el reporte.
 
 #### N8a. Vista Registro en la app. Nube, domingo, solo si G2 se cumplió a tiempo
 
