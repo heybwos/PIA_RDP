@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calibración de servos</title>
+<link rel="icon" href="../icons/lock-keyhole.svg" type="image/svg+xml">
+<style>
+/* Herramienta de P4.5: elige el ángulo de cerrado y de abierto de cada servo.
+   Habla directo con el ESP32 por Web Serial (Edge o Chrome) y el firmware test_servos. */
+@font-face{font-family:"Inter";font-weight:400;src:url("../fonts/inter-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"Inter";font-weight:600;src:url("../fonts/inter-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"JetBrains Mono";font-weight:500;src:url("../fonts/jetbrains-mono-latin-500-normal.woff2") format("woff2")}
+:root{--fondo:#0E0E10;--panel:#1C1C1E;--panel2:#2C2C2E;--linea:#3A3A3C;--texto:#F2F2F7;--gris:rgba(235,235,245,.62);
+  --acento:#5FCF8F;--acento-osc:#1F9F5C;--aviso:#FF9230;--no:#FF4245;--azul:#64A8FF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fondo);color:var(--texto);font:15px/1.45 Inter,system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:24px 16px 40px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;margin-bottom:18px}
+h1{font-size:22px;font-weight:600;margin:0;flex:1 1 auto}
+.sub{color:var(--gris);font-size:13px;margin:4px 0 0}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:var(--panel2);font-size:13px;color:var(--gris)}
+.chip.ok{color:var(--acento)} .chip.no{color:var(--no)}
+.chip i{width:8px;height:8px;border-radius:50%;background:currentColor}
+button{font:inherit;border:0;border-radius:10px;padding:9px 14px;background:var(--panel2);color:var(--texto);cursor:pointer}
+button:hover:not(:disabled){background:#3A3A3C}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.pri{background:var(--acento-osc);font-weight:600} button.pri:hover:not(:disabled){background:#23B068}
+button:focus-visible,input:focus-visible{outline:2px solid var(--azul);outline-offset:2px}
+.aviso{background:rgba(255,146,48,.12);border:1px solid rgba(255,146,48,.35);color:#FFC48A;border-radius:12px;padding:10px 14px;margin-bottom:16px;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:18px}
+.card h2{font-size:17px;margin:0;font-weight:600}
+.card .meta{color:var(--gris);font-size:12.5px;font-family:"JetBrains Mono",monospace}
+.angulo{font-family:"JetBrains Mono",monospace;font-size:44px;font-weight:500;margin:10px 0 2px;letter-spacing:-.5px}
+.angulo small{font-size:18px;color:var(--gris)}
+input[type=range]{width:100%;accent-color:var(--acento);margin:10px 0 6px}
+.fila{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.fila button{padding:7px 11px;font-family:"JetBrains Mono",monospace;font-size:13px}
+input[type=number]{width:78px;font:500 15px "JetBrains Mono",monospace;background:var(--panel2);color:var(--texto);border:1px solid var(--linea);border-radius:8px;padding:6px 8px}
+.marcas{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.marca{background:var(--panel2);border-radius:12px;padding:10px 12px}
+.marca .k{font-size:12px;color:var(--gris)}
+.marca .v{font:500 22px "JetBrains Mono",monospace;margin:2px 0 8px}
+.marca .v.vacio{color:var(--gris)}
+.marca .fila button{flex:1 1 auto}
+.cerrado .k{color:#FFB3B4} .abierto .k{color:#9FE6BF}
+.salida{margin-top:16px}
+textarea{width:100%;min-height:72px;resize:vertical;background:var(--panel2);color:var(--texto);border:1px solid var(--linea);border-radius:10px;padding:10px;font:500 14px "JetBrains Mono",monospace}
+.log{margin-top:16px;background:#000;border-radius:12px;padding:10px 12px;height:140px;overflow:auto;font:12.5px "JetBrains Mono",monospace;color:#B8F5C9}
+.log .out{color:var(--azul)} .log .err{color:#FF8A8C}
+.pasos{color:var(--gris);font-size:14px;margin:0 0 16px;padding-left:20px}
+@media (max-width:520px){.angulo{font-size:36px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div style="flex:1 1 260px">
+      <h1>Calibración de servos</h1>
+      <p class="sub">Elige el ángulo de <b>cerrado</b> y de <b>abierto</b> de cada compartimento. Necesita el firmware <span style="font-family:'JetBrains Mono'">test_servos</span>.</p>
+    </div>
+    <span class="chip no" id="estado"><i></i><span id="estadoTxt">Sin conectar</span></span>
+    <button class="pri" id="conectar">Conectar ESP32</button>
+  </header>
+
+  <div class="aviso" id="sinSerial" hidden>Este navegador no tiene Web Serial. Abre la página en <b>Microsoft Edge</b> o <b>Google Chrome</b>.</div>
+  <ol class="pasos">
+    <li>Cierra cualquier monitor serie (PlatformIO, Arduino) y pulsa <b>Conectar ESP32</b>; elige el puerto USB-SERIAL CH340.</li>
+    <li>Mueve el deslizador de un servo hasta que el cerrojo quede trabado y pulsa <b>Marcar como cerrado</b>. Luego hasta que libere el gancho y pulsa <b>Marcar como abierto</b>.</li>
+    <li>Pulsa <b>Probar los dos</b>: abre y cierra el 1 y luego el 2, uno a la vez. Copia el texto de abajo y pásamelo.</li>
+  </ol>
+
+  <div class="grid" id="servos"></div>
+
+  <div class="card salida">
+    <div class="fila" style="justify-content:space-between">
+      <h2>Resultado</h2>
+      <div class="fila">
+        <button id="probar" disabled>Probar los dos</button>
+        <button id="copiar">Copiar</button>
+      </div>
+    </div>
+    <p class="sub" id="motivo">Motivo del último reinicio: —</p>
+    <textarea id="resultado" readonly aria-label="Ángulos elegidos"></textarea>
+    <div class="log" id="log" aria-live="polite"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const SERVOS=[{n:1,gpio:18,nombre:'Compartimento 1 · Lector'},{n:2,gpio:19,nombre:'Compartimento 2 · Editor'}];
+let marcas={1:{cerrado:null,abierto:null},2:{cerrado:null,abierto:null}};
+try{const g=JSON.parse(localStorage.getItem('pia.servos')||'null');if(g&&g[1]&&g[2])marcas=g}catch(e){}
+let puerto=null, escritor=null, conectado=false;
+
+function log(t,cls=''){const d=document.createElement('div');d.textContent=t;if(cls)d.className=cls;const l=$('#log');l.appendChild(d);
+  while(l.children.length>200)l.removeChild(l.firstChild);l.scrollTop=l.scrollHeight}
+function guardar(){try{localStorage.setItem('pia.servos',JSON.stringify(marcas))}catch(e){}}
+function textoResultado(){return SERVOS.map(s=>`Servo ${s.n} (GPIO${s.gpio}): cerrado ${marcas[s.n].cerrado??'?'}°, abierto ${marcas[s.n].abierto??'?'}°`).join('\n')}
+function pintar(){
+  for(const s of SERVOS){for(const k of ['cerrado','abierto']){const v=marcas[s.n][k],el=$(`#v${k}${s.n}`);
+      el.textContent=v==null?'sin marcar':v+'°';el.classList.toggle('vacio',v==null);$(`#ir${k}${s.n}`).disabled=!conectado||v==null}}
+  const listo=SERVOS.every(s=>marcas[s.n].cerrado!=null&&marcas[s.n].abierto!=null);
+  $('#probar').disabled=!conectado||!listo;
+  $('#resultado').value=textoResultado();
+  document.querySelectorAll('.mover').forEach(b=>b.disabled=!conectado);
+  document.querySelectorAll('input[type=range],input[type=number]').forEach(i=>i.disabled=!conectado);
+}
+
+/* tarjetas */
+$('#servos').innerHTML=SERVOS.map(s=>`
+  <section class="card" aria-labelledby="h${s.n}">
+    <h2 id="h${s.n}">Servo ${s.n}</h2>
+    <div class="meta">${s.nombre} · GPIO${s.gpio}</div>
+    <div class="angulo" id="a${s.n}">90<small>°</small></div>
+    <input type="range" min="0" max="180" step="1" value="90" id="r${s.n}" aria-label="Ángulo del servo ${s.n}">
+    <div class="fila">
+      <button class="mover" data-s="${s.n}" data-d="-5">−5</button><button class="mover" data-s="${s.n}" data-d="-1">−1</button>
+      <input type="number" min="0" max="180" value="90" id="n${s.n}" aria-label="Ángulo exacto del servo ${s.n}">
+      <button class="mover" data-s="${s.n}" data-d="1">+1</button><button class="mover" data-s="${s.n}" data-d="5">+5</button>
+    </div>
+    <div class="marcas">
+      <div class="marca cerrado"><div class="k">Cerrado</div><div class="v vacio" id="vcerrado${s.n}">sin marcar</div>
+        <div class="fila"><button class="mover" data-marcar="cerrado" data-s="${s.n}">Marcar como cerrado</button><button id="ircerrado${s.n}" data-ir="cerrado" data-s="${s.n}">Ir</button></div></div>
+      <div class="marca abierto"><div class="k">Abierto</div><div class="v vacio" id="vabierto${s.n}">sin marcar</div>
+        <div class="fila"><button class="mover" data-marcar="abierto" data-s="${s.n}">Marcar como abierto</button><button id="irabierto${s.n}" data-ir="abierto" data-s="${s.n}">Ir</button></div></div>
+    </div>
+  </section>`).join('');
+
+/* mover: solo el servo que se toca, con un envío cada 60 ms como máximo */
+const actual={1:90,2:90}, pendiente={}, ultimo={1:0,2:0};
+function fijar(n,v,enviar=true){v=Math.max(0,Math.min(180,Math.round(v)));actual[n]=v;
+  $(`#a${n}`).innerHTML=`${v}<small>°</small>`;$(`#r${n}`).value=v;$(`#n${n}`).value=v;
+  if(!enviar||!conectado)return;
+  const ahora=performance.now();clearTimeout(pendiente[n]);
+  const ir=()=>{ultimo[n]=performance.now();tx(`M ${n} ${actual[n]}`)};
+  if(ahora-ultimo[n]>60)ir();else pendiente[n]=setTimeout(ir,60)}
+for(const s of SERVOS){
+  $(`#r${s.n}`).addEventListener('input',e=>fijar(s.n,+e.target.value));
+  $(`#n${s.n}`).addEventListener('change',e=>fijar(s.n,+e.target.value));
+}
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!b.dataset.s)return;const n=+b.dataset.s;
+  if(b.dataset.d) fijar(n,actual[n]+(+b.dataset.d));
+  if(b.dataset.marcar){marcas[n][b.dataset.marcar]=actual[n];guardar();pintar();log(`Servo ${n}: ${b.dataset.marcar} = ${actual[n]}°`)}
+  if(b.dataset.ir){const v=marcas[n][b.dataset.ir];if(v!=null)fijar(n,v)}});
+
+/* Web Serial */
+async function tx(t){if(!escritor)return;log('> '+t,'out');await escritor.write(new TextEncoder().encode(t+'\n'))}
+async function leer(){
+  const dec=new TextDecoderStream(); puerto.readable.pipeTo(dec.writable).catch(()=>{});
+  const r=dec.readable.getReader(); let buf='';
+  try{while(true){const {value,done}=await r.read();if(done)break;buf+=value;let i;
+    while((i=buf.indexOf('\n'))>=0){const l=buf.slice(0,i).replace(/[^\x20-\x7E°áéíóúñ]/g,'').trim();buf=buf.slice(i+1);if(!l)continue;
+      log(l,l.startsWith('ERR')?'err':'');
+      const m=l.match(/Motivo del ultimo reinicio: (.*)$/);if(m){$('#motivo').textContent='Motivo del último reinicio: '+m[1];
+        if(/BROWNOUT/.test(m[1]))log('Hubo un brownout: pon el capacitor de 470 µF o una fuente de 5 V y 2 A con tierras unidas.','err')}}}}
+  catch(e){log('Lectura detenida: '+e.message,'err')}
+  finally{desconectado()}
+}
+function desconectado(){conectado=false;escritor=null;$('#estado').className='chip no';$('#estadoTxt').textContent='Sin conectar';$('#conectar').disabled=false;pintar()}
+$('#conectar').addEventListener('click',async()=>{
+  try{
+    puerto=await navigator.serial.requestPort();
+    await puerto.open({baudRate:921600});
+    escritor=puerto.writable.getWriter(); conectado=true;
+    $('#estado').className='chip ok';$('#estadoTxt').textContent='Conectado';$('#conectar').disabled=true;
+    log('Conectado. Ningún servo se mueve hasta que toques un control.');
+    leer(); pintar(); setTimeout(()=>tx('?'),1500);
+  }catch(e){log('No se pudo conectar: '+e.message+'. ¿Está abierto un monitor serie?','err')}
+});
+$('#probar').addEventListener('click',()=>{const m=marcas;tx(`P ${m[1].cerrado} ${m[1].abierto} ${m[2].cerrado} ${m[2].abierto}`)});
+$('#copiar').addEventListener('click',async()=>{const t=textoResultado();
+  try{await navigator.clipboard.writeText(t);log('Copiado.')}catch(e){$('#resultado').select();log('Selecciona el texto y cópialo con Ctrl+C.')}});
+if(!('serial' in navigator)){$('#sinSerial').hidden=false;$('#conectar').disabled=true}
+pintar();
+</script>
+</body>
+</html>

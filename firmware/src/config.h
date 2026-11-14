@@ -22,5 +22,7 @@ constexpr uint32_t MS_FASE_PIN = 30000;      // tiempo límite para teclear ID y
 constexpr uint32_t MS_FASE_PC = 60000;       // tiempo límite esperando a la PC (rostro, decisión)
 constexpr uint32_t MS_ENTRE_SERVOS = 300;    // nunca dos servos a la vez
 constexpr uint32_t MS_ABIERTO = 8000;        // cierre automático
+// Medido en P4.5 el 14 de noviembre con app/herramientas/servos.html: los dos servos
+// traban el cerrojo a 0° y liberan el gancho a 90°.
 constexpr int ANG_CERRADO = 0;
 constexpr int ANG_ABIERTO = 90;
