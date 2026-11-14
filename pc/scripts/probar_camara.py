@@ -44,7 +44,9 @@ def vista_en_vivo(cam: camara.Camara, rot: int, segundos: float) -> list[np.ndar
     Espacio: mide durante `segundos` y devuelve esos cuadros (sin rotar). Q o Esc: sale."""
     titulo = "PIA - camara (Espacio: medir, Q: salir)"
     cv2.namedWindow(titulo, cv2.WINDOW_NORMAL)
-    midiendo, fin, crudos = False, 0.0, []
+    cv2.setWindowProperty(titulo, cv2.WND_PROP_TOPMOST, 1)  # al frente: si no, queda detrás de otras ventanas
+    print("Abriendo la ventana 'PIA - camara'... (si no la ves, búscala en la barra de tareas)", flush=True)
+    midiendo, fin, crudos, primero = False, 0.0, [], True
     try:
         while True:
             crudo = cam._capturar()
@@ -70,6 +72,9 @@ def vista_en_vivo(cam: camara.Camara, rot: int, segundos: float) -> list[np.ndar
             alto = 900
             esc = min(1.0, alto / img.shape[0])
             cv2.imshow(titulo, cv2.resize(img, None, fx=esc, fy=esc))
+            if primero:
+                print(f"Primer cuadro: {img.shape[1]} x {img.shape[0]}. Ventana abierta.", flush=True)
+                primero = False
             k = cv2.waitKey(1) & 0xFF
             if k in (27, ord("q"), ord("Q")):
                 return None
