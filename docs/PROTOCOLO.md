@@ -38,6 +38,7 @@ El CRC va **al final** porque el ESP32 no lo conoce hasta recibir la imagen comp
 - **Imagen:** 256 × 288 píxeles, 4 bits por píxel: 36,864 bytes, dos píxeles por byte, fila por fila de arriba abajo.
 - **Orden de nibbles:** lo decide la PC (`huella.nibble_alto_primero` en `config.toml`). El ESP32 no toca los datos.
 - **Firmware de prueba (`test_huella_imagen`):** junta la imagen completa en RAM y luego la manda, para que `<bytes>` sea el número real de bytes recibidos del sensor (diagnóstico de G1-B). El firmware principal la reenvía por partes conforme llega.
+- **Si el sensor entrega menos bytes (firmware principal):** el marco se respeta igual: se rellena con ceros hasta `<bytes>` y se manda el CRC **invertido**, para que la PC descarte la imagen sin perder la sincronía.
 - **Lectura en la PC:** tras `IMG:<bytes>` el lector pasa a modo binario, lee exactamente `<bytes>` con tiempo límite por bloque, y vuelve a modo línea. Si se corta o el CRC no coincide, descarta la imagen, manda `RESET` y lo reporta.
 
 ## PC → ESP32
@@ -48,14 +49,18 @@ El CRC va **al final** porque el ESP32 no lo conoce hasta recibir la imagen comp
 | `PEDIR_PIN` | Empieza la captura de ID y PIN. |
 | `PEDIR_HUELLA` | Empieza la captura de huella (`HUELLA:ESPERA` … `IMG:FIN`). |
 | `ACCESO:0\|1\|2` | Decisión: LED rojo, o LED verde y compartimento 1, o los dos. |
-| `CONFIG:<clave>:<valor>` | Tiempos de servo y de fase. |
+| `CONFIG:<clave>:<valor>` | `ms_servos` (entre un servo y otro), `ms_abierto` (cierre automático), `ang_abierto` (grados). Responde `OK:CONFIG:<clave>`. La PC los manda al conectar. |
 | `RESET` | Vuelve al estado inicial y responde `HOLA`. |
 | `PING` | Responde `PONG`. |
 | `PARAMS` | Solo en `test_huella_imagen`: vuelve a imprimir los parámetros del sensor. |
 
-## Vida
+## Vida y seguridad (firmware principal, `esp32dev`)
 
-`PING` de la PC cada segundo. Sin `PING` por 5 s (fuera de una transferencia de imagen), el ESP32 pasa a estado seguro: servos cerrados, LED rojo apagado, OLED "Sin conexion".
+- `PING` de la PC cada segundo (la PC no lo manda durante una imagen). Sin `PING` por 5 s, el ESP32 pasa a estado seguro: servos cerrados, **LED rojo encendido**, OLED "Sin conexion / con la PC", teclado ignorado. Al volver el `PING`, regresa a reposo.
+- Servos a cerrado en `setup()`, antes que nada.
+- La verificación empieza en el teclado: en reposo, la primera tecla arranca la captura de ID y PIN. `PEDIR_PIN` solo la reinicia.
+- Tiempos límite: 30 s para teclear ID y PIN (manda `CANCELA`), 15 s para poner el dedo (`HUELLA:ERR:TIEMPO`), 60 s esperando a la PC.
+- Tras `ACCESO:1|2`, los servos abren uno a la vez y se cierran solos tras `ms_abierto`. Tras `ACCESO:0`, LED rojo unos segundos y vuelve a reposo.
 
 ## Paquetes del AS608 (lado ESP32, a 57600 baudios)
 

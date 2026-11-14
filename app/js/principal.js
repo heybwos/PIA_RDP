@@ -37,7 +37,8 @@ async function procesar(){
 }
 /* si la cola crece, las animaciones se acortan: la animación nunca frena al pipeline */
 const _anim=anim, _wait=wait;
-anim=(ms,fn,id)=>_anim(cola.length>40?ms/4:ms,fn,id);
+/* con la pestaña oculta el navegador no corre requestAnimationFrame: se salta al final para no trabar la cola */
+anim=(ms,fn,id)=>document.hidden?(fn(1,1),Promise.resolve()):_anim(cola.length>40?ms/4:ms,fn,id);
 wait=(ms,id)=>_wait(cola.length>40?ms/4:ms,id);
 
 /* ---------- estado de la verificación en curso ---------- */
@@ -63,12 +64,37 @@ H.estado=m=>{
   if(m.escenarios.length){sel.innerHTML=m.escenarios.map(e=>`<option value="${e.clave}">${e.nombre}</option>`).join('');
     sel.value=m.escenarios.some(e=>e.clave===prev)?prev:'l2'}
   else sel.innerHTML='<option value="">Sin escenarios: corre sembrar_simular.py</option>';
-  $('#bancoTxt').textContent=`${(m.bancos.huella||'').toUpperCase()} · ${(m.bancos.rostro||'').toUpperCase()}`;
-  if(S.mode==='sim'){const chip=$('#connChip');chip.className='chip ok';$('#connTxt').textContent='Dispositivo simulado'}
-  S.running=!!m.ocupado; updateButtons();
+  const chip=$('#connChip');
+  if(m.modo==='esp32'&&typeof m.conexion==='object'){const c=m.conexion;
+    if(S.mode!=='esp32'){S.mode='esp32';$('#mSim').setAttribute('aria-pressed',false);$('#mEsp').setAttribute('aria-pressed',true);$('#espPanel').hidden=false}
+    chip.className='chip ok';chip.querySelector('.ic').outerHTML=ic('monitor');$('#connTxt').textContent=`ESP32 · ${c.puerto.replace('socket://','')} · v${c.version}`;
+    $('#bancoTxt').textContent='AS608 · '+(S.camara||'cámara');
+    $('#espMsg').innerHTML=`Conectado a <span class="mono">${c.puerto}</span> · firmware ${c.version} · sensor ${c.sensor?'OK':'<strong>ERR</strong>'} · OLED ${c.oled?'OK':'<strong>ERR</strong>'}. La verificación empieza al teclear el ID en la caja.`;
+  }else if(S.mode==='esp32'){chip.className='chip no';chip.querySelector('.ic').outerHTML=ic('unplug');$('#connTxt').textContent='ESP32 · sin conexión'}
+  else{$('#bancoTxt').textContent=`${(m.bancos.huella||'').toUpperCase()} · ${(m.bancos.rostro||'').toUpperCase()}`;
+    chip.className='chip ok';$('#connTxt').textContent='Dispositivo simulado'}
+  S.running=S.mode==='sim'&&!!m.ocupado; updateButtons();
+};
+H.puertos=m=>{
+  const sel=$('#port'), b=$('#scanBtn'); b.disabled=false; $('#scanTxt').textContent='Buscar ESP32';
+  /* un firmware de prueba (test_…) contesta HOLA pero no sabe verificar: se lista y no se conecta solo */
+  const prueba=p=>p.responde&&/^test_/.test(p.version||'');
+  const ok=m.puertos.filter(p=>p.responde&&!prueba(p));
+  if(!m.puertos.length){sel.innerHTML='<option>Ningún puerto detectado</option>';sel.disabled=true;
+    $('#espMsg').innerHTML='<strong>No hay puertos serie.</strong> Revisa el cable USB (que sea de datos) y el driver CP210x o CH340.';return}
+  sel.innerHTML=m.puertos.map(p=>`<option value="${p.puerto}"${p.responde&&!prueba(p)?'':' disabled'}>${p.puerto}${!p.responde?' · no contesta':prueba(p)?` · firmware de prueba (${p.version})`:` · v${p.version} · sensor ${p.sensor?'OK':'ERR'} · OLED ${p.oled?'OK':'ERR'}`}</option>`).join('');
+  sel.disabled=!ok.length;
+  if(!ok.length){$('#espMsg').innerHTML=m.puertos.some(prueba)
+      ?'<strong>La placa tiene un firmware de prueba.</strong> Carga el entorno principal (esp32dev) para verificar.'
+      :'<strong>Ningún puerto contestó HOLA.</strong> Carga el firmware principal (esp32dev) y cierra el monitor serie de PlatformIO.';return}
+  sel.value=ok[0].puerto; $('#espMsg').innerHTML=`Conectando a <span class="mono">${ok[0].puerto}</span>…`;
+  enviar({tipo:'conectar',puerto:ok[0].puerto});
 };
 H.etapa=async(m,id)=>{
   const sel=ETAPAS[m.n].panel;
+  if(S.mode==='esp32'&&m.n===1&&m.estado==='curso'){ // con el ESP32 cada verificación empieza sola, en la caja
+    resetUI(); limpiarNav(); F=T=M=null; idActual=''; S.running=true; S.lastResult=null; updateButtons();
+    caption('ESP32','Teclea tu ID y PIN en el teclado de la caja.','wait')}
   if(m.estado==='curso'){await etapaFlujo(m.n,id);panel(sel,'active');
     if(m.n===4) caption('fase 5','Decisión: PIN, umbral de cada factor y fusión ponderada.');}
   else{marcar(m.n,m.estado,m.dato);if(m.estado!=='omit')panel(sel,'done');
@@ -278,18 +304,24 @@ function setMode(m){
   const chip=$('#connChip');
   if(m==='esp32'){ if(S.running){enviar({tipo:'cancelar'});detener();S.running=false} V.curso=0;V.seguir=true;pintarNav();
     chip.className='chip no'; chip.querySelector('.ic').outerHTML=ic('unplug'); $('#connTxt').textContent='ESP32 · sin conexión';
-    oled('Sin conexion','con la PC'); caption('ESP32','Modo ESP32: la conexión con la placa se agrega en N6.','no');
+    oled('Sin conexion','con la PC'); caption('ESP32','Modo ESP32: conecta la placa por USB y pulsa Buscar ESP32.','no');
   } else {
     chip.className='chip ok'; chip.querySelector('.ic').outerHTML=ic('monitor'); $('#connTxt').textContent='Dispositivo simulado';
     oled('Listo','Teclea tu ID'); caption('listo',LISTO,'ok');
   }
-  enviar({tipo:'modo',modo:m==='sim'?'simular':'esp32'});
+  if(m==='sim') enviar({tipo:'modo',modo:'simular'}); // en ESP32, el backend cambia de modo al conectar
   updateButtons();
 }
 $('#mSim').addEventListener('click',()=>setMode('sim'));
 $('#mEsp').addEventListener('click',()=>setMode('esp32'));
 $('#scanBtn').addEventListener('click',()=>{
-  $('#espMsg').innerHTML='<strong>Pendiente (N6).</strong> La búsqueda de puertos y el saludo <span class="mono">HOLA</span> se conectan con el firmware completo.'});
+  $('#scanBtn').disabled=true; $('#scanTxt').textContent='Buscando…';
+  $('#espMsg').innerHTML='Revisando los puertos COM y esperando <span class="mono">HOLA</span>…';
+  /* ?puerto=socket://127.0.0.1:5333 busca solo ese puerto (el ESP32 falso) y no toca los COM reales */
+  const p=new URLSearchParams(location.search).get('puerto');
+  enviar({tipo:'buscar_puertos',puerto:p||undefined,solo:!!p});
+});
+$('#port').addEventListener('change',e=>{ if(e.target.value) enviar({tipo:'conectar',puerto:e.target.value}) });
 
 /* ============================================================
    Arranque: sin verificación inventada; se muestra la bitácora real

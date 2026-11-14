@@ -110,6 +110,8 @@ class CamaraIndice(Camara):
 
 def desde_config(cfg) -> Camara:
     fuente = cfg.valor("camara.fuente", "url")
+    if fuente == "archivo":  # pruebas: una imagen fija de un dataset
+        return CamaraArchivo(cfg.valor("camara.archivo"), cfg.valor("camara.fuente_archivo", "orl"))
     if fuente == "indice":
         return CamaraIndice(int(cfg.valor("camara.indice", 0)))
     return CamaraURL(cfg.valor("camara.url"))

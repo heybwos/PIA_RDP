@@ -34,6 +34,14 @@ class CapturaCancelada(Exception):
     pass
 
 
+class ErrorDispositivo(Exception):
+    """Falla del dispositivo (conexión, sensor, imagen dañada), con qué revisar."""
+
+    def __init__(self, mensaje: str, que_revisar: str = ""):
+        super().__init__(mensaje)
+        self.que_revisar = que_revisar
+
+
 class Dispositivo(ABC):
     nombre = "base"
     simulado = True

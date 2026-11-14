@@ -20,7 +20,7 @@ from . import fusion, huella, rostro
 from .almacen import Almacen, dominio_rostro, guardar_png, leer_png
 from .camara import Camara, CamaraError
 from .config import Config
-from .dispositivos.base import Dispositivo, Emisor, imagen_json, _nada
+from .dispositivos.base import CapturaCancelada, Dispositivo, Emisor, ErrorDispositivo, imagen_json, _nada
 
 PASOS_RECONSTRUCCION = (1, 5, 10, 20)
 N_EIGENFACES_VISTA = 8
@@ -55,8 +55,13 @@ class Orquestador:
         fila: dict[str, Any] = {"modo": modo, "pin_ok": 0, "decision": 0}
         try:
             return await self._verificar(disp, camara, fila, t0)
-        except (ErrorVerificacion, CamaraError) as e:
+        except CapturaCancelada:
+            await self.emitir("error", {"mensaje": "Cancelado con la tecla D", "que_revisar": ""})
+            return await self._cerrar(disp, fila, t0, fusion.Decision(False, 0, 0, 0, 0, "cancelado"))
+        except (ErrorVerificacion, CamaraError, ErrorDispositivo) as e:
             await self.emitir("error", {"mensaje": str(e), "que_revisar": getattr(e, "que_revisar", "")})
+            if "usuario_id" not in fila:  # falló antes de que alguien tecleara: no es un intento
+                return Resultado(False, 0, str(e), {})
             fila.update(decision=0, motivo=f"error: {e}")
             return await self._cerrar(disp, fila, t0, fusion.Decision(False, 0, 0, 0, 0, f"error: {e}"))
 

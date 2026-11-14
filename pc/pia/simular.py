@@ -118,6 +118,35 @@ def sembrar(alm: Almacen, datasets: Path, imprimir=print) -> dict:
     return esc
 
 
+def sembrar_prueba_esp32(alm: Almacen, datasets: Path, fixtures: Path) -> dict:
+    """SOLO para pruebas con el ESP32 falso, en una carpeta de datos aparte (nunca en datos/):
+    usuario 21 (nivel 2, PIN 2468) con huellas sintéticas en formato AS608 y rostro de ORL s5,
+    y calibración 'as608' sacada del banco sintético. La calibración real del AS608 es de N7."""
+    if not alm.modelo_activo("dataset"):
+        sembrar(alm, datasets, imprimir=lambda *_: None)
+    if alm.usuario("21"):
+        alm.borrar_usuario("21")
+    huellas = [(huella.leer(fixtures / f"id01_imp{k}.bin"), "as608") for k in range(3)]
+    caras = [(_gris(ruta_rostro(datasets, 5, j)), "orl") for j in range(1, 7)]
+    registro.registrar(alm, "21", "Prueba ESP32", 2, "2468", huellas, caras, reentrenar_modelo=False)
+    fondo = registro.caras_de_fondo(datasets / "orl", excluir={u[5] for u in USUARIOS} | {5, 20})
+    registro.reentrenar(alm, "dataset", fondo)
+    calibrar_rostro_dataset(alm, datasets)
+    res = {f.stem: huella.procesar(huella.leer(f), "as608") for f in sorted(fixtures.glob("*.bin"))}
+    gen, imp = [], []
+    for a in {k[:4] for k in res}:
+        for b in res:
+            if b.endswith("imp0"):
+                continue
+            (gen if b.startswith(a) else imp).append(huella.comparar(res[f"{a}_imp0"], res[b]).puntaje)
+    r = calibracion.por_eer(gen, imp, mayor_es_mejor=True)
+    alm.guardar_calibracion("huella", "as608", r.umbral, r.eer, r.far, r.frr, r.n_genuinos, r.n_impostores,
+                            parametros={"origen": "banco sintético (solo pruebas)",
+                                        "distribucion": calibracion.distribucion(gen, imp)})
+    return {"id": "21", "pin": "2468", "rostro": str(ruta_rostro(datasets, 5, 8)),
+            "huella": str(fixtures / "id01_imp3.bin")}
+
+
 @dataclass
 class Escenario:
     clave: str
