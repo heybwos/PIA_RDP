@@ -116,20 +116,29 @@ bool huellaEnviarImagen(void (*progreso)(float)) {
   size_t total = 0;
   uint8_t buf[300];
   bool fin = false;
+  unsigned paquetes = 0, malos = 0;
   while (!fin && total < (size_t)IMG_BYTES) {
     uint8_t pid;
     uint16_t n;
     int r = leerPaquete(pid, buf, sizeof buf, n, 2000);
     if (r == -1 || r == -3) break;  // corte: se rellena abajo
-    if (r == -2 || (pid != PID_DATOS && pid != PID_FIN_DATOS)) continue;
+    if (r == -2 || (pid != PID_DATOS && pid != PID_FIN_DATOS)) {
+      malos++;
+      continue;
+    }
     size_t cabe = min((size_t)n, (size_t)IMG_BYTES - total);
     Serial.write(buf, cabe);  // se reenvía conforme llega
     crc = crcActualizar(crc, buf, cabe);
     total += cabe;
     fin = (pid == PID_FIN_DATOS);
-    if (progreso) progreso((float)total / IMG_BYTES);
+    paquetes++;
+    // La OLED tarda en redibujarse por I2C y el sensor no espera: si se actualiza con cada
+    // paquete se llena el búfer de UART2 y se pierden bytes (CRC "incorrecto" en P5).
+    // Cada 32 paquetes (~0.8 s) el búfer de 4 KB aguanta de sobra.
+    if (progreso && (paquetes % 32 == 0)) progreso((float)total / IMG_BYTES);
   }
   bool completa = total == (size_t)IMG_BYTES;
+  size_t total_real = total;
   if (!completa) {  // mantiene el marco: rellena y obliga a la PC a descartar
     memset(buf, 0, sizeof buf);
     while (total < (size_t)IMG_BYTES) {
@@ -142,5 +151,7 @@ bool huellaEnviarImagen(void (*progreso)(float)) {
   Serial.flush();
   uint32_t final_ = ~crc;
   protocoloEnviarf("IMG:FIN:%08lx", (unsigned long)(completa ? final_ : ~final_));
+  if (!completa)  // después de IMG:FIN, para no romper el marco
+    protocoloEnviarf("DIAG:imagen incompleta: %u de %d bytes, %u paquetes malos", (unsigned)(total_real), IMG_BYTES, malos);
   return completa;
 }
