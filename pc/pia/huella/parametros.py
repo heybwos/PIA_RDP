@@ -27,7 +27,13 @@ class Perfil:
 
 PERFILES: dict[str, Perfil] = {
     "sintetico": Perfil("sintetico"),
-    "as608": Perfil("as608"),
+    # Ajustado en N7 (14 de noviembre) con el banco real del AS608: 6 dedos x 8 capturas,
+    # 5 plantillas y 3 pruebas por dedo (18 genuinos, 90 impostores). Rejilla de 144
+    # combinaciones (pc/scripts/explorar_parametros.py): el perfil de la maqueta daba EER 34 %;
+    # este, 16.7 % y FRR 33 % con FAR = 0. La imagen del sensor usa ~8 de 16 niveles: CLAHE y
+    # una segmentación más sensible recuperan crestas; con distancia mínima 6 salen ~33 minucias.
+    # Aflojar las tolerancias del matching subía también a los impostores: se quedan igual.
+    "as608": Perfil("as608", ecualizar=True, umbral_varianza=0.004, distancia_min_minucias=6.0),
     "fvc2002": Perfil("fvc2002"),
 }
 

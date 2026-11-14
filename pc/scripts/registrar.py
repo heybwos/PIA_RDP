@@ -20,36 +20,37 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from pia import camara, config, huella, registro  # noqa: E402
+from pia import camara, config, huella, registro, vista  # noqa: E402
 from pia.almacen import Almacen, leer_png  # noqa: E402
 
 RAIZ = Path(__file__).resolve().parents[2]
 
 
 def huellas_del_sensor(puerto: str, n: int, nibble_alto: bool) -> list:
+    """Con el firmware test_huella_imagen. Repite en el momento las capturas de calidad baja."""
     sys.path.insert(0, str(Path(__file__).parent))
     import bajar_huella as bh
+    from capturar_banco import capturar
 
     enlace = bh.Enlace(puerto, 921600)
     try:
         if not bh.esperar_esp32(enlace):
             raise SystemExit("El ESP32 no responde (¿cargaste test_huella_imagen?)")
+        enlace.descartar(0.3)
         imgs = []
         while len(imgs) < n:
-            print(f"\nHuella {len(imgs) + 1} de {n}: levanta el dedo y vuelve a ponerlo.")
-            enlace.enviar("PEDIR_HUELLA")
-            datos = None
-            while True:
-                ln = enlace.linea(25.0)
-                if ln is None or ln.startswith("HUELLA:ERR"):
-                    print(f"  {ln or 'sin respuesta'}; se repite")
-                    break
-                if ln.startswith("IMG:") and not ln.startswith("IMG:FIN"):
-                    datos = enlace.bytes_exactos(int(ln.split(":")[1]))
-                    enlace.linea(3.0)
-                    break
-            if datos:
-                imgs.append(huella.desempacar(datos, nibble_alto))
+            print(f"\nHuella {len(imgs) + 1} de {n}: levanta el dedo y vuelve a ponerlo"
+                  + (" (cambia un poco la presión o el giro)" if imgs else ""))
+            time.sleep(1.5)
+            img = capturar(enlace, nibble_alto)
+            if img is None:
+                continue
+            r = huella.procesar(img, "as608")
+            if len(r.minucias) < registro.MIN_MINUCIAS or r.calidad < registro.MIN_CALIDAD:
+                print(f"  Calidad baja ({len(r.minucias)} minucias): se repite. Cubre más el sensor.")
+                continue
+            print(f"  OK: {len(r.minucias)} minucias")
+            imgs.append(img)
         return imgs
     finally:
         enlace.cerrar()
@@ -92,12 +93,15 @@ def main() -> int:
         cuadros = [leer_png(Path(f), color=True) for p in args.rostros for f in sorted(glob.glob(p))]
     else:
         cam = camara.desde_config(cfg)
-        print(f"\nMira a la cámara y gira un poco la cabeza. {n_r} cuadros...")
-        cuadros = []
-        for _ in range(n_r):
-            cuadros.append(cam.capturar())
-            time.sleep(0.5)
-        cam.cerrar()
+        print(f"\nRostro: se abre la vista previa. Acomódate y presiona Espacio; gira un poco la cabeza "
+              f"mientras toma {n_r} cuadros.")
+        try:
+            cuadros = vista.capturar_cuadros(cam, n_r, f"PIA - registro de {args.id}")
+        finally:
+            cam.cerrar()
+        if len(cuadros) < 10:
+            print(f"Solo {len(cuadros)} cuadros con rostro (mínimo 10). Registro cancelado; no se guardó nada.")
+            return 1
 
     fondo = registro.caras_de_fondo(cfg.carpeta_datos / "datasets" / "orl", excluir=set())
     inf = registro.registrar(alm, args.id, args.nombre, args.nivel, pin,
