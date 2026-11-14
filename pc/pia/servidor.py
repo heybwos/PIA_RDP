@@ -151,6 +151,14 @@ def crear_app(cfg: config.Config | None = None) -> FastAPI:
     app = FastAPI(title="PIA acceso biométrico")
     app.state.estado = est
 
+    @app.middleware("http")
+    async def sin_cache(request, call_next):
+        # La app cambia seguido: el navegador debe revalidar index.html y los .js en cada carga
+        # (en P5 Edge siguió usando un principal.js viejo tras actualizar el backend).
+        resp = await call_next(request)
+        resp.headers["Cache-Control"] = "no-cache"
+        return resp
+
     @app.websocket("/ws")
     async def ws(sock: WebSocket):
         await sock.accept()
