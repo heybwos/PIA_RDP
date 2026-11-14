@@ -1,0 +1,331 @@
+<title>Conexiones del PIA</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Hoja de banco de pruebas: la placa al centro, cada componente con su color de cable; las alimentaciones van como etiquetas de red. */
+:root{
+  --bg:#F6F7F5; --surface:#FFFFFF; --inset:#EEF0EC; --line:#D9DDD6; --fg:#1B211D; --muted:#5D675F; --faint:#8C958D;
+  --board:#1D2A24; --board-fg:#E8EEE9; --board-muted:#7F9187; --pin:#C9A646;
+  --c-teclado:#2F64C8; --c-huella:#C8650F; --c-oled:#0E8577; --c-servos:#B03A73; --c-leds:#5B8A12;
+  --c-5v:#C23B32; --c-gnd:#4A524C; --c-3v3:#A7790A;
+  --warn-bg:#FFF4E0; --warn-line:#E7B45A; --warn-fg:#6B4300;
+  --sans:"IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111513; --surface:#181D1A; --inset:#1F2522; --line:#2D3530; --fg:#E6ECE8; --muted:#A1ACA5; --faint:#6E7A73;
+  --board:#0B100E; --board-fg:#E6ECE8; --board-muted:#6E8077; --pin:#D8B85A;
+  --c-teclado:#6E9CFF; --c-huella:#F0933D; --c-oled:#3CC4B2; --c-servos:#E57BAF; --c-leds:#9BCB45;
+  --c-5v:#F2706A; --c-gnd:#A7B0AA; --c-3v3:#E3B23C;
+  --warn-bg:#2B2212; --warn-line:#8A6420; --warn-fg:#F2D49A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111513; --surface:#181D1A; --inset:#1F2522; --line:#2D3530; --fg:#E6ECE8; --muted:#A1ACA5; --faint:#6E7A73;
+  --board:#0B100E; --board-fg:#E6ECE8; --board-muted:#6E8077; --pin:#D8B85A;
+  --c-teclado:#6E9CFF; --c-huella:#F0933D; --c-oled:#3CC4B2; --c-servos:#E57BAF; --c-leds:#9BCB45;
+  --c-5v:#F2706A; --c-gnd:#A7B0AA; --c-3v3:#E3B23C;
+  --warn-bg:#2B2212; --warn-line:#8A6420; --warn-fg:#F2D49A; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--sans);font-size:15px;line-height:1.55;margin:0;
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));padding-block:28px 56px}
+.wrap{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1{font-size:30px;line-height:1.15;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:19px;margin:0 0 12px;text-wrap:balance}
+p{margin:0}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.lede{color:var(--muted);max-width:70ch;margin-top:8px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.tag{font-family:var(--mono);font-size:12px;padding:3px 9px;border-radius:6px;background:var(--inset);border:1px solid var(--line);color:var(--muted)}
+.warn{background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--warn-fg);border-radius:10px;padding:12px 14px;font-size:14px}
+.warn b{font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:8px}
+.legend button{font:inherit;font-size:13px;display:inline-flex;align-items:center;gap:8px;padding:7px 12px;min-height:38px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.legend button i{width:12px;height:12px;border-radius:3px;background:var(--sw)}
+.legend button[aria-pressed="true"]{border-color:var(--fg);box-shadow:inset 0 0 0 1px var(--fg)}
+.legend button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.scroll{overflow-x:auto}
+.scroll svg{display:block;min-width:980px;width:100%;height:auto}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px}
+svg text{font-family:var(--mono);font-size:12px;fill:var(--fg)}
+svg .t-muted{fill:var(--faint)}
+svg .t-board{fill:var(--board-fg)} svg .t-board-muted{fill:var(--board-muted)}
+svg .t-title{font-family:var(--sans);font-weight:600;font-size:14px}
+svg .t-small{font-size:10.5px}
+svg [data-c]{transition:opacity .2s}
+svg.focusing [data-c].dim{opacity:.12}
+.grid2{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){.grid2{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;min-width:0}
+ol.check{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
+ol.check li::marker{font-family:var(--mono);color:var(--faint)}
+ol.check b{font-weight:600}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
+th{text-align:left;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+td.m{font-family:var(--mono);white-space:nowrap}
+td .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:8px;vertical-align:0}
+tr.grp td{padding-top:16px;font-weight:600;border-bottom:1px solid var(--line)}
+.note{color:var(--muted);font-size:13px}
+@media (prefers-reduced-motion: reduce){svg [data-c]{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Conexiones del PIA</h1>
+    <p class="lede">Cómo se cablea cada componente al ESP32 DevKit V1. Los números de GPIO salen de <span class="mono">docs/CONTEXTO_PIA_RDP.md</span>; los cables de alimentación se dibujan como etiquetas (<span class="mono">5V</span>, <span class="mono">3V3</span>, <span class="mono">GND</span>) y se detallan en el segundo diagrama.</p>
+    <div class="meta"><span class="tag">ESP32-WROOM-32 · 30 pines</span><span class="tag">AS608 en UART2 · 57600 baudios</span><span class="tag">OLED I2C 0x3C</span><span class="tag">2 × SG90</span></div>
+  </header>
+
+  <div class="warn"><b>Antes de conectar:</b> el dibujo sigue el acomodo de la placa DOIT de 30 pines. Si tu placa es de 38 pines, los pines cambian de lugar pero los números de GPIO son los mismos: guíate por la serigrafía (<span class="mono">D13</span>, <span class="mono">RX2</span>…). Si tu placa dice WROVER, los GPIO16 y 17 están ocupados y hay que elegir otros para el sensor.</div>
+
+  <section aria-labelledby="h-diag">
+    <h2 id="h-diag">Diagrama de señales</h2>
+    <div class="legend" id="legend" role="group" aria-label="Resaltar componente">
+      <button data-f="" aria-pressed="true">Todo</button>
+      <button data-f="teclado" aria-pressed="false" style="--sw:var(--c-teclado)"><i></i>Teclado</button>
+      <button data-f="huella" aria-pressed="false" style="--sw:var(--c-huella)"><i></i>Huella AS608</button>
+      <button data-f="oled" aria-pressed="false" style="--sw:var(--c-oled)"><i></i>OLED</button>
+      <button data-f="servos" aria-pressed="false" style="--sw:var(--c-servos)"><i></i>Servos</button>
+      <button data-f="leds" aria-pressed="false" style="--sw:var(--c-leds)"><i></i>LEDs</button>
+      <button data-f="power" aria-pressed="false" style="--sw:var(--c-5v)"><i></i>Alimentación</button>
+    </div>
+    <figure style="margin-top:12px">
+      <div class="scroll"><svg id="diag" viewBox="0 70 1180 655" role="img" aria-label="ESP32 al centro. A la izquierda el teclado 4×4 en GPIO 32, 33, 25, 26, 27, 14 y 13, más GPIO4. A la derecha: LED verde en GPIO23, OLED en GPIO22 (SCL) y 21 (SDA), servos en GPIO19 y 18, LED rojo en GPIO5 y el sensor AS608 en GPIO17 (TX2) y 16 (RX2)."></svg></div>
+      <figcaption>Pulsa un componente arriba para resaltar solo sus cables. Los pines grises no se usan: son de arranque, de la memoria flash, del USB o solo de entrada.</figcaption>
+    </figure>
+  </section>
+
+  <section aria-labelledby="h-pwr">
+    <h2 id="h-pwr">Alimentación</h2>
+    <figure>
+      <div class="scroll"><svg id="pwr" viewBox="0 0 1180 300" role="img" aria-label="La laptop alimenta al ESP32 por USB. El pin VIN entrega 5 V al riel de 5 V, que alimenta al AS608 y a los dos servos; un capacitor de 470 microfaradios va entre 5 V y GND junto a los servos. La OLED se alimenta del pin 3V3. Todas las tierras están unidas."></svg></div>
+      <figcaption>Plan principal: todo sale del USB de la laptop. Si el monitor serie muestra «Brownout detector was triggered» al mover los servos, pasa el riel de 5 V a un cargador de celular de 5 V y 2 A, une su GND con el del ESP32 y desconecta ese riel del VIN.</figcaption>
+    </figure>
+  </section>
+
+  <div class="grid2">
+    <section class="card" aria-labelledby="h-chk">
+      <h2 id="h-chk">Lista antes de energizar</h2>
+      <ol class="check">
+        <li><b>Mide el TX del AS608.</b> Alimenta solo el sensor a 5 V y mide TX contra GND. Unos 3.3 V: va directo a GPIO16. Unos 5 V: pon el divisor de la derecha. No pongas el divisor sin medir.</li>
+        <li><b>Conecta el AS608 por la serigrafía de su placa, no por el color de los cables.</b> La hoja de datos se contradice con los colores. Solo se usan Vi, GND, TXD y RXD.</li>
+        <li><b>Los servos van a 5 V, nunca al pin 3V3.</b> Sus picos de corriente reinician el ESP32.</li>
+        <li><b>Capacitor de 470 µF</b> entre 5 V y GND, cerca de los servos. La pata con la franja (negativa) va a GND.</li>
+        <li><b>Con fuente externa, no conectes sus 5 V al VIN</b> mientras el ESP32 esté conectado por USB. Solo une las tierras.</li>
+        <li><b>Teclado:</b> antes de cablear, comprueba con el multímetro que al presionar <span class="mono">1</span> hay continuidad entre el pin 1 y el pin 5. Si no, el orden de tu teclado es otro: anota el real.</li>
+        <li><b>LEDs:</b> la pata larga (ánodo) va del lado de la resistencia y el GPIO; la corta, a GND.</li>
+        <li><b>GPIO5</b> hace que el LED rojo parpadee débil al encender. Es normal.</li>
+      </ol>
+    </section>
+    <section class="card" aria-labelledby="h-div">
+      <h2 id="h-div">Divisor para el TX del AS608</h2>
+      <p class="note" style="margin-bottom:10px">Solo si mediste unos 5 V en TX. Baja la señal a 5 × 2/3 ≈ 3.3 V.</p>
+      <svg viewBox="0 0 380 200" role="img" aria-label="TXD del AS608 pasa por una resistencia de 1 kilo-ohm hasta un nodo; del nodo sale el cable a GPIO16 y una resistencia de 2 kilo-ohms a GND." style="width:100%;height:auto;display:block">
+        <g style="stroke:var(--c-huella);fill:none;stroke-width:3;stroke-linecap:round">
+          <line x1="20" y1="60" x2="110" y2="60"/><line x1="170" y1="60" x2="210" y2="60"/><line x1="210" y1="60" x2="330" y2="60"/>
+          <line x1="210" y1="60" x2="210" y2="100"/><line x1="210" y1="150" x2="210" y2="170"/>
+        </g>
+        <rect x="110" y="50" width="60" height="20" rx="3" style="fill:var(--surface);stroke:var(--fg);stroke-width:1.5"/>
+        <rect x="200" y="100" width="20" height="50" rx="3" style="fill:var(--surface);stroke:var(--fg);stroke-width:1.5"/>
+        <circle cx="210" cy="60" r="5" style="fill:var(--c-huella)"/>
+        <text x="20" y="48">AS608 TXD</text>
+        <text x="140" y="42" text-anchor="middle">1 kΩ</text>
+        <text x="230" y="130">2 kΩ</text>
+        <text x="330" y="48" text-anchor="end">GPIO16 (RX2)</text>
+        <line x1="196" y1="170" x2="224" y2="170" style="stroke:var(--c-gnd);stroke-width:3"/>
+        <line x1="201" y1="177" x2="219" y2="177" style="stroke:var(--c-gnd);stroke-width:2.5"/>
+        <line x1="206" y1="184" x2="214" y2="184" style="stroke:var(--c-gnd);stroke-width:2"/>
+        <text x="232" y="182" class="t-muted">GND</text>
+      </svg>
+      <p class="note" style="margin-top:10px">RXD del AS608 sí va directo a GPIO17: el sensor acepta los 3.3 V que salen del ESP32.</p>
+    </section>
+  </div>
+
+  <section class="card" aria-labelledby="h-tbl">
+    <h2 id="h-tbl">Tabla de conexiones</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Componente</th><th>Pin del componente</th><th>ESP32</th><th>Nota</th></tr></thead>
+      <tbody>
+        <tr class="grp"><td colspan="4"><span class="sw" style="background:var(--c-huella)"></span>Sensor de huella AS608</td></tr>
+        <tr><td></td><td class="m">Vi</td><td class="m">VIN (5 V)</td><td>O fuente externa de 5 V con GND común.</td></tr>
+        <tr><td></td><td class="m">GND</td><td class="m">GND</td><td></td></tr>
+        <tr><td></td><td class="m">TXD</td><td class="m">GPIO16 · RX2</td><td>Directo o con divisor, según la medición.</td></tr>
+        <tr><td></td><td class="m">RXD</td><td class="m">GPIO17 · TX2</td><td>Directo.</td></tr>
+        <tr><td></td><td class="m">D−, D+, Vt, WAK</td><td class="m">—</td><td>No se conectan.</td></tr>
+        <tr class="grp"><td colspan="4"><span class="sw" style="background:var(--c-teclado)"></span>Teclado 4×4 (sin alimentación ni GND)</td></tr>
+        <tr><td></td><td class="m">1 · F1</td><td class="m">GPIO13</td><td rowspan="4">Filas. Usan pull-up interna: nunca en GPIO34 a 39.</td></tr>
+        <tr><td></td><td class="m">2 · F2</td><td class="m">GPIO14</td></tr>
+        <tr><td></td><td class="m">3 · F3</td><td class="m">GPIO27</td></tr>
+        <tr><td></td><td class="m">4 · F4</td><td class="m">GPIO26</td></tr>
+        <tr><td></td><td class="m">5 · C1</td><td class="m">GPIO25</td><td rowspan="4">Columnas. C4 va del otro lado de la placa (D4).</td></tr>
+        <tr><td></td><td class="m">6 · C2</td><td class="m">GPIO33</td></tr>
+        <tr><td></td><td class="m">7 · C3</td><td class="m">GPIO32</td></tr>
+        <tr><td></td><td class="m">8 · C4</td><td class="m">GPIO4</td></tr>
+        <tr class="grp"><td colspan="4"><span class="sw" style="background:var(--c-oled)"></span>OLED SSD1306 0.96″</td></tr>
+        <tr><td></td><td class="m">SDA</td><td class="m">GPIO21</td><td></td></tr>
+        <tr><td></td><td class="m">SCL</td><td class="m">GPIO22</td><td></td></tr>
+        <tr><td></td><td class="m">VCC</td><td class="m">3V3</td><td>No a 5 V.</td></tr>
+        <tr><td></td><td class="m">GND</td><td class="m">GND</td><td></td></tr>
+        <tr class="grp"><td colspan="4"><span class="sw" style="background:var(--c-servos)"></span>Servos SG90</td></tr>
+        <tr><td></td><td class="m">Servo 1 · señal</td><td class="m">GPIO18</td><td>Compartimento 1 (Lector).</td></tr>
+        <tr><td></td><td class="m">Servo 2 · señal</td><td class="m">GPIO19</td><td>Compartimento 2 (Editor).</td></tr>
+        <tr><td></td><td class="m">V+ (rojo) / GND (café)</td><td class="m">5 V / GND</td><td>Capacitor de 470 µF entre 5 V y GND junto a ellos.</td></tr>
+        <tr class="grp"><td colspan="4"><span class="sw" style="background:var(--c-leds)"></span>LEDs de 5 mm</td></tr>
+        <tr><td></td><td class="m">Verde · ánodo</td><td class="m">GPIO23</td><td>Con resistencia de 220 Ω en serie. Cátodo a GND.</td></tr>
+        <tr><td></td><td class="m">Rojo · ánodo</td><td class="m">GPIO5</td><td>Con resistencia de 220 Ω en serie. Cátodo a GND.</td></tr>
+        <tr class="grp"><td colspan="4"><span class="sw" style="background:var(--c-gnd)"></span>Pines que no se usan</td></tr>
+        <tr><td></td><td class="m">GPIO0, 2, 12, 15</td><td class="m">—</td><td>Pines de arranque.</td></tr>
+        <tr><td></td><td class="m">GPIO1, 3</td><td class="m">—</td><td>UART0, la usa el USB.</td></tr>
+        <tr><td></td><td class="m">GPIO6 a 11</td><td class="m">—</td><td>Memoria flash (no salen en la placa).</td></tr>
+        <tr><td></td><td class="m">GPIO34, 35, 36, 39</td><td class="m">—</td><td>Solo entrada, sin pull-up.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+</div>
+
+<script>
+"use strict";
+const NS='http://www.w3.org/2000/svg';
+function el(tag,attrs,parent,text){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;if(parent)parent.appendChild(e);return e}
+const COL={teclado:'var(--c-teclado)',huella:'var(--c-huella)',oled:'var(--c-oled)',servos:'var(--c-servos)',leds:'var(--c-leds)'};
+const NET={'5V':'var(--c-5v)','3V3':'var(--c-3v3)','GND':'var(--c-gnd)'};
+
+/* ---------- diagrama de señales ---------- */
+const S=document.getElementById('diag');
+const Y=i=>130+i*36, XL=470, XR=630;
+const LEFT =[['EN','EN'],['VP','GPIO36'],['VN','GPIO39'],['D34','GPIO34'],['D35','GPIO35'],['D32','GPIO32'],['D33','GPIO33'],['D25','GPIO25'],['D26','GPIO26'],['D27','GPIO27'],['D14','GPIO14'],['D12','GPIO12'],['D13','GPIO13'],['GND','GND'],['VIN','VIN']];
+const RIGHT=[['D23','GPIO23'],['D22','GPIO22'],['TX0','GPIO1'],['RX0','GPIO3'],['D21','GPIO21'],['D19','GPIO19'],['D18','GPIO18'],['D5','GPIO5'],['TX2','GPIO17'],['RX2','GPIO16'],['D4','GPIO4'],['D2','GPIO2'],['D15','GPIO15'],['GND','GND'],['3V3','3V3']];
+const LUSE={5:'teclado',6:'teclado',7:'teclado',8:'teclado',9:'teclado',10:'teclado',12:'teclado',13:'power',14:'power'};
+const RUSE={0:'leds',1:'oled',4:'oled',5:'servos',6:'servos',7:'leds',8:'huella',9:'huella',10:'teclado',13:'power',14:'power'};
+
+const gWires=el('g',{},S), gParts=el('g',{},S), gBoard=el('g',{},S), gChips=el('g',{},S);
+
+function wire(points,c,extra={}){const g=el('g',{'data-c':c},gWires);const d='M'+points.map(p=>p.join(' ')).join(' L');
+  el('path',{d,style:'fill:none;stroke:var(--surface);stroke-width:8;stroke-linejoin:round'},g);
+  el('path',{d,style:`fill:none;stroke:${COL[c]};stroke-width:3;stroke-linejoin:round;stroke-linecap:round${extra.dash?';stroke-dasharray:6 5':''}`},g);return g}
+function chip(x,y,text,net,anchor='start',c='power'){const w=text.length*7.1+16, x0=anchor==='end'?x-w:x;
+  const g=el('g',{'data-c':c},gChips);const color=NET[net]||COL[net]||'var(--fg)';
+  el('rect',{x:x0,y:y-11,width:w,height:22,rx:5,style:`fill:var(--surface);stroke:${color};stroke-width:1.6`},g);
+  el('text',{x:x0+w/2,y:y+4,'text-anchor':'middle',style:`fill:${color};font-weight:600`},g,text);return g}
+function stub(x1,x2,y,net,c='power'){const g=el('g',{'data-c':c},gWires);el('line',{x1,y1:y,x2,y2:y,style:`stroke:${NET[net]||COL[net]};stroke-width:2.5`},g)}
+function resistor(x,y,c){const g=el('g',{'data-c':c},gParts);el('rect',{x:x-20,y:y-7,width:40,height:14,rx:3,style:`fill:var(--surface);stroke:${COL[c]};stroke-width:2`},g);
+  el('text',{x,y:y-13,'text-anchor':'middle',class:'t-small'},g,'220 Ω')}
+function box(x,y,w,h,c,title,sub){const g=el('g',{'data-c':c},gParts);
+  el('rect',{x,y,width:w,height:h,rx:8,style:`fill:var(--surface);stroke:${COL[c]};stroke-width:2`},g);
+  if(title) el('text',{x:x+12,y:y+(sub?h/2-3:h/2+5),class:'t-title'},g,title);
+  if(sub) el('text',{x:x+12,y:y+h/2+14,class:'t-small t-muted'},g,sub);return g}
+function pinLabel(g,x,y,t,anchor='start'){el('text',{x,y:y+4,'text-anchor':anchor,class:'t-small'},g,t)}
+function ledSym(g,x,y,color){el('path',{d:`M${x} ${y-8} L${x+14} ${y} L${x} ${y+8} Z`,style:`fill:${color};stroke:${color};stroke-width:1.5`},g);
+  el('line',{x1:x+14,y1:y-9,x2:x+14,y2:y+9,style:`stroke:${color};stroke-width:2.5`},g)}
+
+/* placa */
+el('rect',{x:XL,y:82,width:XR-XL,height:592,rx:10,style:'fill:var(--board)'},gBoard);
+el('rect',{x:XL+28,y:90,width:XR-XL-56,height:24,rx:3,style:'fill:none;stroke:var(--board-muted);stroke-width:1.2'},gBoard);
+el('text',{x:(XL+XR)/2,y:106,'text-anchor':'middle',class:'t-small t-board-muted'},gBoard,'antena');
+el('text',{x:(XL+XR)/2,y:390,'text-anchor':'middle',class:'t-title t-board'},gBoard,'ESP32');
+el('text',{x:(XL+XR)/2,y:408,'text-anchor':'middle',class:'t-small t-board-muted'},gBoard,'DevKit V1');
+el('rect',{x:525,y:666,width:50,height:24,rx:3,style:'fill:var(--board-muted)'},gBoard);
+el('text',{x:550,y:712,'text-anchor':'middle',class:'t-small t-muted'},gBoard,'USB → laptop');
+LEFT.forEach(([lab,g],i)=>{const used=LUSE[i];const t=el('text',{x:XL+12,y:Y(i)+4,class:used?'t-board':'t-board-muted'},gBoard,lab);el('title',{},t,g);
+  el('circle',{cx:XL,cy:Y(i),r:5,style:used?`fill:var(--pin);stroke:var(--board);stroke-width:1.5`:'fill:var(--board);stroke:var(--board-muted);stroke-width:1.5'},gBoard)});
+RIGHT.forEach(([lab,g],i)=>{const used=RUSE[i];const t=el('text',{x:XR-12,y:Y(i)+4,'text-anchor':'end',class:used?'t-board':'t-board-muted'},gBoard,lab);el('title',{},t,g);
+  el('circle',{cx:XR,cy:Y(i),r:5,style:used?`fill:var(--pin);stroke:var(--board);stroke-width:1.5`:'fill:var(--board);stroke:var(--board-muted);stroke-width:1.5'},gBoard)});
+
+/* teclado: pines 8..1 de arriba abajo, alineados con D35..D13 */
+{const g=box(60,Y(4)-34,240,Y(11)-Y(4)+68,'teclado');
+ el('text',{x:60,y:Y(4)-44,class:'t-title'},g,'Teclado 4×4');
+ const keys=['1','2','3','A','4','5','6','B','7','8','9','C','*','0','#','D'];
+ keys.forEach((k,i)=>{const cx=84+(i%4)*32, cy=Y(5)-6+Math.floor(i/4)*34;
+   el('rect',{x:cx,y:cy,width:26,height:26,rx:5,style:'fill:var(--inset);stroke:var(--line)'},g);
+   el('text',{x:cx+13,y:cy+17,'text-anchor':'middle',class:'t-small'},g,k)});
+ const pins=[['8 · C4',4],['7 · C3',5],['6 · C2',6],['5 · C1',7],['4 · F4',8],['3 · F3',9],['2 · F2',10],['1 · F1',11]];
+ pins.forEach(([t,r])=>{el('circle',{cx:300,cy:Y(r),r:4,style:'fill:var(--c-teclado)'},g);pinLabel(g,292,Y(r),t,'end')});
+ el('text',{x:60,y:Y(11)+52,class:'t-small t-muted'},g,'pines 1–4 filas · 5–8 columnas (verificar)');
+ for(let r=5;r<=10;r++) wire([[300,Y(r)],[XL,Y(r)]],'teclado');
+ wire([[300,Y(11)],[430,Y(11)],[430,Y(12)],[XL,Y(12)]],'teclado');
+ wire([[300,Y(4)],[326,Y(4)]],'teclado'); chip(330,Y(4),'→ D4 · GPIO4','teclado','start','teclado');
+}
+/* lado derecho */
+const RX=760;
+function ledRow(r,c,name,color){wire([[XR,Y(r)],[RX,Y(r)]],c);resistor(692,Y(r),c);
+  const g=box(RX,Y(r)-15,150,30,c);ledSym(g,RX+12,Y(r),color);el('text',{x:RX+36,y:Y(r)+5,class:'t-title'},g,name);
+  stub(RX+150,RX+170,Y(r),'GND');chip(RX+174,Y(r),'GND','GND')}
+ledRow(0,'leds','LED verde','var(--c-leds)');
+ledRow(7,'leds','LED rojo','var(--c-5v)');
+/* OLED */
+{wire([[XR,Y(1)],[RX,Y(1)]],'oled');wire([[XR,Y(4)],[RX,Y(4)]],'oled');
+ const g=box(RX,Y(1)-18,230,Y(4)-Y(1)+36,'oled');
+ [['SCL',1],['VCC',2],['GND',3],['SDA',4]].forEach(([t,r])=>{el('circle',{cx:RX,cy:Y(r),r:4,style:'fill:var(--c-oled)'},g);pinLabel(g,RX+10,Y(r),t)});
+ el('rect',{x:RX+70,y:Y(1)-6,width:146,height:Y(4)-Y(1)+12,rx:4,style:'fill:var(--board)'},g);
+ el('text',{x:RX+143,y:(Y(1)+Y(4))/2-2,'text-anchor':'middle',class:'t-title t-board'},g,'OLED 0.96″');
+ el('text',{x:RX+143,y:(Y(1)+Y(4))/2+16,'text-anchor':'middle',class:'t-small t-board-muted'},g,'SSD1306 · I2C');
+ stub(RX-22,RX,Y(2),'3V3','power');chip(RX-24,Y(2),'3V3','3V3','end');
+ stub(RX-22,RX,Y(3),'GND','power');chip(RX-24,Y(3),'GND','GND','end');}
+/* servos */
+[[5,'Servo 2 · compartimento 2'],[6,'Servo 1 · compartimento 1']].forEach(([r,t])=>{wire([[XR,Y(r)],[RX,Y(r)]],'servos');
+  const g=box(RX,Y(r)-14,230,28,'servos');el('text',{x:RX+12,y:Y(r)+5,class:'t-small'},g,'señal · '+t);
+  stub(RX+230,RX+246,Y(r),'5V');chip(RX+250,Y(r),'5V','5V');chip(RX+298,Y(r),'GND','GND')});
+/* AS608 */
+{wire([[XR,Y(8)],[RX,Y(8)]],'huella');wire([[XR,Y(9)],[RX,Y(9)]],'huella');
+ const g=box(RX,Y(8)-20,230,Y(9)-Y(8)+40,'huella');
+ el('circle',{cx:RX,cy:Y(8),r:4,style:'fill:var(--c-huella)'},g);el('circle',{cx:RX,cy:Y(9),r:4,style:'fill:var(--c-huella)'},g);
+ pinLabel(g,RX+10,Y(8),'RXD');pinLabel(g,RX+10,Y(9),'TXD');
+ el('text',{x:RX+64,y:(Y(8)+Y(9))/2+5,class:'t-title'},g,'AS608 · huella');
+ stub(RX+230,RX+246,Y(8),'5V');chip(RX+250,Y(8),'Vi → 5V','5V');
+ stub(RX+230,RX+246,Y(9),'GND');chip(RX+250,Y(9),'GND','GND');
+ const lab=el('g',{'data-c':'huella'},gParts);
+ el('text',{x:695,y:Y(8)-8,'text-anchor':'middle',class:'t-small'},lab,'TX2 → RXD');
+ el('text',{x:695,y:Y(9)-8,'text-anchor':'middle',class:'t-small'},lab,'TXD → RX2');
+ el('text',{x:695,y:Y(9)+20,'text-anchor':'middle',class:'t-small t-muted'},lab,'divisor si TX ≈ 5 V');}
+/* GPIO4 hacia el teclado */
+wire([[XR,Y(10)],[656,Y(10)]],'teclado');chip(660,Y(10),'Teclado pin 8 · C4','teclado','start','teclado');
+/* alimentaciones en la placa */
+stub(XR,656,Y(13),'GND');chip(660,Y(13),'GND','GND');
+stub(XR,656,Y(14),'3V3');chip(660,Y(14),'3V3 → OLED VCC','3V3');
+stub(444,XL,Y(13),'GND');chip(440,Y(13),'GND','GND','end');
+stub(444,XL,Y(14),'5V');chip(440,Y(14),'VIN = 5 V → AS608, servos','5V','end');
+
+/* ---------- diagrama de alimentación ---------- */
+const P=document.getElementById('pwr');
+function pel(tag,a,t,c){const g=c?el('g',{'data-c':c},P):P;return el(tag,a,g,t)}
+const R5=50, RG=262;
+pel('line',{x1:220,y1:R5,x2:1150,y2:R5,style:'stroke:var(--c-5v);stroke-width:4'});
+pel('line',{x1:220,y1:RG,x2:1150,y2:RG,style:'stroke:var(--c-gnd);stroke-width:4'});
+pel('text',{x:1150,y:R5-10,'text-anchor':'end',style:'fill:var(--c-5v);font-weight:600'},'riel 5 V');
+pel('text',{x:1150,y:RG+22,'text-anchor':'end',style:'fill:var(--c-gnd);font-weight:600'},'GND común');
+function pbox(x,y,w,h,title,sub,stroke){const g=el('g',{},P);el('rect',{x,y,width:w,height:h,rx:8,style:`fill:var(--surface);stroke:${stroke};stroke-width:2`},g);
+  el('text',{x:x+w/2,y:y+h/2-(sub?3:-5),'text-anchor':'middle',class:'t-title'},g,title);if(sub)el('text',{x:x+w/2,y:y+h/2+15,'text-anchor':'middle',class:'t-small t-muted'},g,sub);return g}
+function vline(x,y1,y2,color){el('line',{x1:x,y1,x2:x,y2,style:`stroke:${color};stroke-width:2.5`},P);
+  for(const y of [y1,y2]) if(y===R5||y===RG) el('circle',{cx:x,cy:y,r:4.5,style:`fill:${color}`},P)}
+pbox(20,125,150,60,'Laptop','USB: datos y 5 V','var(--fg)');
+el('line',{x1:170,y1:155,x2:240,y2:155,style:'stroke:var(--fg);stroke-width:2.5'},P);
+el('text',{x:205,y:146,'text-anchor':'middle',class:'t-small'},P,'USB');
+pbox(240,105,150,100,'ESP32','VIN · 3V3 · GND','var(--fg)');
+vline(300,R5,105,'var(--c-5v)');el('text',{x:308,y:84,class:'t-small'},P,'VIN');
+vline(300,205,RG,'var(--c-gnd)');
+el('line',{x1:390,y1:155,x2:440,y2:155,style:'stroke:var(--c-3v3);stroke-width:2.5'},P);
+el('text',{x:415,y:146,'text-anchor':'middle',class:'t-small'},P,'3V3');
+pbox(440,130,130,50,'OLED','VCC 3.3 V','var(--c-oled)');vline(505,180,RG,'var(--c-gnd)');
+[[620,'AS608','Vi 5 V · 120–150 mA','var(--c-huella)'],[780,'Servo 1','5 V · picos altos','var(--c-servos)'],[930,'Servo 2','5 V · picos altos','var(--c-servos)']].forEach(([x,t,s,c])=>{
+  pbox(x,120,130,60,t,s,c);vline(x+65,R5,120,'var(--c-5v)');vline(x+65,180,RG,'var(--c-gnd)')});
+/* capacitor */
+{const x=1100;vline(x,R5,140,'var(--c-5v)');vline(x,170,RG,'var(--c-gnd)');
+ el('line',{x1:x-16,y1:140,x2:x+16,y2:140,style:'stroke:var(--fg);stroke-width:3'},P);
+ el('path',{d:`M${x-16} 172 Q${x} 160 ${x+16} 172`,style:'fill:none;stroke:var(--fg);stroke-width:3'},P);
+ el('text',{x:x-24,y:136,'text-anchor':'end',class:'t-small'},P,'+');
+ el('text',{x:x-22,y:160,'text-anchor':'end',class:'t-small'},P,'470 µF');
+ el('text',{x:x-22,y:174,'text-anchor':'end',class:'t-small t-muted'},P,'≥ 10 V');}
+el('text',{x:640,y:225,class:'t-small t-muted'},P,'Los cátodos de los LEDs y el GND del AS608 también van a este GND.');
+
+/* ---------- resaltar por componente ---------- */
+const btns=[...document.querySelectorAll('#legend button')];
+btns.forEach(b=>b.addEventListener('click',()=>{const f=b.dataset.f;
+  btns.forEach(x=>x.setAttribute('aria-pressed',x===b));
+  S.classList.toggle('focusing',!!f);
+  S.querySelectorAll('[data-c]').forEach(e=>e.classList.toggle('dim',!!f&&e.dataset.c!==f));
+}));
+</script>
