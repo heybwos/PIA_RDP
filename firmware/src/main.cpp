@@ -167,12 +167,15 @@ void setup() {
 }
 
 void loop() {
-  uint32_t ahora = millis();
   String l;
   while (protocoloLinea(l)) comandoPc(l);
+  // `ahora` se toma DESPUÉS de leer los comandos: si se tomara antes, un PING recién llegado deja
+  // tUltimoPing > ahora, la resta sin signo da la vuelta y el ESP32 caía a SIN_PC cada segundo
+  // (borrando el ID y el PIN a medio teclear). Encontrado en P5 con la placa real.
+  uint32_t ahora = millis();
 
   // Vida: sin PING en 5 s, estado seguro (nunca durante una imagen: esa fase bloquea)
-  if (estado != SIN_PC && ahora - tUltimoPing > MS_SIN_PING) aSinPc();
+  if (estado != SIN_PC && (int32_t)(ahora - tUltimoPing) > (int32_t)MS_SIN_PING) aSinPc();
 
   actuadoresTick();
   char k = tecladoLeer();
