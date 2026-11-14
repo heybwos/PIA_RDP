@@ -49,17 +49,42 @@ const _beat=beat; beat=(k,t,ms,id)=>alcanzar?(caption(k,t),Promise.resolve()):_b
    reducidos, con los rectángulos de Viola-Jones, hasta que el rostro queda estable. */
 function vivo(m){
   if(m.estado==='tomado'){$('#faceSt').innerHTML=est('ok','foto tomada');
-    caption('fase 1','Rostro estable: se toma el cuadro para el análisis.','ok');return}
+    caption('fase 1','Foto tomada: tu cara estuvo dentro de la guía. Sigue el análisis.','ok');
+    textoCam('Foto tomada',C_OK);return}
   if(V.etapa!==3&&V.seguir) mostrarEtapa(3);
   panel('#pRostro','active'); setPhase(1,'rostro');
   camBase=mkCanvas(m.imagen.ancho,m.imagen.alto); pintar(camBase,m.imagen);
   camDraw({rostro:m.rostro,ojos:m.ojos},{box:m.rostro?1:0,eyes:1,line:0});
+  guiaCam(m);
   $('#camTag').textContent='cámara en vivo';
-  const t=m.estado==='preparate'?`Prepárate: mira al lente del celular (${Math.ceil(m.falta_s)} s)`
-    :m.estado==='estable'?`Rostro detectado, no te muevas (${m.seguidos}/${m.necesarios})`
-    :m.rostro?'Rostro sin los dos ojos: mira de frente al lente':'Buscando rostro… acércate y mira al lente';
-  $('#faceSt').innerHTML=est(m.estado==='estable'?'ok':'wait',m.estado==='estable'?'detectado':m.estado==='preparate'?'prepárate':'buscando');
-  caption('fase 1',`${t} · quedan ${Math.ceil(m.limite_s)} s`,m.estado==='estable'?'ok':'wait');
+  const prep=m.estado==='preparate';
+  const grande=prep?String(Math.ceil(m.falta_s)):m.dentro?'No te muevas':m.pista;
+  textoCam(grande,prep?C_AC:m.dentro?C_OK:C_AV,prep?64:20);
+  const t=prep?`Prepárate: pon tu cara dentro del óvalo y mira al lente (empieza en ${Math.ceil(m.falta_s)} s)`:m.pista;
+  $('#faceSt').innerHTML=est(m.dentro&&!prep?'ok':'wait',prep?'prepárate':m.dentro?'dentro de la guía':'ajusta');
+  caption('fase 1',`${t} · quedan ${Math.ceil(m.limite_s)} s`,m.dentro&&!prep?'ok':'wait');
+}
+/* óvalo guía, flecha hacia él y barra de "no te muevas", en las coordenadas del lienzo */
+function guiaCam(m){
+  const {s,ox,oy}=camFit(), w=camBase.width, h=camBase.height, g=m.guia;
+  const cx=ox+g.cx*w*s, cy=oy+g.cy*h*s, rx=(g.ancho_min+g.ancho_max)/2*w*s*0.62, ry=rx*1.32;
+  const color=m.dentro?C_OK:C_AV;
+  camCtx.save(); camCtx.lineWidth=3; camCtx.setLineDash(m.dentro?[]:[10,8]); camCtx.strokeStyle=rgb(color,.95);
+  camCtx.beginPath(); camCtx.ellipse(cx,cy,rx,ry,0,0,2*PI); camCtx.stroke(); camCtx.setLineDash([]);
+  if(m.progreso>0){camCtx.lineWidth=7;camCtx.strokeStyle=rgb(C_OK);camCtx.beginPath();
+    camCtx.ellipse(cx,cy,rx+8,ry+8,0,-PI/2,-PI/2+2*PI*m.progreso);camCtx.stroke()}
+  if(m.flecha&&!m.dentro&&m.rostro){const [dx,dy]=m.flecha, L=Math.hypot(dx*w,dy*h)*s;
+    if(L>12){const fx=cx-dx*w*s, fy=cy-dy*h*s, ang=Math.atan2(cy-fy,cx-fx);
+      camCtx.strokeStyle=rgb(C_AV);camCtx.lineWidth=4;camCtx.beginPath();camCtx.moveTo(fx,fy);camCtx.lineTo(cx,cy);camCtx.stroke();
+      camCtx.beginPath();camCtx.moveTo(cx,cy);camCtx.lineTo(cx-14*Math.cos(ang-0.5),cy-14*Math.sin(ang-0.5));
+      camCtx.moveTo(cx,cy);camCtx.lineTo(cx-14*Math.cos(ang+0.5),cy-14*Math.sin(ang+0.5));camCtx.stroke()}}
+  camCtx.restore();
+}
+function textoCam(t,color,tam=20){
+  camCtx.save(); camCtx.font=`600 ${tam}px Inter, sans-serif`; camCtx.textAlign='center';
+  const y=tam>40?336/2+tam/3:336-16, wTxt=camCtx.measureText(t).width+24; // abajo: arriba está la etiqueta
+  if(tam<=40){camCtx.fillStyle='rgba(0,0,0,.62)';camCtx.fillRect(224-wTxt/2,y-tam-2,wTxt,tam+14)}
+  camCtx.fillStyle=rgb(color); camCtx.fillText(t,224,y); camCtx.restore();
 }
 
 /* ---------- estado de la verificación en curso ---------- */

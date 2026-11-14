@@ -98,21 +98,36 @@ def test_camara_url_con_droidcam_falso():
 
 
 @pytest.mark.skipif(not HAY_DATASETS, reason="sin datasets")
-def test_rostro_en_vivo_espera_cuadros_estables(tmp_path, monkeypatch):
-    """Con cámara real se toma el cuadro solo tras ESTABLES cuadros seguidos con rostro y ojos."""
+def test_rostro_en_vivo_espera_cara_dentro_de_la_guia(tmp_path, monkeypatch):
+    """Con cámara real se toma el cuadro solo cuando la cara está dentro de la guía, y se
+    indica qué ajustar (sin cara, cara chica y descentrada)."""
     import cv2
 
     from pia import camara, orquestador
 
     monkeypatch.setattr(orquestador, "REACCION_S", 0.0)
+    monkeypatch.setattr(orquestador, "MANTENER_S", 0.0)
     cara = cv2.imread(str(DATASETS / "orl" / "s3" / "1.pgm"), cv2.IMREAD_GRAYSCALE)
-    lienzo = np.full((480, 640), 90, np.uint8)
-    lienzo[128:352, 228:412] = cv2.resize(cara, (184, 224))
-    vacio = np.full((480, 640), 90, np.uint8)
+
+    def lienzo(ancho, cx, cy):  # retrato de 480 x 640 con la cara de `ancho` px centrada en (cx, cy)
+        c = np.full((640, 480), 90, np.uint8)
+        g = cv2.resize(cara, (ancho, int(ancho * 112 / 92)))
+        y0, x0 = cy - g.shape[0] // 2, cx - ancho // 2
+        c[y0 : y0 + g.shape[0], x0 : x0 + ancho] = g
+        return c
+
+    vacio = np.full((640, 480), 90, np.uint8)
+    chica = lienzo(90, 240, 270)
+    centrada = lienzo(200, 240, 290)
+    orq = orquestador.Orquestador(Almacen(tmp_path), config.cargar(), None)
+    for img, esperado in ((vacio, "No te veo"), (chica, "Acércate"), (centrada, "Así está bien")):
+        from pia import rostro
+        _, pista, _ = orquestador.evaluar_posicion(rostro.procesar(img, permitir_relleno=False), 480, 640)
+        assert pista.startswith(esperado), (esperado, pista)
 
     class Secuencia(camara.Camara):
         def __init__(self):
-            self.cuadros = [vacio, lienzo, vacio, lienzo, lienzo, lienzo, lienzo]
+            self.cuadros = [vacio, chica, centrada]
             self.i = 0
 
         def _capturar(self):
@@ -125,12 +140,12 @@ def test_rostro_en_vivo_espera_cuadros_estables(tmp_path, monkeypatch):
     async def emitir(t, d):
         eventos.append((t, d))
 
+    orq.emitir = emitir
     cam = Secuencia()
-    orq = orquestador.Orquestador(Almacen(tmp_path), config.cargar(), emitir)
     cuadro = asyncio.run(orq._cuadro_rostro(cam))
-    assert cuadro is lienzo and cam.i == 6  # vacío, cara, vacío (reinicia), cara x3
+    assert cuadro is centrada and cam.i == 3
     vivos = [d for t, d in eventos if t == "rostro_vivo"]
-    assert vivos[-1]["estado"] == "tomado" and any(d.get("estado") == "buscando" for d in vivos)
+    assert vivos[-1]["estado"] == "tomado" and any(d.get("estado") == "ajusta" for d in vivos)
 
 
 def test_camara_sin_respuesta_no_inventa():

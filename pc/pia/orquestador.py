@@ -24,10 +24,30 @@ from .config import Config
 from .dispositivos.base import CapturaCancelada, Dispositivo, Emisor, ErrorDispositivo, imagen_json, _nada
 
 PASOS_RECONSTRUCCION = (1, 5, 10, 20)
-REACCION_S = 2.0         # tiempo para acomodarse antes de aceptar un cuadro
-ESTABLES = 3             # cuadros seguidos con rostro y dos ojos para tomar la foto
-LIMITE_ROSTRO_S = 20.0   # sin rostro estable en este tiempo, se niega con mensaje
+REACCION_S = 3.0         # cuenta regresiva para acomodarse antes de evaluar
+MANTENER_S = 1.5         # tiempo seguido dentro de la guía para tomar la foto
+LIMITE_ROSTRO_S = 30.0   # sin foto en este tiempo, se niega con mensaje
 VIVO_ANCHO = 240         # ancho de la vista previa que se manda a la app
+# Guía (óvalo) en fracciones del cuadro: centro, y ancho del rostro aceptado
+GUIA = {"cx": 0.5, "cy": 0.42, "tol": 0.12, "ancho_min": 0.28, "ancho_max": 0.62}
+
+
+def evaluar_posicion(r: rostro.ResultadoRostro, w: int, h: int) -> tuple[bool, str, list[float] | None]:
+    """¿Está la cara dentro de la guía? Devuelve (dentro, indicación, [dx, dy] hacia la guía)."""
+    if not r.hay_rostro:
+        return False, "No te veo: ponte frente al lente", None
+    x, y, fw, fh = r.deteccion.rostro
+    cx, cy, rel = (x + fw / 2) / w, (y + fh / 2) / h, fw / w
+    dx, dy = GUIA["cx"] - cx, GUIA["cy"] - cy
+    if len(r.deteccion.ojos) != 2:
+        return False, "Mira de frente al lente: no veo tus dos ojos", [dx, dy]
+    if rel < GUIA["ancho_min"]:
+        return False, "Acércate un poco al celular", [dx, dy]
+    if rel > GUIA["ancho_max"]:
+        return False, "Aléjate un poco del celular", [dx, dy]
+    if abs(dx) > GUIA["tol"] or abs(dy) > GUIA["tol"]:
+        return False, "Centra tu cara en el óvalo (sigue la flecha)", [dx, dy]
+    return True, "Así está bien: no te muevas", [dx, dy]
 N_EIGENFACES_VISTA = 8
 
 
@@ -166,37 +186,42 @@ class Orquestador:
         return await self._cerrar(disp, fila, t0, dec)
 
     async def _cuadro_rostro(self, camara: Camara) -> np.ndarray:
-        """Cámara en vivo: manda vista previa a la app y toma el cuadro cuando hay rostro con los
-        dos ojos en ESTABLES cuadros seguidos, después de un tiempo de reacción. Un dataset
-        (imagen fija) se toma directo."""
+        """Cámara en vivo: manda vista previa a la app con una guía (óvalo) e indicaciones
+        (acércate, aléjate, centra la cara…). Tras una cuenta regresiva, toma el cuadro cuando la
+        cara lleva MANTENER_S seguidos dentro de la guía con los dos ojos. Un dataset (imagen
+        fija) se toma directo."""
         if isinstance(camara, CamaraArchivo):
             return await asyncio.to_thread(camara.capturar)
         t0 = time.monotonic()
-        seguidos, ultimo_envio = 0, 0.0
+        desde, ultimo_envio = None, 0.0
         while True:
             cuadro = await asyncio.to_thread(camara.capturar)
             r = await asyncio.to_thread(rostro.procesar, cuadro, None, False)
-            ok = r.hay_rostro and len(r.deteccion.ojos) == 2
-            transcurrido = time.monotonic() - t0
+            h, w = cuadro.shape[:2]
+            dentro, pista, flecha = evaluar_posicion(r, w, h)
+            ahora = time.monotonic()
+            transcurrido = ahora - t0
             listo = transcurrido >= REACCION_S
-            seguidos = seguidos + 1 if (ok and listo) else 0
-            if seguidos >= ESTABLES:
-                await self.emitir("rostro_vivo", {"estado": "tomado", "seguidos": seguidos, "necesarios": ESTABLES})
+            desde = (desde or ahora) if (dentro and listo) else None
+            progreso = min(1.0, (ahora - desde) / max(MANTENER_S, 1e-6)) if desde else 0.0
+            if desde and ahora - desde >= MANTENER_S:
+                await self.emitir("rostro_vivo", {"estado": "tomado", "progreso": 1.0})
                 return cuadro
             if transcurrido > LIMITE_ROSTRO_S:
-                raise ErrorVerificacion("No se detectó un rostro con los dos ojos a tiempo",
-                                        "Mira de frente al lente del celular, con buena luz, a 50-70 cm")
-            if time.monotonic() - ultimo_envio > 0.12:  # ~8 cuadros por segundo a la app, reducidos
-                ultimo_envio = time.monotonic()
+                raise ErrorVerificacion("No se logró una foto del rostro dentro de la guía a tiempo",
+                                        f"Última indicación: {pista}. Mira de frente al lente, con buena luz")
+            if ahora - ultimo_envio > 0.12:  # ~8 cuadros por segundo a la app, reducidos
+                ultimo_envio = ahora
                 gris = rostro.a_gris(cuadro)
                 f = VIVO_ANCHO / gris.shape[1]
                 chico = cv2.resize(gris, None, fx=f, fy=f, interpolation=cv2.INTER_AREA)
                 esc = lambda rc: [int(round(v * f)) for v in rc]  # noqa: E731
                 await self.emitir("rostro_vivo", {
                     "imagen": imagen_json(chico), "rostro": esc(r.deteccion.rostro) if r.deteccion.rostro else None,
-                    "ojos": [esc(o) for o in r.deteccion.ojos],
-                    "estado": "preparate" if not listo else ("estable" if ok else "buscando"),
-                    "falta_s": max(0.0, REACCION_S - transcurrido), "seguidos": seguidos, "necesarios": ESTABLES,
+                    "ojos": [esc(o) for o in r.deteccion.ojos], "guia": GUIA,
+                    "estado": "preparate" if not listo else ("mantener" if dentro else "ajusta"),
+                    "dentro": dentro, "pista": pista, "flecha": flecha, "progreso": progreso,
+                    "falta_s": max(0.0, REACCION_S - transcurrido),
                     "limite_s": max(0.0, LIMITE_ROSTRO_S - transcurrido)})
 
     async def _cerrar(self, disp: Dispositivo, fila: dict, t0: float, dec: fusion.Decision) -> Resultado:
