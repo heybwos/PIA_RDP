@@ -71,7 +71,8 @@ def calibrar_huella_dataset(alm: Almacen, datasets: Path) -> calibracion.Resulta
                 (gen if a == b else imp).append(s)
     r = calibracion.por_eer(gen, imp, mayor_es_mejor=True)
     alm.guardar_calibracion("huella", FUENTE_HUELLA, r.umbral, r.eer, r.far, r.frr, r.n_genuinos, r.n_impostores,
-                            parametros={"perfil": FUENTE_HUELLA, "base": DB_HUELLA, "registro": "1-5", "prueba": "6-8"})
+                            parametros={"perfil": FUENTE_HUELLA, "base": DB_HUELLA, "registro": "1-5", "prueba": "6-8",
+                                        "distribucion": calibracion.distribucion(gen, imp)})
     return r
 
 
@@ -89,7 +90,8 @@ def calibrar_rostro_dataset(alm: Almacen, datasets: Path) -> calibracion.Resulta
                 (gen if p == q else imp).append(distancia_minima(w, vs))
     r = calibracion.por_eer(gen, imp, mayor_es_mejor=False)
     alm.guardar_calibracion("rostro", "dataset", r.umbral, r.eer, r.far, r.frr, r.n_genuinos, r.n_impostores,
-                            modelo_id=mid, parametros={"dataset": "orl", "registro": "1-6", "prueba": "7-10"})
+                            modelo_id=mid, parametros={"dataset": "orl", "registro": "1-6", "prueba": "7-10",
+                                                       "distribucion": calibracion.distribucion(gen, imp)})
     return r
 
 

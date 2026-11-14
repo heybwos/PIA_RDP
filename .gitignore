@@ -14,3 +14,7 @@ __pycache__/
 .pio/
 firmware/.pio/
 .vscode/.browse*
+
+# Node (playwright para app/pruebas)
+node_modules/
+package-lock.json

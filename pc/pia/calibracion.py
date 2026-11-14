@@ -29,6 +29,15 @@ def tasas(g: np.ndarray, i: np.ndarray, u: float, mayor_es_mejor: bool) -> tuple
     return float((i < u).mean()), float((g >= u).mean())
 
 
+def distribucion(genuinos, impostores, bins: int = 28) -> dict:
+    """Histogramas de genuinos e impostores sobre el mismo eje, para dibujarlos en la app."""
+    g, i = np.asarray(genuinos, float), np.asarray(impostores, float)
+    tope = float(np.percentile(np.concatenate([g, i]), 99.5)) or 1.0
+    bordes = np.linspace(0, tope, bins + 1)
+    return {"max": tope, "genuinos": np.histogram(np.clip(g, 0, tope), bordes)[0].tolist(),
+            "impostores": np.histogram(np.clip(i, 0, tope), bordes)[0].tolist()}
+
+
 def por_eer(genuinos, impostores, mayor_es_mejor: bool) -> Resultado:
     g, i = np.asarray(genuinos, float), np.asarray(impostores, float)
     v = np.unique(np.concatenate([g, i]))

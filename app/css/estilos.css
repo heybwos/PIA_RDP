@@ -1,0 +1,442 @@
+/* ============================================================
+   Maqueta del modo Simular. Lenguaje visual: HIG de Apple en modo oscuro.
+   - Los datos (huella, cámara, gráficas) van sobre superficies opacas.
+   - El vidrio es una aproximación con CSS (no es el material Liquid Glass real)
+     y solo se usa en lo que flota: barra, navegador de etapas, controles y pie.
+   - Cambiar de fondo: atributo data-fondo="a" | "b" en <html>.
+   ============================================================ */
+
+/* Fuentes locales (SIL OFL 1.1, ver fonts/). Subconjunto latin: no trae flechas ni letras griegas. */
+@font-face{font-family:"Inter";font-weight:400;font-style:normal;font-display:swap;src:url("../fonts/inter-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"Inter";font-weight:500;font-style:normal;font-display:swap;src:url("../fonts/inter-latin-500-normal.woff2") format("woff2")}
+@font-face{font-family:"Inter";font-weight:600;font-style:normal;font-display:swap;src:url("../fonts/inter-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"JetBrains Mono";font-weight:400;font-style:normal;font-display:swap;src:url("../fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"JetBrains Mono";font-weight:500;font-style:normal;font-display:swap;src:url("../fonts/jetbrains-mono-latin-500-normal.woff2") format("woff2")}
+@font-face{font-family:"JetBrains Mono";font-weight:600;font-style:normal;font-display:swap;src:url("../fonts/jetbrains-mono-latin-600-normal.woff2") format("woff2")}
+
+:root{
+  color-scheme:dark;
+  /* Fondos. #1C1C1E y #2C2C2E coinciden con systemGray6 y systemGray5 (oscuro) de la HIG. */
+  --bg:#000000; --bg-2:#1C1C1E; --bg-3:#2C2C2E; --hueco:#0E0E0F;
+  /* Texto, líneas y rellenos: valores de UIKit medidos por la comunidad, la HIG no los publica. */
+  --label:#FFFFFF; --label-2:rgba(235,235,245,.6); --label-3:rgba(235,235,245,.3);
+  --separator:rgba(84,84,88,.65); --fill:rgba(120,120,128,.36); --fill-2:rgba(120,120,128,.2);
+  /* Acento único (tint). Valor provisional: confirmar con el manual de identidad de la FIME. */
+  --verde-fime:#1F9F5C;
+  --acento-claro:#74C49A;   /* el script lo recalcula: verde FIME mezclado con 38 % de blanco, para texto y trazos finos */
+  --sobre-acento:#04110A;   /* texto sobre el acento (el blanco solo da 3.4:1) */
+  /* Estados: colores de sistema de la HIG para modo oscuro (consultados el 11 nov 2026). */
+  --ok:#30D158; --no:#FF4245; --aviso:#FF9230;
+  /* Vidrio */
+  --vidrio:rgba(58,58,62,.32); --vidrio-barra:rgba(28,28,30,.75); --vidrio-flota:rgba(30,30,32,.75);
+  --vidrio-linea:rgba(255,255,255,.11);
+  --sans:"Inter",system-ui,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+  /* Forma: radio interno = radio externo - padding */
+  --r-panel:24px; --pad:16px; --r-in:calc(var(--r-panel) - var(--pad));
+  --curva:cubic-bezier(.32,.72,0,1);
+  --cab-h:132px;  /* alto de la cabecera fija; el script lo mide */
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{background:var(--bg);color:var(--label);-webkit-text-size-adjust:100%}
+body{margin:0;font-family:var(--sans);font-size:15px;line-height:1.4;min-height:100vh;
+  padding:0 max(16px,env(safe-area-inset-right,0px)) calc(96px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  font-feature-settings:"cv11","ss03";-webkit-font-smoothing:antialiased}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button,select,input{font:inherit;color:inherit}
+button{-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid var(--acento-claro);outline-offset:2px}
+svg.ic{width:1.15em;height:1.15em;flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.18em}
+
+/* ---------- Fondo: estático, se pinta una sola vez ---------- */
+.fondo{position:fixed;inset:0;z-index:-1;pointer-events:none;background-color:#060607}
+/* A · "Bosque y petróleo": verde FIME profundo detrás de la barra, azul petróleo detrás del pie */
+html[data-fondo="a"] .fondo{background-image:
+  radial-gradient(62vw 52vh at 16% -8%, rgba(20,104,66,.62), transparent 72%),
+  radial-gradient(58vw 54vh at 74% 108%, rgba(16,70,96,.60), transparent 72%),
+  radial-gradient(44vw 46vh at 104% 16%, rgba(56,68,88,.42), transparent 70%)}
+/* B · "Grafito": gris azulado arriba, verde y petróleo apenas insinuados abajo */
+html[data-fondo="b"] .fondo{background-image:
+  radial-gradient(78vw 56vh at 50% -14%, rgba(70,82,104,.72), transparent 72%),
+  radial-gradient(50vw 46vh at 10% 104%, rgba(20,92,62,.40), transparent 70%),
+  radial-gradient(48vw 46vh at 94% 100%, rgba(22,62,84,.46), transparent 70%)}
+.fondo::before{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(0,0,0,.55) 100%)}
+.fondo::after{content:"";position:absolute;inset:0;background-image:var(--grano,none);background-size:160px 160px;opacity:.035}
+
+/* ---------- Vidrio ---------- */
+.vidrio,.vidrio-barra,.vidrio-flota{border:1px solid var(--vidrio-linea);box-shadow:0 12px 36px rgba(0,0,0,.36)}
+.vidrio{background:var(--vidrio);-webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%);box-shadow:0 6px 20px rgba(0,0,0,.24)}
+/* barra superior: más opaca porque el contenido pasa por debajo */
+.vidrio-barra{background:var(--vidrio-barra);-webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%)}
+/* navegador y pie: también les pasa contenido claro por debajo (la huella cruda) */
+.vidrio-flota{background:var(--vidrio-flota);-webkit-backdrop-filter:blur(28px) saturate(150%);backdrop-filter:blur(28px) saturate(150%)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .vidrio,.vidrio-barra,.vidrio-flota{background:rgba(30,30,32,.96)}
+}
+@media (prefers-reduced-transparency:reduce){
+  .vidrio,.vidrio-barra,.vidrio-flota{background:rgba(30,30,32,.97);-webkit-backdrop-filter:none;backdrop-filter:none}
+}
+/* sobre vidrio el texto secundario sube de opacidad: debajo puede pasar contenido claro */
+.vidrio-barra,.vidrio-flota{--label-2:rgba(235,235,245,.82)}
+/* borde especular: solo en la barra y en el navegador */
+.especular{position:relative}
+.especular::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,.34),rgba(255,255,255,.04) 38%,rgba(255,255,255,.03) 64%,rgba(255,255,255,.16));
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+
+/* ---------- Cabecera: barra + navegador de etapas ---------- */
+.cabecera{position:relative;z-index:20;padding-top:calc(8px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:8px;max-width:1440px;margin:0 auto}
+@media (min-width:860px) and (min-height:620px){.cabecera{position:sticky;top:0}}
+.barra{border-radius:28px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:8px 12px 8px 10px;min-height:56px}
+.marca{display:flex;align-items:center;gap:10px;min-width:0;margin-right:4px}
+.marca-ic{width:36px;height:36px;border-radius:18px;display:grid;place-items:center;background:var(--verde-fime);color:var(--sobre-acento);font-size:18px}
+.marca strong{display:block;font-size:15px;font-weight:600;line-height:1.2}
+.marca .sub{display:block;font-size:12px;color:var(--label-2);line-height:1.3}
+.grupo{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--label-2)}
+.estado{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:0 12px;min-height:32px;border-radius:16px;font-size:13px;color:var(--label-2);background:var(--fill-2);white-space:nowrap}
+.chip .ic{font-size:14px}
+.chip.aviso .ic{color:var(--aviso)} .chip.ok .ic{color:var(--ok)} .chip.no .ic{color:var(--no)}
+
+/* control segmentado en cápsula; el seleccionado lleva el acento */
+.seg{display:inline-flex;padding:4px;border-radius:22px;gap:2px}
+.barra .seg{background:var(--fill-2)}   /* dentro de la barra no lleva su propio blur: ya está sobre vidrio */
+.seg button{position:relative;border:0;background:transparent;padding:0 14px;min-height:36px;min-width:44px;border-radius:18px;color:var(--label-2);cursor:pointer;font-size:14px;font-weight:500;white-space:nowrap;
+  transition:background .2s var(--curva),color .2s var(--curva)}
+.seg button::after{content:"";position:absolute;inset:-4px 0}   /* objetivo táctil de 44 px */
+.seg button:hover{color:var(--label)}
+.seg button[aria-pressed="true"]{background:var(--verde-fime);color:var(--sobre-acento);font-weight:600}
+
+/* navegador de etapas */
+.fila-nav{position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 12px}
+.etapas{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:min(100%,820px);padding:4px;border-radius:30px}
+.nav-ind{position:absolute;top:4px;left:0;height:calc(100% - 8px);width:0;border-radius:26px;background:rgba(120,120,128,.26);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);pointer-events:none;
+  transition:transform .5s var(--curva),width .5s var(--curva)}
+html.vt .nav-ind,html.sin-anim .nav-ind{transition:none}
+.paso{position:relative;z-index:1;border:0;background:transparent;border-radius:26px;min-height:52px;padding:4px 14px 4px 10px;cursor:pointer;
+  display:flex;align-items:center;gap:10px;min-width:0;text-align:left;color:var(--label-2);transition:color .2s}
+.paso[aria-current="step"],.paso:hover{color:var(--label)}
+.paso .fig{flex:none;width:28px;height:28px;display:grid;place-items:center;border-radius:14px;border:1.5px solid var(--label-3);font-family:var(--mono);font-size:13px;font-weight:500;color:var(--label-2);transition:background .25s,border-color .25s,border-radius .25s}
+.paso .txt{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.paso .nom{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.paso .dato{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--label-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.paso .dato:empty{display:none}
+.paso[aria-current="step"] .dato{color:var(--label)}
+/* estados: cada uno cambia de forma e icono, no solo de color */
+.paso[data-est="curso"] .fig{border-color:var(--acento-claro);color:var(--acento-claro)}
+.paso[data-est="curso"] .fig i{width:8px;height:8px;border-radius:4px;background:var(--acento-claro);animation:pulso 1.4s ease-in-out infinite}
+.paso[data-est="ok"] .fig{background:var(--ok);border-color:transparent;color:#03200C}
+.paso[data-est="no"] .fig{background:var(--no);border-color:transparent;color:#2B0304;border-radius:8px}
+.paso[data-est="omit"] .fig{border-style:dashed}
+.paso .fig .ic{width:16px;height:16px;stroke-width:2.5}
+.volver{border:0;border-radius:22px;min-height:44px;padding:0 16px 0 18px;display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:600;
+  background:var(--verde-fime);color:var(--sobre-acento)}
+@media (min-width:1280px){.volver{position:absolute;right:0;top:50%;transform:translateY(-50%)}}
+/* pista de las flechas del teclado: no es un control, va en el hueco izquierdo del navegador (espejo de .volver) */
+.atajo{display:none}
+@media (min-width:1280px){
+  .atajo{position:absolute;left:0;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(235,235,245,.82);white-space:nowrap;pointer-events:none}
+  .atajo .tecla{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--fill-2);border:1px solid var(--vidrio-linea);color:var(--label)}
+  .atajo .tecla .ic{width:14px;height:14px;stroke-width:2}
+  .atajo .tecla+.tecla+span{margin-left:2px}
+}
+@keyframes pulso{50%{opacity:.3}}
+
+/* ---------- Controles ---------- */
+.wrap{max-width:1440px;margin:0 auto}
+.controles{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:12px 0}
+.campo{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px;color:var(--label-2)}
+select{-webkit-appearance:none;appearance:none;border-radius:22px;padding:0 40px 0 16px;min-height:44px;max-width:100%;font-size:15px;color:var(--label);cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ebebf5' stroke-opacity='.6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center}
+select:disabled{opacity:.5;cursor:not-allowed}
+select option{background:#2C2C2E;color:#fff}
+.btn{border:0;border-radius:22px;min-height:44px;padding:0 18px;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-size:15px;font-weight:500;color:var(--label);white-space:nowrap;
+  transition:filter .2s,opacity .2s,transform .15s var(--curva)}
+.btn:hover{filter:brightness(1.15)}
+.btn:active{transform:scale(.97)}
+.btn.principal{background:var(--verde-fime);color:var(--sobre-acento);font-weight:600}
+.btn.gris{background:var(--fill)}
+.btn:disabled{opacity:.4;cursor:not-allowed;filter:none;transform:none}
+.controles .hueco{flex:1}
+.esp{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;width:100%;padding:12px 12px 12px 16px;border-radius:28px}
+.esp p{margin:0;color:var(--label-2);flex:1 1 280px;font-size:14px}
+.esp p strong{color:var(--label);font-weight:600}
+
+/* ---------- Rejilla y paneles ---------- */
+.grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);grid-template-areas:"frontal" "huella" "rostro" "decision" "bitacora"}
+@media (min-width:860px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"frontal decision" "huella huella" "rostro rostro" "bitacora bitacora"}}
+@media (min-width:1240px){.grid{grid-template-columns:minmax(300px,.86fr) minmax(0,1fr) minmax(0,1fr);grid-template-areas:"frontal huella huella" "rostro rostro decision" "bitacora bitacora bitacora"}}
+.panel{background:var(--bg-2);border-radius:var(--r-panel);padding:var(--pad);min-width:0;position:relative;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);
+  scroll-margin-top:calc(var(--cab-h) + 12px);transition:box-shadow .35s}
+.panel[data-state="active"]{box-shadow:inset 0 0 0 1.5px var(--verde-fime)}
+.panel-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-bottom:12px;min-height:28px}
+.panel-head h2{margin:0;font-size:17px;font-weight:600;line-height:1.3;width:fit-content}
+.panel-head .meta{font-size:12px;color:var(--label-2)}
+.panel-head .st{margin-left:auto;font-size:13px;color:var(--label-2);display:inline-flex;align-items:center;gap:6px}
+.p-frontal{grid-area:frontal}.p-huella{grid-area:huella}.p-rostro{grid-area:rostro}.p-decision{grid-area:decision}.p-bitacora{grid-area:bitacora}
+.label{font-size:12px;color:var(--label-2)}
+.cap{font-size:13px;color:var(--label-2)}
+.cap b{color:var(--label);font-weight:500}
+.est{display:inline-flex;align-items:center;gap:6px}
+.est.ok .ic{color:var(--ok)} .est.no .ic{color:var(--no)}
+.est .punto{width:8px;height:8px;border-radius:4px;background:var(--aviso);animation:pulso 1.4s ease-in-out infinite}
+/* fases del PIA dentro de cada factor */
+.fases{list-style:none;display:flex;gap:4px;margin:0;padding:0;flex-wrap:wrap;align-items:center}
+.fases li,.fase-chip{display:inline-flex;align-items:center;gap:6px;padding:0 10px 0 4px;min-height:28px;border-radius:14px;font-size:12px;color:var(--label-2);transition:color .25s,background .25s}
+.fase-chip{padding:0 10px;background:var(--fill-2)}
+.fases li .n{width:20px;height:20px;border-radius:10px;display:grid;place-items:center;font-family:var(--mono);font-size:11px;box-shadow:inset 0 0 0 1px var(--label-3)}
+.fases li .n .ic{width:12px;height:12px;stroke-width:3}
+.fases li.done .n{background:var(--fill);box-shadow:none;color:var(--label)}
+.fases li.on{color:var(--label);background:var(--fill-2)}
+.fases li.on .n{background:var(--verde-fime);box-shadow:none;color:var(--sobre-acento);font-weight:600}
+
+/* panel frontal */
+.fr{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+.fr-a,.fr-c{min-width:0}
+.oled-row{display:flex;gap:12px;align-items:center}
+.oled-bezel{flex:1;min-width:0;background:#000;border-radius:var(--r-in);padding:8px;box-shadow:inset 0 0 0 1px var(--separator)}
+.oled-bezel canvas{display:block;width:100%;max-width:384px;aspect-ratio:2/1;image-rendering:pixelated;margin:0 auto}
+.leds{display:flex;flex-direction:column;gap:8px;align-items:center}
+.led{width:18px;height:18px;border-radius:9px;box-shadow:inset 0 0 0 1px var(--separator);transition:background .25s,box-shadow .25s}
+.led.g{background:#0E2A16}.led.r{background:#33100F}
+.led.g.on{background:var(--ok);box-shadow:0 0 14px 3px rgba(48,209,88,.5)}
+.led.r.on{background:var(--no);box-shadow:0 0 14px 3px rgba(255,66,69,.5)}
+.leds small{font-size:12px;color:var(--label-2);line-height:1}
+.slots{display:flex;gap:16px;margin:16px 0 0;flex-wrap:wrap}
+.slotgrp{display:flex;flex-direction:column;gap:4px}
+.slotrow{display:flex;gap:6px}
+.slot{width:36px;height:44px;border-radius:var(--r-in);background:var(--hueco);box-shadow:inset 0 0 0 1px var(--separator);display:grid;place-items:center;font-family:var(--mono);font-size:20px;transition:box-shadow .2s,background .2s}
+.slot.fill{box-shadow:inset 0 0 0 1.5px var(--acento-claro)}
+.slot.err{box-shadow:inset 0 0 0 1.5px var(--no);background:rgba(255,66,69,.12)}
+.kp-row{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.keypad{display:grid;grid-template-columns:repeat(4,minmax(44px,1fr));gap:8px;padding:8px;background:var(--hueco);border-radius:var(--r-panel);flex:0 1 216px}
+.key{aspect-ratio:1/.82;min-height:44px;border-radius:var(--r-panel);border:0;background:var(--bg-3);font-family:var(--mono);font-size:19px;cursor:pointer;
+  transition:transform .15s var(--curva),background .2s,color .2s}
+.keypad .key{border-radius:16px}
+.key.fn{color:var(--label-2)}
+.key.hit{transform:scale(.93);background:var(--verde-fime);color:var(--sobre-acento)}
+.key:disabled{cursor:default}
+.kp-side{flex:1 1 110px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--label-2);cursor:pointer;min-height:44px}
+.toggle input{accent-color:var(--verde-fime);width:18px;height:18px;margin:0}
+.users{font-size:13px;border-collapse:collapse;width:100%}
+.users td{padding:2px 0;color:var(--label-2)}
+.users td:first-child{color:var(--label);font-family:var(--mono);width:32px}
+.serial{background:var(--hueco);border-radius:var(--r-in);padding:8px 12px;height:150px;overflow:auto;font-family:var(--mono);font-size:12px;line-height:1.6}
+.serial div{white-space:nowrap}
+.serial .dir{color:var(--label-2);display:inline-block;width:96px}
+.serial .in{color:var(--acento-claro)} .serial .out{color:var(--label)}
+.serial .note{color:var(--label-2)}
+
+/* huella */
+.fp-body{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);grid-template-areas:"par" "tira" "met"}
+@media (min-width:700px){.fp-body{grid-template-columns:minmax(0,1fr) 220px;grid-template-areas:"par met" "tira met"}}
+.fp-pair{grid-area:par;position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-self:start}
+.fp-cell{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fp-cell canvas{width:100%;height:auto;aspect-ratio:256/288;border-radius:var(--r-in);background:var(--hueco);display:block}
+.fp-overlay{position:absolute;inset:0;pointer-events:none;width:100%;height:100%}
+.strip{grid-area:tira;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;align-self:start}
+.thumb{display:flex;flex-direction:column;gap:4px;border:0;background:none;padding:0;cursor:pointer;text-align:left;min-width:0;border-radius:var(--r-in)}
+.thumb canvas{width:100%;aspect-ratio:256/288;border-radius:var(--r-in);background:var(--hueco);transition:box-shadow .25s,opacity .25s;opacity:.3}
+.thumb span{font-size:12px;color:var(--label-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thumb.done canvas{opacity:1}
+.thumb.cur canvas{box-shadow:0 0 0 2px var(--acento-claro)}
+.thumb.cur span{color:var(--label);font-weight:500}
+.metrics{grid-area:met;display:flex;flex-direction:column;gap:8px}
+.metric{padding:12px;border-radius:var(--r-in);background:var(--bg-3)}
+.metric .v{font-family:var(--mono);font-size:20px;font-variant-numeric:tabular-nums;line-height:1.25;margin-top:2px}
+.metric .v small{font-size:12px;color:var(--label-2)}
+.legend{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--label-2)}
+.legend i{display:inline-block;width:10px;height:10px;margin-right:8px;vertical-align:-1px}
+.lg-end{border:2px solid var(--acento-claro);border-radius:50%}
+.lg-bif{border:2px solid var(--aviso)}
+.bar{position:relative;height:8px;background:var(--fill);border-radius:4px;margin-top:8px}
+.bar>i{position:absolute;inset:0 auto 0 0;width:0;background:var(--acento-claro);border-radius:4px}
+.bar>b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--label)}
+
+/* rostro */
+.face-grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:700px){.face-grid{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}}
+.cam{position:relative;align-self:start}
+.cam canvas{width:100%;height:auto;aspect-ratio:4/3;border-radius:var(--r-in);display:block;background:var(--hueco)}
+.cam .tag{position:absolute;left:8px;top:8px;font-size:12px;padding:4px 10px;border-radius:12px;background:rgba(0,0,0,.6);color:rgba(235,235,245,.8)}
+.fsteps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.fstep{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fstep .box{aspect-ratio:1;border-radius:var(--r-in);overflow:hidden;background:var(--hueco);display:grid;place-items:center}
+.fstep canvas{width:100%;height:100%;display:block;transition:transform .9s var(--curva)}
+.hist{aspect-ratio:1;display:grid;align-items:end;background:var(--hueco);border-radius:var(--r-in);padding:6px;overflow:hidden}
+.hist svg,.chart svg{display:block;width:100%;height:auto}
+.eig{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+.eig canvas{width:100%;aspect-ratio:1;border-radius:6px;background:var(--hueco);opacity:0;transform:scale(.9);transition:opacity .35s,transform .35s var(--curva)}
+.eig canvas.in{opacity:1;transform:none}
+.face-low{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);grid-column:1/-1}
+@media (min-width:700px){.face-low{grid-template-columns:minmax(0,1.2fr) 150px minmax(0,1fr)}}
+.recon{display:flex;flex-direction:column;gap:4px}
+.recon .box{aspect-ratio:1;border-radius:var(--r-in);overflow:hidden;background:var(--hueco)}
+.recon canvas{width:100%;height:100%;display:block}
+.sect{display:flex;flex-direction:column;gap:6px;min-width:0}
+
+/* decisión */
+.fuse{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+.fuse-a,.fuse-b{display:flex;flex-direction:column;gap:12px;min-width:0}
+.fz-row .top-l{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--label-2)}
+.fz-row .top-l b{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--label);font-weight:500}
+.fz-bar{position:relative;height:8px;border-radius:4px;background:var(--fill);margin-top:6px}
+.fz-bar>i{position:absolute;inset:0 auto 0 0;width:0;border-radius:inherit;background:var(--acento-claro)}
+.fz-bar>i.low{background:var(--no)}
+.fz-bar>b{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--label)}
+.fz-bar.big{height:16px;border-radius:8px}
+.verdict{display:flex;align-items:center;gap:12px;padding:12px;border-radius:var(--r-in);background:var(--bg-3);transition:background .3s,box-shadow .3s}
+.verdict .ic-w{width:44px;height:44px;border-radius:22px;display:grid;place-items:center;background:var(--fill);flex:none;font-size:20px;transition:border-radius .3s,background .3s}
+.verdict strong{display:block;font-size:20px;font-weight:600;line-height:1.25}
+.verdict span{font-size:13px;color:var(--label-2)}
+.verdict.ok{box-shadow:inset 0 0 0 1.5px var(--ok)}
+.verdict.ok .ic-w{background:var(--ok);color:#03200C}
+.verdict.no{box-shadow:inset 0 0 0 1.5px var(--no)}
+.verdict.no .ic-w{background:var(--no);color:#2B0304;border-radius:12px}
+.comp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.comp figure{margin:0;padding:12px;border-radius:var(--r-in);background:var(--bg-3);display:flex;flex-direction:column;gap:6px;min-width:0}
+.comp svg{width:100%;height:auto;display:block}
+.comp figcaption{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:var(--label-2);flex-wrap:wrap}
+.comp figcaption b{color:var(--label);font-weight:500}
+.arm{transition:transform .6s var(--curva)}
+.lid{transition:transform .8s var(--curva) .25s}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:2px 10px 2px 8px;border-radius:12px;background:var(--fill-2);color:var(--label-2)}
+.pill.ok{color:var(--ok)}
+.pill .ic{width:13px;height:13px}
+
+/* bitácora */
+.tbl-wrap{overflow-x:auto}
+table.log{width:100%;border-collapse:collapse;font-size:13px;min-width:720px}
+table.log th{text-align:left;font-weight:500;color:var(--label-2);font-size:12px;padding:8px 12px;border-bottom:1px solid var(--separator)}
+table.log td{padding:8px 12px;border-bottom:1px solid var(--separator);font-variant-numeric:tabular-nums}
+table.log tr:last-child td{border-bottom:0}
+table.log td.m{font-family:var(--mono)}
+table.log tr.new{animation:fila .8s ease-out}
+@keyframes fila{from{background:rgba(31,159,92,.3)}to{background:transparent}}
+.res{display:inline-flex;align-items:center;gap:6px;padding:2px 10px 2px 8px;border-radius:12px;font-size:12px;font-weight:500;white-space:nowrap}
+.res .ic{width:13px;height:13px;stroke-width:2.5}
+.res.ok{background:rgba(48,209,88,.16);color:var(--ok)}
+.res.no{background:rgba(255,66,69,.16);color:var(--no)}
+.ver-log{display:none;margin-left:auto}
+.btn.chico{min-height:44px;font-size:13px;padding:0 14px}
+
+/* ---------- Vista por etapa: mismos paneles, otro acomodo ---------- */
+.grid[data-vista="etapa"]{grid-template-columns:minmax(0,1fr);grid-template-areas:none;--r-panel:32px;--pad:24px}
+.grid[data-vista="etapa"]>.panel{grid-area:auto;display:none}
+.grid[data-vista="etapa"][data-etapa="1"]>[data-e="1"],
+.grid[data-vista="etapa"][data-etapa="2"]>[data-e="2"],
+.grid[data-vista="etapa"][data-etapa="3"]>[data-e="3"],
+.grid[data-vista="etapa"][data-etapa="4"]>[data-e="4"]{display:block}
+.grid[data-vista="etapa"] .panel[data-state="active"]{box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
+.grid[data-vista="etapa"] .pral .panel-head{margin-bottom:16px;min-height:36px}
+.grid[data-vista="etapa"] .pral .panel-head h2{font-size:28px;font-weight:600;letter-spacing:-.01em;line-height:1.2}
+.grid[data-vista="etapa"] .ver-log{display:inline-flex}
+.grid[data-vista="etapa"] #pBitacora:not(.completa) tbody tr:not(:first-child){display:none}
+@media (min-width:1000px){
+  /* en la vista por etapa el margen inferior solo reserva el pie (84 px); con 96 aparecía scroll vertical aunque la etapa cupiera */
+  html:has(.grid[data-vista="etapa"]) body{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  /* las visualizaciones principales se ajustan al alto libre para que quepan sin scroll */
+  .grid[data-vista="etapa"]{--alto-vis:max(250px,calc(100vh - var(--cab-h) - 286px))}
+  .grid[data-vista="etapa"] .fr{grid-template-columns:minmax(0,1fr) minmax(280px,min(34vw,calc((100vh - var(--cab-h) - 272px)/.82))) minmax(0,1fr);
+    grid-template-rows:auto 1fr;grid-template-areas:"a kp c" "lado kp c";gap:16px 24px;align-items:start}
+  .grid[data-vista="etapa"] .kp-row{display:contents}
+  .grid[data-vista="etapa"] .fr-a{grid-area:a} .grid[data-vista="etapa"] .keypad{grid-area:kp}
+  .grid[data-vista="etapa"] .kp-side{grid-area:lado} .grid[data-vista="etapa"] .fr-c{grid-area:c}
+  .grid[data-vista="etapa"] .keypad{flex:none;width:100%;gap:10px;padding:10px}
+  .grid[data-vista="etapa"] .key{font-size:26px}
+  .grid[data-vista="etapa"] .serial{height:var(--alto-vis)}
+  /* el tercer límite deja a .fp-lado al menos 476 px (+ 48 de hueco), lo que necesita para tira y métricas en dos columnas */
+  .grid[data-vista="etapa"] .fp-body{grid-template-columns:min(64%,calc(var(--alto-vis)*512/288 + 16px),calc(100% - 524px)) minmax(0,1fr);grid-template-areas:"par lado";gap:24px}
+  .grid[data-vista="etapa"] .fp-lado{grid-area:lado;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;align-content:start}
+  .grid[data-vista="etapa"] .strip{grid-template-columns:repeat(auto-fill,minmax(64px,1fr));grid-area:auto}
+  .grid[data-vista="etapa"] .metrics{grid-area:auto}
+  .grid[data-vista="etapa"] .face-grid{grid-template-columns:min(46%,calc((var(--alto-vis) + 24px)*4/3)) minmax(0,1fr);gap:24px}
+  .grid[data-vista="etapa"] .face-der{display:flex;flex-direction:column;gap:16px;min-width:0}
+  .grid[data-vista="etapa"] .fsteps{grid-template-columns:repeat(3,minmax(0,150px));justify-content:start}
+  .grid[data-vista="etapa"] .eig{grid-template-columns:repeat(8,minmax(0,72px))}
+  .grid[data-vista="etapa"] .face-low{grid-template-columns:minmax(0,1.2fr) 120px minmax(0,1fr)}
+  .grid[data-vista="etapa"] .fuse{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+  .grid[data-vista="etapa"] .fuse-a{gap:16px}
+  .grid[data-vista="etapa"] .comp svg{max-height:max(110px,calc(var(--alto-vis) - 250px))}
+  /* bitácora compacta: en la etapa 4 solo muestra el último registro */
+  .grid[data-vista="etapa"] #pBitacora{--r-panel:24px;--pad:16px;padding:12px 24px}
+  .grid[data-vista="etapa"] #pBitacora .panel-head{margin-bottom:4px}
+  .grid[data-vista="etapa"] #pBitacora table.log th,
+  .grid[data-vista="etapa"] #pBitacora table.log td{padding-top:6px;padding-bottom:6px}
+}
+@media (min-width:1000px) and (max-height:800px){
+  .grid[data-vista="etapa"]{gap:12px}
+  .grid[data-vista="etapa"] .oled-bezel canvas{max-width:224px}
+  .grid[data-vista="etapa"] .slots{margin-top:12px}
+  .grid[data-vista="etapa"] .fuse-a{gap:12px}
+}
+@media (min-width:1280px){
+  /* rostro en tres columnas: cámara, preproceso y eigenfaces, y pesos con reconstrucción y distancia */
+  .grid[data-vista="etapa"] .face-der{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;align-items:start}
+  .grid[data-vista="etapa"] .fsteps{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .grid[data-vista="etapa"] .eig{grid-template-columns:repeat(8,minmax(0,1fr))}
+  .grid[data-vista="etapa"] .face-low{grid-column:auto;grid-template-columns:minmax(0,104px) minmax(0,1fr)}
+  .grid[data-vista="etapa"] .face-low>:first-child{grid-column:1/-1}
+}
+/* en la vista completa los envoltorios de la vista por etapa no pintan caja */
+.fp-lado,.face-der{display:contents}
+
+/* ---------- Pie de explicación ---------- */
+.pie{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:30;
+  width:min(860px,calc(100% - 32px));border-radius:30px;padding:8px 8px 8px 20px;min-height:60px;display:flex;align-items:center;gap:12px}
+.pie p{margin:0;flex:1;min-width:0;font-size:15px;line-height:1.35}
+.pie .k{font-family:var(--mono);font-size:13px;color:var(--acento-claro);white-space:nowrap}
+.pie .est{flex:none;font-size:16px}
+@media (max-width:600px){.pie{border-radius:24px;padding-left:16px}.pie .k{display:none}.pie p{font-size:14px}}
+.empty{display:grid;place-items:center;text-align:center;color:var(--label-2);font-size:13px;padding:20px}
+
+/* ---------- Móvil ---------- */
+@media (max-width:700px){
+  .paso{flex-direction:column;gap:2px;padding:6px 2px;text-align:center;min-height:60px}
+  .paso .txt{align-items:center;max-width:100%}
+  .paso .nom{font-size:12px}
+  .paso .dato{font-size:10px}
+  .estado{margin-left:0}
+  .strip{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .controles .hueco{display:none}
+  .controles .btn{flex:1}
+}
+
+/* ---------- Transición entre etapas (View Transitions API) ---------- */
+html.vt .grid[data-vista="etapa"]{view-transition-name:etapa}
+html.vt .grid[data-vista="etapa"] .pral .panel-head h2{view-transition-name:titulo-etapa}
+html.vt .nav-ind{view-transition-name:nav-ind}
+html.vt .cabecera{view-transition-name:cabecera}
+html.vt .pie{view-transition-name:pie}
+::view-transition-old(root){display:none}
+::view-transition-new(root){animation:none}
+::view-transition-group(*){animation-duration:500ms;animation-timing-function:cubic-bezier(.32,.72,0,1)}
+::view-transition-old(*),::view-transition-new(*){animation-duration:500ms;animation-timing-function:cubic-bezier(.32,.72,0,1)}
+@keyframes vt-sale-izq{to{opacity:0;transform:translateX(-6%) scale(.97);filter:blur(8px)}}
+@keyframes vt-entra-der{from{opacity:0;transform:translateX(6%) scale(.97);filter:blur(8px)}}
+@keyframes vt-sale-der{to{opacity:0;transform:translateX(6%) scale(.97);filter:blur(8px)}}
+@keyframes vt-entra-izq{from{opacity:0;transform:translateX(-6%) scale(.97);filter:blur(8px)}}
+@keyframes vt-sale{to{opacity:0}}
+@keyframes vt-entra{from{opacity:0}}
+html[data-dir="adelante"]::view-transition-old(etapa){animation:500ms cubic-bezier(.32,.72,0,1) both vt-sale-izq}
+html[data-dir="adelante"]::view-transition-new(etapa){animation:500ms cubic-bezier(.32,.72,0,1) both vt-entra-der}
+html[data-dir="atras"]::view-transition-old(etapa){animation:500ms cubic-bezier(.32,.72,0,1) both vt-sale-der}
+html[data-dir="atras"]::view-transition-new(etapa){animation:500ms cubic-bezier(.32,.72,0,1) both vt-entra-izq}
+html[data-dir="fundido"]::view-transition-old(root){display:block;animation:250ms ease both vt-sale}
+html[data-dir="fundido"]::view-transition-new(root){animation:250ms ease both vt-entra}
+/* respaldo sin la API: opacidad y transform sobre la rejilla (lo anima el script) */
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-duration:.01ms!important;animation:none!important}
+  ::view-transition-group(*){animation:none!important}
+  ::view-transition-old(*){animation:150ms linear both vt-sale!important}
+  ::view-transition-new(*){animation:150ms linear both vt-entra!important}
+  ::view-transition-old(root){display:none}
+  ::view-transition-new(root){animation:none!important}
+}
+
+/* ?sinvidrio=1: respaldo de rendimiento para la laptop de la demo (R15) */
+.sin-vidrio *, .sin-vidrio *::before, .sin-vidrio *::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}

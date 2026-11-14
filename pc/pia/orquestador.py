@@ -8,6 +8,7 @@ hilo (asyncio.to_thread) para no trabar el WebSocket.
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -16,7 +17,7 @@ from typing import Any
 import numpy as np
 
 from . import fusion, huella, rostro
-from .almacen import Almacen, dominio_rostro, guardar_png
+from .almacen import Almacen, dominio_rostro, guardar_png, leer_png
 from .camara import Camara, CamaraError
 from .config import Config
 from .dispositivos.base import Dispositivo, Emisor, imagen_json, _nada
@@ -95,10 +96,16 @@ class Orquestador:
             if mejor is None or m.puntaje > mejor.puntaje:
                 mejor, mejor_p = m, p
         umbral_h = cal_h["umbral"]
+        # La plantilla se dibuja desde su imagen cruda guardada (fuente de verdad)
+        img_t = leer_png(self.alm.ruta(mejor_p["archivo"]))
+        r_t = await asyncio.to_thread(huella.procesar, img_t, mejor_p["perfil"])
         await self.emitir("huella_matching", {
             "puntaje": mejor.puntaje, "umbral": umbral_h, "pares": mejor.pares,
             "aristas_a": mejor.aristas_a, "aristas_b": mejor.aristas_b, "muestra_id": mejor_p["muestra_id"],
-            "plantilla": {"minucias": [m.como_dict() for m in mejor_p["minucias"]]},
+            "plantilla": {"minucias": [m.como_dict() for m in mejor_p["minucias"]],
+                          "esqueleto": imagen_json(r_t.etapas["esqueleto"] * 255),
+                          "binaria": imagen_json(r_t.etapas["binaria"] * 255)},
+            "eer": cal_h.get("eer"),
         })
         fila["puntaje_huella"] = mejor.puntaje
         await self._etapa(2, "ok" if mejor.puntaje >= umbral_h else "no", f"{mejor.puntaje:.2f}")
@@ -116,17 +123,19 @@ class Orquestador:
             raise ErrorVerificacion(f"No hay modelo o calibración de rostro para '{dom}'",
                                     "Registra usuarios con rostro de esa fuente y calibra")
         mid, modelo = activo
-        r_r = await asyncio.to_thread(rostro.procesar, cuadro, modelo, fuente_r != "camara")
-        await self._emitir_rostro(cuadro, r_r, mid, modelo, fuente_r)
-        if not r_r.hay_rostro:
-            raise ErrorVerificacion("No se detectó un rostro", "Mira de frente a la cámara, con buena luz")
         vect = self.alm.vectores(id_, mid)
         if len(vect) == 0:
             raise ErrorVerificacion(f"El usuario {id_} no tiene vectores en el modelo de '{dom}'",
                                     "Regístralo con rostro de esa fuente")
+        r_r = await asyncio.to_thread(rostro.procesar, cuadro, modelo, fuente_r != "camara")
+        await self._emitir_rostro(cuadro, r_r, mid, modelo, fuente_r, vect)
+        if not r_r.hay_rostro:
+            raise ErrorVerificacion("No se detectó un rostro", "Mira de frente a la cámara, con buena luz")
         d, _ = rostro.comparar(r_r.pesos, vect, cal_r["umbral"])
-        await self.emitir("rostro_distancia", {"distancia": d, "umbral": cal_r["umbral"],
-                                               "distancia_espacio": r_r.distancia_espacio})
+        params = json.loads(cal_r.get("parametros") or "{}")
+        await self.emitir("rostro_distancia", {"distancia": d, "umbral": cal_r["umbral"], "eer": cal_r.get("eer"),
+                                               "n_muestras": len(vect), "distancia_espacio": r_r.distancia_espacio,
+                                               "distribucion": params.get("distribucion")})
         fila["distancia_rostro"] = d
         await self._etapa(3, "ok" if d < cal_r["umbral"] else "no", f"d {d:.2f}")
 
@@ -175,7 +184,7 @@ class Orquestador:
         await self.emitir("huella_minucias", {"minucias": [m.como_dict() for m in r.minucias], "calidad": r.calidad})
 
     async def _emitir_rostro(self, cuadro: np.ndarray, r: rostro.ResultadoRostro, mid: int,
-                             modelo: rostro.Modelo, fuente: str) -> None:
+                             modelo: rostro.Modelo, fuente: str, vect: np.ndarray) -> None:
         await self.emitir("rostro_cuadro", {"imagen": imagen_json(rostro.a_gris(cuadro)), "fuente": fuente})
         await self.emitir("rostro_deteccion", {"rostro": r.deteccion.rostro, "ojos": r.deteccion.ojos,
                                                "con_relleno": r.deteccion.con_relleno})
@@ -191,12 +200,18 @@ class Orquestador:
                 "media": imagen_json(modelo.media.reshape(lado, lado)),
                 "eigenfaces": [imagen_json(u.reshape(lado, lado)) for u in modelo.eigenfaces[:N_EIGENFACES_VISTA]]})
             self._modelos_enviados.add(mid)
-        if r.pesos is not None:
-            await self.emitir("rostro_pesos", {"pesos": r.pesos.tolist()})
+        if r.pesos is not None and r.hay_rostro:
+            # referencia: promedio de los vectores registrados del usuario; sigma: desviación de cada componente
+            await self.emitir("rostro_pesos", {"pesos": r.pesos.tolist(), "referencia": vect.mean(axis=0).tolist(),
+                                               "sigma": np.sqrt(modelo.valores).tolist()})
             pasos = sorted({c for c in PASOS_RECONSTRUCCION if c < modelo.k} | {modelo.k})
-            await self.emitir("rostro_reconstruccion", {"pasos": [
-                {"componentes": c, "imagen": imagen_json(modelo.reconstruir(r.pesos, c).reshape(modelo.lado, modelo.lado))}
-                for c in pasos]})
+            x = r.normalizada.imagen.reshape(-1)
+            lista = []
+            for c in pasos:
+                rec = modelo.reconstruir(r.pesos, c)
+                lista.append({"componentes": c, "error": float(np.sqrt(np.mean((rec - x) ** 2))),
+                              "imagen": imagen_json(rec.reshape(modelo.lado, modelo.lado))})
+            await self.emitir("rostro_reconstruccion", {"pasos": lista})
 
     def _guardar_intento(self, id_: str, img: np.ndarray, cuadro: np.ndarray) -> dict:
         ahora = datetime.now()

@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="es" data-fondo="a">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Acceso Biométrico PIA</title>
+<link rel="icon" href="icons/fingerprint.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+<div class="fondo" aria-hidden="true"></div>
+
+<div class="cabecera" id="cabecera">
+  <header class="barra vidrio-barra especular">
+    <div class="marca">
+      <div class="marca-ic" aria-hidden="true"><i data-ic="fingerprint"></i></div>
+      <div><strong>Acceso biométrico</strong><span class="sub">PIA de RDP · FIME UANL</span></div>
+    </div>
+    <div class="seg" role="group" aria-label="Modo de operación">
+      <button id="mSim" aria-pressed="true">Simular</button>
+      <button id="mEsp" aria-pressed="false">ESP32</button>
+    </div>
+    <div class="grupo"><span id="lblVista">Vista</span>
+      <div class="seg" id="vista" role="group" aria-labelledby="lblVista">
+        <button data-v="completa" aria-pressed="false">Completa</button>
+        <button data-v="etapa" aria-pressed="true">Por etapa</button>
+      </div>
+    </div>
+    <div class="estado">
+      <span class="chip aviso" id="bancoChip" title="Origen de la huella y el rostro de la verificación"><i data-ic="flask-conical"></i><span id="bancoTxt">FVC2002 · ORL</span></span>
+      <span class="chip ok" id="connChip"><i data-ic="monitor"></i><span id="connTxt">Dispositivo simulado</span></span>
+    </div>
+  </header>
+  <div class="fila-nav">
+    <div class="atajo" aria-hidden="true"><span class="tecla"><i data-ic="arrow-left"></i></span><span class="tecla"><i data-ic="arrow-right"></i></span><span>Cambiar de etapa</span></div>
+    <nav class="etapas vidrio-flota especular" id="nav" aria-label="Etapas de la verificación" aria-keyshortcuts="ArrowLeft ArrowRight" title="Flechas izquierda y derecha: cambiar de etapa">
+      <span class="nav-ind" id="navInd" aria-hidden="true"></span>
+      <button class="paso" data-e="1"><span class="fig"></span><span class="txt"><span class="nom">PIN</span><span class="dato"></span></span></button>
+      <button class="paso" data-e="2"><span class="fig"></span><span class="txt"><span class="nom">Huella</span><span class="dato"></span></span></button>
+      <button class="paso" data-e="3"><span class="fig"></span><span class="txt"><span class="nom">Rostro</span><span class="dato"></span></span></button>
+      <button class="paso" data-e="4"><span class="fig"></span><span class="txt"><span class="nom">Actuación</span><span class="dato"></span></span></button>
+    </nav>
+    <button class="volver" id="volver" hidden><span id="volverTxt">En curso: PIN</span><i data-ic="arrow-right"></i></button>
+  </div>
+</div>
+
+<main class="wrap">
+  <section class="controles" aria-label="Controles de la simulación">
+    <label class="campo" for="scn"><span>Escenario</span>
+      <select id="scn" class="vidrio">
+        <option value="l1">Usuario legítimo · nivel 1 (ID 07)</option>
+        <option value="l2" selected>Usuario legítimo · nivel 2 (ID 12)</option>
+        <option value="ih">Impostor de huella (dice ser ID 12)</option>
+        <option value="ir">Impostor de rostro (dice ser ID 07)</option>
+        <option value="pin">PIN incorrecto (ID 07)</option>
+      </select>
+    </label>
+    <div class="campo"><span id="lblRostro">Rostro</span>
+      <div class="seg vidrio" id="fuenteRostro" role="group" aria-labelledby="lblRostro">
+        <button data-v="dataset" aria-pressed="true">Dataset</button>
+        <button data-v="camara" aria-pressed="false">DroidCam</button>
+      </div>
+    </div>
+    <div class="campo"><span id="lblVel">Velocidad</span>
+      <div class="seg vidrio" id="speed" role="group" aria-labelledby="lblVel">
+        <button data-v="2" aria-pressed="false">2×</button>
+        <button data-v="1" aria-pressed="true">1×</button>
+        <button data-v="0.5" aria-pressed="false">0.5×</button>
+        <button data-v="paso" aria-pressed="false">Paso a paso</button>
+      </div>
+    </div>
+    <div class="hueco"></div>
+    <button class="btn vidrio" id="resetBtn"><i data-ic="rotate-ccw"></i>Reiniciar</button>
+    <button class="btn principal" id="runBtn"><i data-ic="play"></i><span id="runTxt">Iniciar verificación</span></button>
+    <div class="esp vidrio" id="espPanel" hidden>
+      <label class="campo" for="port"><span>Puerto serie</span>
+        <select id="port" class="gris" style="background-color:var(--fill-2)" disabled><option>Ningún puerto detectado</option></select>
+      </label>
+      <button class="btn gris" id="scanBtn"><i data-ic="search"></i><span id="scanTxt">Buscar ESP32</span></button>
+      <p id="espMsg">Conecta la placa por USB y pulsa <strong>Buscar ESP32</strong>. La app espera el saludo <span class="mono">HOLA:&lt;versión&gt;</span> a 921600 baudios.</p>
+    </div>
+  </section>
+
+  <div class="grid" id="grid" data-vista="etapa" data-etapa="4">
+    <!-- ETAPA 1 · PANEL FRONTAL (PIN) -->
+    <section class="panel pral p-frontal" id="pFrontal" data-e="1" aria-labelledby="hFrontal">
+      <div class="panel-head"><h2 id="hFrontal">PIN y panel frontal</h2><span class="fase-chip">Fase 1 · Captura</span><span class="meta mono">OLED SSD1306 · teclado 4×4</span></div>
+      <div class="fr">
+        <div class="fr-a">
+          <div class="oled-row">
+            <div class="oled-bezel"><canvas id="oled" width="128" height="64" aria-label="Réplica de la pantalla OLED"></canvas></div>
+            <div class="leds"><div class="led g" id="ledG" title="LED verde"></div><small>OK</small><div class="led r" id="ledR" title="LED rojo"></div><small>NO</small></div>
+          </div>
+          <div class="slots">
+            <div class="slotgrp"><span class="label">ID</span><div class="slotrow" id="slotId"><div class="slot"></div><div class="slot"></div></div></div>
+            <div class="slotgrp"><span class="label">PIN</span><div class="slotrow" id="slotPin"><div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div></div></div>
+          </div>
+        </div>
+        <div class="kp-row">
+          <div class="keypad" id="keypad" aria-label="Teclado matricial"></div>
+          <div class="kp-side">
+            <label class="toggle" for="showDigits"><input type="checkbox" id="showDigits" checked>Mostrar dígitos (demo)</label>
+            <span class="cap">En Simular, el escenario teclea ID, <b>#</b>, PIN y <b>#</b>. Con el ESP32: <b>*</b> borra, <b>D</b> cancela.</span>
+            <table class="users"><tbody>
+              <tr><td>07</td><td>Ana T. · Lector · PIN 4821</td></tr>
+              <tr><td>12</td><td>Luis G. · Editor · PIN 1593</td></tr>
+            </tbody></table>
+            <span class="cap">Usuarios de prueba.</span>
+          </div>
+        </div>
+        <div class="fr-c sect"><span class="label">Tráfico serie</span>
+          <div class="serial" id="serial" aria-label="Tráfico serie" role="log"></div></div>
+      </div>
+    </section>
+
+    <!-- ETAPA 2 · HUELLA -->
+    <section class="panel pral p-huella" id="pHuella" data-e="2" aria-labelledby="hHuella">
+      <div class="panel-head"><h2 id="hHuella">Huella dactilar</h2>
+        <ol class="fases" id="fasesH" aria-label="Fases del PIA en la huella"></ol>
+        <span class="meta mono" id="fpMeta">AS608 · 256 × 288 · 4 bits/px</span><span class="st" id="fpSt"></span></div>
+      <div class="fp-body">
+        <div class="fp-pair" id="fpPair">
+          <div class="fp-cell"><span class="label" id="fpLblL">Captura</span><canvas id="fpL" width="512" height="576"></canvas></div>
+          <div class="fp-cell"><span class="label" id="fpLblR">Plantilla registrada</span><canvas id="fpR" width="512" height="576"></canvas></div>
+          <canvas class="fp-overlay" id="fpO"></canvas>
+        </div>
+        <div class="fp-lado">
+          <div class="strip" id="strip"></div>
+          <div class="metrics">
+            <div class="metric"><span class="label">Transferencia</span><div class="v" id="mBytes">0 <small>B</small></div><div class="bar"><i id="mBytesBar"></i></div></div>
+            <div class="metric"><span class="label">Minucias</span><div class="v" id="mMin">—</div>
+              <div class="legend" style="margin-top:8px"><span><i class="lg-end"></i>Terminación (círculo)</span><span><i class="lg-bif"></i>Bifurcación (cuadro)</span></div></div>
+            <div class="metric"><span class="label">Matching por grafos</span><div class="v" id="mScore">—</div><div class="bar"><i id="mScoreBar"></i><b id="mThr"></b></div><span class="cap" id="mPairs" style="margin-top:8px;display:block">Pares en correspondencia: —</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ETAPA 3 · ROSTRO -->
+    <section class="panel pral p-rostro" id="pRostro" data-e="3" aria-labelledby="hRostro">
+      <div class="panel-head"><h2 id="hRostro">Rostro</h2>
+        <ol class="fases" id="fasesR" aria-label="Fases del PIA en el rostro"></ol>
+        <span class="meta mono">DroidCam · Viola-Jones · Eigenfaces</span><span class="st" id="faceSt"></span></div>
+      <div class="face-grid">
+        <div class="cam"><canvas id="cam" width="448" height="336"></canvas><span class="tag mono" id="camTag">cámara</span></div>
+        <div class="face-der">
+          <div class="sect">
+            <div class="fsteps">
+              <div class="fstep"><span class="label">Alineado</span><div class="box"><canvas id="fAlign" width="64" height="64"></canvas></div><span class="cap mono" id="fAlignCap">—</span></div>
+              <div class="fstep"><span class="label">Normalizado</span><div class="box"><canvas id="fNorm" width="64" height="64"></canvas></div><span class="cap">CLAHE + máscara</span></div>
+              <div class="fstep"><span class="label">Histograma</span><div class="hist" id="fHist"></div><span class="cap">antes (barras) y después (línea)</span></div>
+            </div>
+            <div class="sect" style="margin-top:8px">
+              <span class="label">Cara media y eigenfaces</span>
+              <div class="eig" id="eig"></div>
+              <span class="cap mono" id="eigCap">—</span>
+            </div>
+          </div>
+          <div class="face-low">
+            <div class="sect chart"><span class="label">Vector de pesos (primeros 16, en desviaciones estándar)</span><div id="wChart"></div><span class="cap">Barras: captura. Contorno: promedio registrado del usuario.</span></div>
+            <div class="recon"><span class="label">Reconstrucción</span><div class="box"><canvas id="fRec" width="64" height="64"></canvas></div><span class="cap mono" id="recCap">—</span></div>
+            <div class="sect chart"><span class="label">Distancia euclidiana</span><div id="dChart"></div><span class="cap" id="dCap">—</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ETAPA 4 · DECISIÓN Y ACTUACIÓN -->
+    <section class="panel pral p-decision" id="pDecision" data-e="4" aria-labelledby="hDecision">
+      <div class="panel-head"><h2 id="hDecision">Decisión y actuación</h2><span class="fase-chip">Fase 5 · Actuación</span><span class="meta mono">suma ponderada 0.5 / 0.5</span></div>
+      <div class="fuse">
+        <div class="fuse-a">
+          <div class="fz-row"><div class="top-l"><span>Huella (normalizado) · mínimo 0.50</span><b id="zH">—</b></div><div class="fz-bar"><i id="zHb"></i><b style="left:50%" title="Cada factor debe pasar su propio umbral"></b></div></div>
+          <div class="fz-row"><div class="top-l"><span>Rostro (normalizado) · mínimo 0.50</span><b id="zR">—</b></div><div class="fz-bar"><i id="zRb"></i><b style="left:50%" title="Cada factor debe pasar su propio umbral"></b></div></div>
+          <div class="fz-row"><div class="top-l"><span>Puntaje fusionado · umbral 0.60</span><b id="zS">—</b></div><div class="fz-bar big"><i id="zSb"></i><b style="left:60%"></b></div></div>
+          <div class="verdict" id="verdict"><div class="ic-w" id="vIc" aria-hidden="true"></div>
+            <div><strong id="vT">En espera</strong><span id="vS">Inicia una verificación.</span></div></div>
+        </div>
+        <div class="fuse-b">
+          <div class="comp">
+            <figure><svg viewBox="0 0 160 112" id="c1"></svg><figcaption><b>1 · Lector</b><span class="pill" id="c1s">Bloqueado</span></figcaption></figure>
+            <figure><svg viewBox="0 0 160 112" id="c2"></svg><figcaption><b>2 · Editor (Compras)</b><span class="pill" id="c2s">Bloqueado</span></figcaption></figure>
+          </div>
+          <span class="cap">Servos SG90 en GPIO18 y GPIO19. Se mueve uno a la vez, con 300 ms entre ellos.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- BITÁCORA (en la vista por etapa acompaña a la etapa 4) -->
+    <section class="panel p-bitacora" id="pBitacora" data-e="4" aria-labelledby="hLog">
+      <div class="panel-head"><h2 id="hLog">Bitácora</h2><span class="meta mono">SQLite · un registro por intento</span>
+        <button class="btn gris chico ver-log" id="verLog" aria-expanded="false"><i data-ic="list"></i><span id="verLogTxt">Ver bitácora completa</span></button></div>
+      <div class="tbl-wrap"><table class="log"><thead><tr><th>Hora</th><th>ID</th><th>Usuario</th><th>PIN</th><th>Huella</th><th>Rostro (d)</th><th>Fusión</th><th>Resultado</th></tr></thead><tbody id="logBody"></tbody></table></div>
+    </section>
+  </div>
+</main>
+
+<div class="pie vidrio-flota" id="pie" role="status" aria-live="polite">
+  <span class="est" id="capDot"></span><span class="k" id="capK">listo</span><p id="capText">Elige un escenario y pulsa Iniciar verificación, o teclea un ID y PIN en el teclado.</p>
+  <button class="btn principal" id="nextBtn" hidden>Siguiente<i data-ic="chevron-right"></i></button>
+</div>
+
+
+<script src="js/base.js"></script>
+<script src="js/dibujo.js"></script>
+<script src="js/principal.js"></script>
+</body>
+</html>
