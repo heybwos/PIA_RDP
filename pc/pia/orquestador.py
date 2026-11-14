@@ -14,15 +14,20 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+import cv2
 import numpy as np
 
 from . import fusion, huella, rostro
 from .almacen import Almacen, dominio_rostro, guardar_png, leer_png
-from .camara import Camara, CamaraError
+from .camara import Camara, CamaraArchivo, CamaraError
 from .config import Config
 from .dispositivos.base import CapturaCancelada, Dispositivo, Emisor, ErrorDispositivo, imagen_json, _nada
 
 PASOS_RECONSTRUCCION = (1, 5, 10, 20)
+REACCION_S = 2.0         # tiempo para acomodarse antes de aceptar un cuadro
+ESTABLES = 3             # cuadros seguidos con rostro y dos ojos para tomar la foto
+LIMITE_ROSTRO_S = 20.0   # sin rostro estable en este tiempo, se niega con mensaje
+VIVO_ANCHO = 240         # ancho de la vista previa que se manda a la app
 N_EIGENFACES_VISTA = 8
 
 
@@ -118,7 +123,7 @@ class Orquestador:
         # ---------------------------------------------------------------- 3. Rostro
         await self._etapa(3, "curso")
         await disp.mostrar("Mira a la", "camara")
-        cuadro = await asyncio.to_thread(camara.capturar)
+        cuadro = await self._cuadro_rostro(camara)
         fuente_r = camara.fuente
         dom = dominio_rostro(fuente_r)
         fila["fuente_rostro"] = fuente_r
@@ -159,6 +164,40 @@ class Orquestador:
         if dc("datos.guardar_intentos", True):
             fila.update(self._guardar_intento(id_, img, cuadro))
         return await self._cerrar(disp, fila, t0, dec)
+
+    async def _cuadro_rostro(self, camara: Camara) -> np.ndarray:
+        """Cámara en vivo: manda vista previa a la app y toma el cuadro cuando hay rostro con los
+        dos ojos en ESTABLES cuadros seguidos, después de un tiempo de reacción. Un dataset
+        (imagen fija) se toma directo."""
+        if isinstance(camara, CamaraArchivo):
+            return await asyncio.to_thread(camara.capturar)
+        t0 = time.monotonic()
+        seguidos, ultimo_envio = 0, 0.0
+        while True:
+            cuadro = await asyncio.to_thread(camara.capturar)
+            r = await asyncio.to_thread(rostro.procesar, cuadro, None, False)
+            ok = r.hay_rostro and len(r.deteccion.ojos) == 2
+            transcurrido = time.monotonic() - t0
+            listo = transcurrido >= REACCION_S
+            seguidos = seguidos + 1 if (ok and listo) else 0
+            if seguidos >= ESTABLES:
+                await self.emitir("rostro_vivo", {"estado": "tomado", "seguidos": seguidos, "necesarios": ESTABLES})
+                return cuadro
+            if transcurrido > LIMITE_ROSTRO_S:
+                raise ErrorVerificacion("No se detectó un rostro con los dos ojos a tiempo",
+                                        "Mira de frente al lente del celular, con buena luz, a 50-70 cm")
+            if time.monotonic() - ultimo_envio > 0.12:  # ~8 cuadros por segundo a la app, reducidos
+                ultimo_envio = time.monotonic()
+                gris = rostro.a_gris(cuadro)
+                f = VIVO_ANCHO / gris.shape[1]
+                chico = cv2.resize(gris, None, fx=f, fy=f, interpolation=cv2.INTER_AREA)
+                esc = lambda rc: [int(round(v * f)) for v in rc]  # noqa: E731
+                await self.emitir("rostro_vivo", {
+                    "imagen": imagen_json(chico), "rostro": esc(r.deteccion.rostro) if r.deteccion.rostro else None,
+                    "ojos": [esc(o) for o in r.deteccion.ojos],
+                    "estado": "preparate" if not listo else ("estable" if ok else "buscando"),
+                    "falta_s": max(0.0, REACCION_S - transcurrido), "seguidos": seguidos, "necesarios": ESTABLES,
+                    "limite_s": max(0.0, LIMITE_ROSTRO_S - transcurrido)})
 
     async def _cerrar(self, disp: Dispositivo, fila: dict, t0: float, dec: fusion.Decision) -> Resultado:
         await self._etapa(4, "curso")

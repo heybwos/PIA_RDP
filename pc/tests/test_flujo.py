@@ -97,6 +97,42 @@ def test_camara_url_con_droidcam_falso():
         proc.kill()
 
 
+@pytest.mark.skipif(not HAY_DATASETS, reason="sin datasets")
+def test_rostro_en_vivo_espera_cuadros_estables(tmp_path, monkeypatch):
+    """Con cámara real se toma el cuadro solo tras ESTABLES cuadros seguidos con rostro y ojos."""
+    import cv2
+
+    from pia import camara, orquestador
+
+    monkeypatch.setattr(orquestador, "REACCION_S", 0.0)
+    cara = cv2.imread(str(DATASETS / "orl" / "s3" / "1.pgm"), cv2.IMREAD_GRAYSCALE)
+    lienzo = np.full((480, 640), 90, np.uint8)
+    lienzo[128:352, 228:412] = cv2.resize(cara, (184, 224))
+    vacio = np.full((480, 640), 90, np.uint8)
+
+    class Secuencia(camara.Camara):
+        def __init__(self):
+            self.cuadros = [vacio, lienzo, vacio, lienzo, lienzo, lienzo, lienzo]
+            self.i = 0
+
+        def _capturar(self):
+            c = self.cuadros[min(self.i, len(self.cuadros) - 1)]
+            self.i += 1
+            return c
+
+    eventos = []
+
+    async def emitir(t, d):
+        eventos.append((t, d))
+
+    cam = Secuencia()
+    orq = orquestador.Orquestador(Almacen(tmp_path), config.cargar(), emitir)
+    cuadro = asyncio.run(orq._cuadro_rostro(cam))
+    assert cuadro is lienzo and cam.i == 6  # vacío, cara, vacío (reinicia), cara x3
+    vivos = [d for t, d in eventos if t == "rostro_vivo"]
+    assert vivos[-1]["estado"] == "tomado" and any(d.get("estado") == "buscando" for d in vivos)
+
+
 def test_camara_sin_respuesta_no_inventa():
     from pia import camara
 

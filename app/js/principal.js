@@ -23,6 +23,8 @@ function conectar(){
   ws.onopen=()=>{clearTimeout(reintento)};
   ws.onmessage=e=>{const m=JSON.parse(e.data);
     if(m.tipo==='estado'){H.estado(m);return}       // el estado no espera turno
+    /* la cámara en vivo tampoco: si la cola sigue animando la huella, se adelanta hasta alcanzarla */
+    if(m.tipo==='rostro_vivo'){if(procesando||cola.length)alcanzar=true;vivo(m);return}
     cola.push(m); if(!procesando) procesar()};
   ws.onclose=()=>{const chip=$('#connChip');chip.className='chip no';$('#connTxt').textContent='Backend desconectado';
     caption('sin backend','No hay conexión con el backend. Arráncalo con: python -m pia (desde pc/). Reintentando…','no');
@@ -33,13 +35,32 @@ async function procesar(){
   while(cola.length){const m=cola.shift(), id=S.runId;
     try{ if(H[m.tipo]) await H[m.tipo](m,id) }
     catch(e){ if(e!==ABORT){console.error(e);caption('error','Falla al dibujar '+m.tipo+': '+e.message,'no')} }}
-  procesando=false;
+  procesando=false; alcanzar=false;
 }
 /* si la cola crece, las animaciones se acortan: la animación nunca frena al pipeline */
+let alcanzar=false; // true: la cámara en vivo ya empezó; lo pendiente se dibuja sin animar
 const _anim=anim, _wait=wait;
 /* con la pestaña oculta el navegador no corre requestAnimationFrame: se salta al final para no trabar la cola */
-anim=(ms,fn,id)=>document.hidden?(fn(1,1),Promise.resolve()):_anim(cola.length>40?ms/4:ms,fn,id);
-wait=(ms,id)=>_wait(cola.length>40?ms/4:ms,id);
+anim=(ms,fn,id)=>(document.hidden||alcanzar)?(fn(1,1),Promise.resolve()):_anim(cola.length>40?ms/4:ms,fn,id);
+wait=(ms,id)=>alcanzar?Promise.resolve():_wait(cola.length>40?ms/4:ms,id);
+const _beat=beat; beat=(k,t,ms,id)=>alcanzar?(caption(k,t),Promise.resolve()):_beat(k,t,ms,id);
+
+/* Cámara en vivo (modo ESP32 con DroidCam / IP Webcam): el backend manda ~8 cuadros por segundo
+   reducidos, con los rectángulos de Viola-Jones, hasta que el rostro queda estable. */
+function vivo(m){
+  if(m.estado==='tomado'){$('#faceSt').innerHTML=est('ok','foto tomada');
+    caption('fase 1','Rostro estable: se toma el cuadro para el análisis.','ok');return}
+  if(V.etapa!==3&&V.seguir) mostrarEtapa(3);
+  panel('#pRostro','active'); setPhase(1,'rostro');
+  camBase=mkCanvas(m.imagen.ancho,m.imagen.alto); pintar(camBase,m.imagen);
+  camDraw({rostro:m.rostro,ojos:m.ojos},{box:m.rostro?1:0,eyes:1,line:0});
+  $('#camTag').textContent='cámara en vivo';
+  const t=m.estado==='preparate'?`Prepárate: mira al lente del celular (${Math.ceil(m.falta_s)} s)`
+    :m.estado==='estable'?`Rostro detectado, no te muevas (${m.seguidos}/${m.necesarios})`
+    :m.rostro?'Rostro sin los dos ojos: mira de frente al lente':'Buscando rostro… acércate y mira al lente';
+  $('#faceSt').innerHTML=est(m.estado==='estable'?'ok':'wait',m.estado==='estable'?'detectado':m.estado==='preparate'?'prepárate':'buscando');
+  caption('fase 1',`${t} · quedan ${Math.ceil(m.limite_s)} s`,m.estado==='estable'?'ok':'wait');
+}
 
 /* ---------- estado de la verificación en curso ---------- */
 let F=null, T=null, M=null, idActual='', pcaDibujado=false;
@@ -181,7 +202,7 @@ H.huella_matching=async(m,id)=>{
 let DET=null;
 H.rostro_cuadro=async(m,id)=>{
   pcaDibujado=false; camBase=mkCanvas(m.imagen.ancho,m.imagen.alto); pintar(camBase,m.imagen);
-  $('#camTag').textContent=`${m.fuente==='camara'?'DroidCam':m.fuente.toUpperCase()} · ${m.imagen.ancho} × ${m.imagen.alto} gris`;
+  $('#camTag').textContent=`${m.fuente==='camara'?'cámara':m.fuente.toUpperCase()} · ${m.imagen.ancho} × ${m.imagen.alto} gris`;
   setPhase(1,'rostro'); $('#faceSt').innerHTML=est('wait','capturando');
   await anim(600,e=>{camCtx.globalAlpha=e;camDraw({},{box:0,eyes:0,line:0});camCtx.globalAlpha=1},id);
   await beat('fase 1',m.fuente==='camara'?'La PC toma un cuadro de DroidCam y lo pasa a escala de grises.':`Cuadro del dataset ${m.fuente.toUpperCase()}, en escala de grises.`,700,id);

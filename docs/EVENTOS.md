@@ -25,6 +25,7 @@ Toda imagen va como `{"ancho": W, "alto": H, "tipo": "u8" | "f32", "datos": "<ba
 | `huella_etapa` | `nombre` (`normalizada`, `segmentacion`, `orientacion`, `gabor`, `binaria`, `esqueleto`), `imagen`, y en `orientacion`: `bloque`, `angulos` (f32 por bloque), `coherencia`, `mascara` | Cada etapa del preproceso |
 | `huella_minucias` | `minucias` [{x, y, t, tipo}], `calidad` | |
 | `huella_matching` | `puntaje`, `umbral`, `pares` [[i, j]], `plantilla` {minucias, esqueleto}, `aristas_a`, `aristas_b`, `muestra_id` | Contra la mejor plantilla del usuario |
+| `rostro_vivo` | `imagen` (u8, 240 px de ancho), `rostro`, `ojos` (en esa escala), `estado` (`preparate`, `buscando`, `estable`, `tomado`), `falta_s`, `seguidos`, `necesarios`, `limite_s` | Solo con cámara real: ~8 por segundo hasta que hay rostro con dos ojos en 3 cuadros seguidos (tras 2 s de reacción; límite 20 s). La app los dibuja sin esperar la cola |
 | `rostro_cuadro` | `imagen` (u8, gris), `fuente` | Cuadro capturado |
 | `rostro_deteccion` | `rostro` [x, y, w, h] o null, `ojos` [[x, y, w, h]…], `con_relleno` | Rectángulos reales de Viola-Jones |
 | `rostro_alineado` | `imagen` (64×64 u8), `metodo` (`ojos`, `respaldo`, `sin_rostro`), `angulo` | |
