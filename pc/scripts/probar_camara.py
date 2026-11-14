@@ -39,6 +39,48 @@ def lamina(cuadro: np.ndarray, r: rostro.ResultadoRostro) -> np.ndarray:
     return np.hstack([img, np.vstack([cara, norm])])
 
 
+def vista_en_vivo(cam: camara.Camara, rot: int, segundos: float) -> list[np.ndarray] | None:
+    """Ventana con la cámara en vivo y los rectángulos de Viola-Jones para acomodarse.
+    Espacio: mide durante `segundos` y devuelve esos cuadros (sin rotar). Q o Esc: sale."""
+    titulo = "PIA - camara (Espacio: medir, Q: salir)"
+    cv2.namedWindow(titulo, cv2.WINDOW_NORMAL)
+    midiendo, fin, crudos = False, 0.0, []
+    try:
+        while True:
+            crudo = cam._capturar()
+            cuadro = camara.rotar(crudo, rot)
+            r = rostro.procesar(cuadro, permitir_relleno=False)
+            img = cuadro.copy()
+            ok = r.hay_rostro and len(r.deteccion.ojos) == 2
+            if r.deteccion.rostro:
+                x, y, w, h = r.deteccion.rostro
+                cv2.rectangle(img, (x, y), (x + w, y + h), (92, 207, 143) if ok else (48, 146, 255), 3)
+            for x, y, w, h in r.deteccion.ojos:
+                cv2.rectangle(img, (x, y), (x + w, y + h), (48, 146, 255), 2)
+            if midiendo:
+                crudos.append(crudo)
+                texto = f"Midiendo... {max(0, fin - time.monotonic()):.0f} s"
+                if time.monotonic() >= fin:
+                    return crudos
+            else:
+                texto = "Rostro y ojos OK - Espacio para medir" if ok else "Acomodate: sin rostro con los dos ojos"
+            cv2.rectangle(img, (0, 0), (img.shape[1], 56), (20, 20, 20), -1)
+            cv2.putText(img, texto, (14, 38), cv2.FONT_HERSHEY_SIMPLEX, 1.0,
+                        (92, 207, 143) if ok else (80, 160, 255), 2, cv2.LINE_AA)
+            alto = 900
+            esc = min(1.0, alto / img.shape[0])
+            cv2.imshow(titulo, cv2.resize(img, None, fx=esc, fy=esc))
+            k = cv2.waitKey(1) & 0xFF
+            if k in (27, ord("q"), ord("Q")):
+                return None
+            if k == ord(" ") and not midiendo:
+                midiendo, fin = True, time.monotonic() + segundos
+            if cv2.getWindowProperty(titulo, cv2.WND_PROP_VISIBLE) < 1:
+                return None
+    finally:
+        cv2.destroyAllWindows()
+
+
 def guardar_url(url: str, rotacion: int | None) -> None:
     ruta = config.RAIZ / "config.toml"
     config.cargar()  # crea config.toml desde el ejemplo si no existe
@@ -62,6 +104,7 @@ def main() -> int:
     ap.add_argument("--segundos", type=float, default=6.0)
     ap.add_argument("--guardar-url", action="store_true", help="guarda la URL y la mejor rotación en config.toml")
     ap.add_argument("--rotacion", type=int, choices=[0, 90, 180, 270], help="fija la rotación en lugar de probar las cuatro")
+    ap.add_argument("--vista", action="store_true", help="ventana en vivo para acomodarse; Espacio mide")
     args = ap.parse_args()
     cfg = config.cargar()
     if args.indice is not None:
@@ -69,14 +112,24 @@ def main() -> int:
     else:
         url = args.url or cfg.valor("camara.url")
         cam, origen = camara.CamaraURL(url), url
-    print(f"Leyendo {origen} durante {args.segundos:.0f} s. Mira a la cámara de frente.")
-    crudos, lecturas = [], []
-    fin = time.monotonic() + args.segundos
+    crudos, lecturas = [], [0.0]
     try:
-        while time.monotonic() < fin:
-            t0 = time.perf_counter()
-            crudos.append(cam._capturar())  # sin rotar: se prueban las cuatro orientaciones abajo
-            lecturas.append((time.perf_counter() - t0) * 1000)
+        if args.vista:
+            rot = args.rotacion if args.rotacion is not None else int(cfg.valor("camara.rotacion", 0))
+            print(f"Vista en vivo de {origen} (rotación {rot}°). Acomódate y presiona Espacio para medir.")
+            crudos = vista_en_vivo(cam, rot, args.segundos)
+            if not crudos:
+                print("Cerrado sin medir.")
+                return 0
+            args.rotacion = rot
+        else:
+            print(f"Leyendo {origen} durante {args.segundos:.0f} s. Mira a la cámara de frente.")
+            fin = time.monotonic() + args.segundos
+            lecturas = []
+            while time.monotonic() < fin:
+                t0 = time.perf_counter()
+                crudos.append(cam._capturar())  # sin rotar: se prueban las cuatro orientaciones abajo
+                lecturas.append((time.perf_counter() - t0) * 1000)
     except camara.CamaraError as e:
         print(f"ERROR: {e}\n  Qué revisar: {e.que_revisar}")
         return 2
