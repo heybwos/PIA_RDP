@@ -324,6 +324,7 @@ class DispositivoESP32(Dispositivo):
 
     async def actuar(self, nivel: int) -> None:
         self._tx(f"ACCESO:{nivel}")
+        self._abiertos = max(0, nivel)
         if nivel == 0:
             await self.emitir("leds", {"verde": False, "rojo": True})
             return
@@ -331,6 +332,33 @@ class DispositivoESP32(Dispositivo):
         for n in range(1, nivel + 1):  # el firmware los mueve uno a la vez; la app refleja lo mismo
             await self.emitir("servo", {"n": n, "abierto": True})
             await asyncio.sleep(self.ms_entre_servos / 1000)
+
+    async def esperar_otra(self) -> None:
+        """La tecla # en la caja, con el resultado en pantalla, manda OTRA."""
+        while True:
+            tipo, t = await self._siguiente(limite=None)
+            if tipo == "linea" and t == "OTRA":
+                return
+
+    async def cerrar_compartimentos(self) -> None:
+        """CERRAR: el firmware cierra los servos uno a la vez y responde CERRADO."""
+        self._tx("CERRAR")
+        await self.emitir("oled", {"l1": "Cerrando", "l2": "compartimentos"})
+        await self.emitir("leds", {"verde": False, "rojo": False})
+        for n in range(1, getattr(self, "_abiertos", 0) + 1):
+            await self.emitir("servo", {"n": n, "abierto": False})
+            await asyncio.sleep(self.ms_entre_servos / 1000)
+        self._abiertos = 0
+        fin = time.monotonic() + 5
+        while time.monotonic() < fin:  # espera la confirmación del firmware
+            try:
+                tipo, t = await self._siguiente(limite=max(0.1, fin - time.monotonic()))
+            except ErrorDispositivo:
+                if not self._vivo:
+                    raise
+                return
+            if tipo == "linea" and t == "CERRADO":
+                return
 
     async def reiniciar(self) -> None:
         self._tx("PEDIR_PIN")

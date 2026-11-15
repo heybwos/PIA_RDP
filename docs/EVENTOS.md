@@ -40,6 +40,7 @@ Toda imagen va como `{"ancho": W, "alto": H, "tipo": "u8" | "f32", "datos": "<ba
 | `servo` | `n` (1 o 2), `abierto` | Cada servo, uno a la vez |
 | `bitacora_fila` | la fila insertada en `bitacora` | |
 | `error` | `mensaje`, `que_revisar` | Cualquier falla; nunca se sustituye por datos inventados |
+| `esperando_otra` | `concedido` | ESP32: la decisión queda en pantalla (servos abiertos) hasta "Intentar de nuevo" o `#` en la caja |
 | `puertos` | `puertos` [{puerto, responde, version, sensor, oled}] | Respuesta a `buscar_puertos`. Un `version` que empieza con `test_` es un firmware de prueba: la app no se conecta sola |
 
 En modo ESP32 el estado trae `conexion` = {puerto, version, sensor, oled}. Cada verificación empieza sola cuando alguien teclea en la caja: la app limpia los paneles al recibir `etapa` 1 en `curso`.
@@ -51,6 +52,7 @@ En modo ESP32 el estado trae `conexion` = {puerto, version, sensor, oled}. Cada 
 | `iniciar` | `escenario` (`l1`, `l2`, `ih`, `ir`, `pin`), `fuente_rostro` (`dataset` o `camara`) |
 | `tecla` | `c` |
 | `cancelar` | — |
+| `otra` | — | ESP32: "Intentar de nuevo": la caja cierra los servos uno a la vez y empieza otra verificación |
 | `listo` | `punto` (`huella`, `veredicto`) | Solo en modo ESP32: la app terminó de animar ese punto. El backend espera este aviso (máximo 30 s) antes de encender la cámara y antes de mandar `ACCESO` a la caja, para que lo físico vaya al ritmo de la pantalla |
 | `modo` | `modo` (`simular` o `esp32`) |
 | `buscar_puertos` | `puerto` (opcional, `socket://…` del ESP32 falso), `solo` (true: no prueba los COM reales) |

@@ -5,7 +5,7 @@
 
 Al llegar el primer PING teclea el guion (TECLA:… y PIN:id:pin). Con PEDIR_HUELLA manda una
 imagen de 256 x 288 a 4 bits por partes, al ritmo de 57600 baudios (o de golpe con --rapido).
-Responde a MSG, ACCESO, CONFIG, PING y RESET.
+Responde a MSG, ACCESO, CERRAR (con CERRADO), CONFIG, PING y RESET.
 
 Fallas: --falla crc (CRC malo), corte (se calla a media imagen), silencio (no contesta a
 PEDIR_HUELLA), cancela (teclea el ID, luego D, y después el guion completo).
@@ -24,8 +24,8 @@ BYTES_POR_SEGUNDO = 5760
 
 
 class Falso:
-    def __init__(self, guion: str, huella: Path, rapido: bool, falla: str | None, repetir: bool):
-        self.guion, self.rapido, self.falla, self.repetir = guion, rapido, falla, repetir
+    def __init__(self, guion: str, huella: Path, rapido: bool, falla: str | None, repetir: bool, otra: bool = False):
+        self.guion, self.rapido, self.falla, self.repetir, self.otra = guion, rapido, falla, repetir, otra
         self.imagen = huella.read_bytes()
         if len(self.imagen) != 36864:
             raise SystemExit(f"{huella} no mide 36,864 bytes (formato AS608)")
@@ -106,11 +106,18 @@ class Falso:
                         tareas.append(asyncio.create_task(enviar_huella()))
                 elif cmd.startswith("ACCESO:"):
                     tx("OK:ACCESO")
+                    if self.repetir or self.otra:  # alguien presiona # con el resultado en pantalla
+                        async def pedir_otra():
+                            await asyncio.sleep(0 if self.rapido else 3)
+                            tx("TECLA:#")
+                            tx("OTRA")
+                            await w.drain()
+                        tareas.append(asyncio.create_task(pedir_otra()))
+                elif cmd == "CERRAR":
+                    tx("OK:CERRAR")
+                    tx("CERRADO")
                     if self.repetir:
-                        async def otra():
-                            await asyncio.sleep(3)
-                            await teclear()
-                        tareas.append(asyncio.create_task(otra()))
+                        tareas.append(asyncio.create_task(teclear()))
                 elif cmd:
                     tx("ERR:desconocido")
                 await w.drain()
@@ -136,9 +143,10 @@ def main() -> None:
     ap.add_argument("--huella", type=Path, default=HUELLA_DEFECTO, help=".bin de 36,864 bytes")
     ap.add_argument("--rapido", action="store_true")
     ap.add_argument("--falla", choices=["crc", "corte", "silencio", "cancela"])
-    ap.add_argument("--repetir", action="store_true", help="vuelve a teclear el guion después de cada ACCESO")
+    ap.add_argument("--repetir", action="store_true", help="tras cada ACCESO presiona #, y tras CERRAR vuelve a teclear")
+    ap.add_argument("--otra", action="store_true", help="tras ACCESO presiona # (manda OTRA) una vez")
     a = ap.parse_args()
-    asyncio.run(servir(a.puerto, Falso(a.guion, a.huella, a.rapido, a.falla, a.repetir)))
+    asyncio.run(servir(a.puerto, Falso(a.guion, a.huella, a.rapido, a.falla, a.repetir, a.otra)))
 
 
 if __name__ == "__main__":

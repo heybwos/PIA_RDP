@@ -46,7 +46,21 @@ const esperar = ms => new Promise(r => setTimeout(r, ms));
                teclas: [...document.querySelectorAll('#slotId .slot')].map(s => s.textContent).join('') };
     });
     await pagina.screenshot({ path: path.join(RAIZ, 'datos', 'capturas_app', 'esp32_falso.png') });
-    const ok = r.res && r.res.ok && r.res.nivel === 2;
+    // El resultado se queda (servos abiertos) hasta "Intentar de nuevo"; entonces se cierran
+    const cierre = await pagina.evaluate(async () => {
+      const t0 = Date.now(), b = document.querySelector('#runBtn');
+      while (b.disabled && Date.now() - t0 < 30000) await new Promise(r => setTimeout(r, 200));
+      const antes = [document.querySelector('#c1s').textContent, document.querySelector('#c2s').textContent];
+      const texto = b.textContent.trim();
+      b.click();
+      while (document.querySelector('#c2s').textContent.includes('Liberado') && Date.now() - t0 < 40000)
+        await new Promise(r => setTimeout(r, 200));
+      return { texto, antes, despues: [document.querySelector('#c1s').textContent, document.querySelector('#c2s').textContent] };
+    });
+    const cerro = cierre.texto === 'Intentar de nuevo' && cierre.antes.every(s => s.includes('Liberado'))
+      && cierre.despues.every(s => s.includes('Bloqueado'));
+    console.log(`${cerro ? 'OK   ' : 'FALLA'} Intentar de nuevo: antes ${cierre.antes.join(' / ')} -> después ${cierre.despues.join(' / ')}`);
+    const ok = r.res && r.res.ok && r.res.nivel === 2 && cerro;
     console.log(`${ok ? 'OK   ' : 'FALLA'} ESP32 falso (${r.conn}, ID ${r.teclas}): ${r.res ? (r.res.ok ? 'concedido nivel ' + r.res.nivel : 'negado (' + r.res.motivo + ')') : 'sin veredicto'}`);
     console.log(`Errores en consola: ${errores}`);
     console.log(`Peticiones fuera de localhost: ${externas.length}`);

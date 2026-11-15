@@ -45,6 +45,7 @@ class Estado:
         self.esp32: DispositivoESP32 | None = None
         self.tarea_esp32: asyncio.Task | None = None
         self.listos: dict[str, asyncio.Event] = {}
+        self.otra = asyncio.Event()  # "Intentar de nuevo" en la app
         self.orq.esperar = self.esperar_app
 
     async def esperar_app(self, punto: str, limite_s: float) -> None:
@@ -155,14 +156,29 @@ class Estado:
                 ev.clear()
             cam = camara_.desde_config(self.cfg)
             try:
-                await self.orq.verificar(disp, cam, "esp32")
+                res = await self.orq.verificar(disp, cam, "esp32")
             finally:
                 cam.cerrar()
             await self.difundir("estado", self.resumen())
-            if disp.conectado:
-                await asyncio.sleep(1.0)
-                await disp.mostrar("Listo", "Teclea tu ID")
+            if not disp.conectado:
+                break
+            if res.fila:  # hubo decisión: se queda en pantalla hasta "Intentar de nuevo" o la tecla #
+                await self.difundir("esperando_otra", {"concedido": res.concedido})
+                await self._esperar_otra(disp)
+                await disp.cerrar_compartimentos()
+            await disp.mostrar("Listo", "Teclea tu ID")
         await self.difundir("estado", self.resumen())
+
+    async def _esperar_otra(self, disp) -> None:
+        self.otra.clear()
+        tareas = [asyncio.create_task(self.otra.wait()), asyncio.create_task(disp.esperar_otra())]
+        try:
+            hechas, _ = await asyncio.wait(tareas, return_when=asyncio.FIRST_COMPLETED)
+            for t in hechas:
+                t.result()  # propaga una desconexión del ESP32
+        finally:
+            for t in tareas:
+                t.cancel()
 
 
 def crear_app(cfg: config.Config | None = None) -> FastAPI:
@@ -200,6 +216,8 @@ def crear_app(cfg: config.Config | None = None) -> FastAPI:
                     await est.difundir("estado", est.resumen())
                 elif tipo == "listo":
                     est.app_lista(str(msg.get("punto", "")))
+                elif tipo == "otra":
+                    est.otra.set()
                 elif tipo == "buscar_puertos":
                     await est.buscar_puertos(msg.get("puerto"), bool(msg.get("solo")))
                 elif tipo == "conectar":

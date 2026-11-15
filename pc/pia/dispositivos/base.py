@@ -6,6 +6,7 @@ eventos de su lado (teclas, OLED, LEDs, servos, líneas del protocolo serie).
 
 from __future__ import annotations
 
+import asyncio
 import base64
 from abc import ABC, abstractmethod
 from typing import Any, Awaitable, Callable
@@ -67,3 +68,12 @@ class Dispositivo(ABC):
 
     async def reiniciar(self) -> None:
         await self.mostrar("Listo", "Teclea tu ID")
+
+    async def esperar_otra(self) -> None:
+        """Espera a que alguien pida otra verificación desde el dispositivo (tecla # en la caja).
+        Por defecto nunca pasa: el aviso viene de la app."""
+        await asyncio.Event().wait()
+
+    async def cerrar_compartimentos(self) -> None:
+        """Cierra los servos que haya abierto el último acceso, uno a la vez, y apaga los LEDs."""
+        await self.emitir("leds", {"verde": False, "rojo": False})

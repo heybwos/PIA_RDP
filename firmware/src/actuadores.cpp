@@ -19,7 +19,7 @@ struct Paso {
 static Paso cola[6];
 static int nCola = 0, iCola = 0;
 static uint32_t tSiguiente = 0, tCerrar = 0;
-static bool abiertos = false;
+static bool abiertos = false, cerradoAuto = false;
 
 static void mover(int s, int ang) {
   if (!servos[s].attached()) servos[s].attach(PINES_SERVO[s], 500, 2400);
@@ -59,6 +59,7 @@ void actuadoresAcceso(int nivel) {
   if (nivel >= 2) encolar(1, angAbierto);
   tSiguiente = millis();
   abiertos = true;
+  cerradoAuto = false;
   tCerrar = 0;
 }
 
@@ -77,15 +78,20 @@ void actuadoresTick() {
     mover(cola[iCola].servo, cola[iCola].angulo);
     iCola++;
     tSiguiente = ahora + msEntre;
-    if (iCola == nCola && abiertos) tCerrar = ahora + msAbierto;
+    if (iCola == nCola && abiertos && msAbierto) tCerrar = ahora + msAbierto;  // 0: sin cierre automático
   }
   if (abiertos && tCerrar && (int32_t)(ahora - tCerrar) >= 0) {
     actuadoresCerrarTodo();
     actuadoresLeds(false, false);
+    cerradoAuto = true;
   }
 }
 
 bool actuadoresOcupados() { return abiertos || iCola < nCola; }
+
+void actuadoresAutoCierre(uint32_t ms) { msAbierto = ms; }
+
+bool actuadoresCerradosSolos() { return cerradoAuto; }
 
 void actuadoresConfig(uint32_t ms1, uint32_t ms2, int ang) {
   if (ms1) msEntre = ms1;

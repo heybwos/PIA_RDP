@@ -21,6 +21,8 @@ Contrato único entre `firmware/` y `pc/`. Ninguno de los dos lados se programa 
 | `HUELLA:ERR:<codigo>` | Sin dedo en el tiempo límite (`TIEMPO`), o el código de confirmación del sensor en hex (`ERR:0A:01`, comando y código). |
 | `IMG:<bytes>` | Le siguen **exactamente** `<bytes>` bytes crudos y después la línea `IMG:FIN:<crc32>`. |
 | `IMG:FIN:<crc32>` | CRC-32 (el de zlib, IEEE 802.3) de los bytes crudos, en hex de 8 dígitos en minúsculas. |
+| `OTRA` | Tecla `#` con el resultado en pantalla: pide otra verificación (la PC responde con `CERRAR`). |
+| `CERRADO` | Los servos terminaron de cerrarse tras `CERRAR`; el ESP32 vuelve a reposo. |
 | `PONG` | Respuesta a `PING`. |
 | `OK:<comando>` / `ERR:<motivo>` | Respuesta a un comando. |
 | `DIAG:<texto>` | Diagnóstico libre. |
@@ -48,7 +50,8 @@ El CRC va **al final** porque el ESP32 no lo conoce hasta recibir la imagen comp
 | `MSG:<linea1>\|<linea2>` | Texto para la OLED. |
 | `PEDIR_PIN` | Empieza la captura de ID y PIN. |
 | `PEDIR_HUELLA` | Empieza la captura de huella (`HUELLA:ESPERA` … `IMG:FIN`). |
-| `ACCESO:0\|1\|2` | Decisión: LED rojo, o LED verde y compartimento 1, o los dos. |
+| `ACCESO:0\|1\|2` | Decisión: LED rojo, o LED verde y compartimento 1, o los dos. El ESP32 queda en RESULTADO (servos abiertos) hasta `CERRAR`. |
+| `CERRAR` | Cierra los servos uno a la vez, apaga los LEDs y responde `OK:CERRAR` y luego `CERRADO`. |
 | `CONFIG:<clave>:<valor>` | `ms_servos` (entre un servo y otro), `ms_abierto` (cierre automático), `ang_abierto` (grados). Responde `OK:CONFIG:<clave>`. La PC los manda al conectar. |
 | `RESET` | Vuelve al estado inicial y responde `HOLA`. |
 | `PING` | Responde `PONG`. |
@@ -60,7 +63,7 @@ El CRC va **al final** porque el ESP32 no lo conoce hasta recibir la imagen comp
 - Servos a cerrado en `setup()`, antes que nada.
 - La verificación empieza en el teclado: en reposo, la primera tecla arranca la captura de ID y PIN. `PEDIR_PIN` solo la reinicia.
 - Tiempos límite: 30 s para teclear ID y PIN (manda `CANCELA`), 15 s para poner el dedo (`HUELLA:ERR:TIEMPO`), 60 s esperando a la PC.
-- Tras `ACCESO:1|2`, los servos abren uno a la vez y se cierran solos tras `ms_abierto`. Tras `ACCESO:0`, LED rojo unos segundos y vuelve a reposo.
+- Tras `ACCESO:n` el ESP32 queda en RESULTADO: servos abiertos (si se concedió) o LED rojo, hasta `CERRAR` (botón "Intentar de nuevo" de la app, o `#` en la caja, que manda `OTRA`). Con `CONFIG:ms_abierto:<ms>` distinto de 0 vuelve el cierre automático; la configuración actual es 0 (manual). Sin PC, los servos se cierran igual (estado seguro).
 
 ## Paquetes del AS608 (lado ESP32, a 57600 baudios)
 

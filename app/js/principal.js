@@ -139,7 +139,7 @@ H.puertos=m=>{
 H.etapa=async(m,id)=>{
   const sel=ETAPAS[m.n].panel;
   if(S.mode==='esp32'&&m.n===1&&m.estado==='curso'){ // con el ESP32 cada verificación empieza sola, en la caja
-    resetUI(); limpiarNav(); F=T=M=null; idActual=''; S.running=true; S.lastResult=null; updateButtons();
+    resetUI(); limpiarNav(); F=T=M=null; idActual=''; S.running=true; S.lastResult=null; S.esperandoOtra=false; updateButtons();
     caption('ESP32','Teclea tu ID y PIN en el teclado de la caja.','wait')}
   if(m.estado==='curso'){await etapaFlujo(m.n,id);panel(sel,'active');
     if(m.n===4) caption('fase 5','Decisión: PIN, umbral de cada factor y fusión ponderada.');}
@@ -318,6 +318,10 @@ H.veredicto=async(m,id)=>{
   listo('veredicto'); // ahora la caja muestra el resultado en la OLED y mueve los servos
 };
 H.bitacora_fila=m=>logRow(filaLog(m));
+/* ESP32: el resultado se queda en pantalla (y los servos abiertos) hasta "Intentar de nuevo" o # en la caja */
+H.esperando_otra=m=>{S.esperandoOtra=true; updateButtons();
+  caption('fase 5',(m.concedido?'Saca lo que necesites y cierra las puertas de los compartimentos. ':'')+
+    'Pulsa "Intentar de nuevo" (o # en la caja): se cierran los servos y empieza otra verificación.',m.concedido?'ok':'no')};
 function filaLog(f){const hora=(f.fecha||'').slice(11,19);
   return {hora,id:f.usuario_id??'—',user:f.nombre||'—',pin:!!f.pin_ok,h:f.puntaje_huella!=null?fmt(f.puntaje_huella):null,
     r:f.distancia_rostro!=null?f.distancia_rostro.toFixed(2):null,s:f.fusion!=null?fmt(f.fusion):null,ok:f.decision>0,
@@ -331,8 +335,10 @@ H.error=m=>{caption('error',m.mensaje+(m.que_revisar?'. '+m.que_revisar:''),'no'
 function manualKey(k){flashKey(k);
   caption('teclado','En Simular la verificación sale de un escenario. El teclado físico se conecta en el modo ESP32 (N6).','wait')}
 function updateButtons(){
-  const sim=S.mode==='sim';
-  $('#runBtn').disabled=!sim||!ws||ws.readyState!==1; $('#runTxt').textContent=S.running?'Reiniciar verificación':'Iniciar verificación';
+  const sim=S.mode==='sim', sinWs=!ws||ws.readyState!==1;
+  /* con el ESP32 la verificación empieza en la caja; el botón solo sirve para "Intentar de nuevo" */
+  $('#runBtn').disabled=sinWs||(sim?false:!S.esperandoOtra);
+  $('#runTxt').textContent=!sim?'Intentar de nuevo':S.running?'Reiniciar verificación':'Iniciar verificación';
   Object.values(keyEls).forEach(b=>b.disabled=!sim||S.running);
 }
 const LISTO='Elige un escenario y pulsa Iniciar verificación.';
@@ -343,7 +349,11 @@ function iniciar(){
   S.running=true; S.runs++; updateButtons();
   enviar({tipo:'iniciar',escenario:$('#scn').value,fuente_rostro:S.fuenteRostro,velocidad:S.step?1:1/S.speed});
 }
-$('#runBtn').addEventListener('click',()=>{S.instant=false;iniciar()});
+$('#runBtn').addEventListener('click',()=>{
+  if(S.mode==='esp32'){ if(!S.esperandoOtra) return;
+    S.esperandoOtra=false; updateButtons(); enviar({tipo:'otra'});
+    caption('ESP32','Cerrando los compartimentos uno a la vez; después empieza una verificación nueva.','wait'); return }
+  S.instant=false;iniciar()});
 $('#resetBtn').addEventListener('click',()=>{ if(S.running) enviar({tipo:'cancelar'}); detener(); S.running=false; resetUI(); limpiarNav(); $('#serial').innerHTML='';
   if(S.mode==='sim'){oled('Listo','Teclea tu ID'); caption('listo',LISTO,'ok');}
   updateButtons(); mostrarEtapa(1); });

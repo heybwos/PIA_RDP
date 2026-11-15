@@ -5,7 +5,9 @@
 // TECLEANDO arma ID (2 dígitos + #) y PIN (4 dígitos + #); * borra, D cancela
 // ESPERA_PC el PIN ya se mandó; atiende MSG, PEDIR_HUELLA, ACCESO, CONFIG
 // HUELLA    GenImg cada 100 ms hasta que hay dedo (tiempo límite), luego UpImage y envío
-// ACTUANDO  servos abiertos; al cerrarse solos vuelve a REPOSO
+// RESULTADO ya se decidió (ACCESO:n): servos abiertos si se concedió. Se queda así hasta CERRAR
+//           (botón "Intentar de nuevo" de la app) o la tecla # (manda OTRA para que la PC lo pida)
+// CERRANDO  cierra los servos uno a la vez; al terminar manda CERRADO y vuelve a REPOSO
 //
 // Seguridad: servos cerrados en setup(); al perder la PC se cierran y nada se abre;
 // cada fase tiene tiempo límite.
@@ -21,7 +23,7 @@
 #include "protocolo.h"
 #include "teclado.h"
 
-enum Estado { SIN_PC, REPOSO, TECLEANDO, ESPERA_PC, HUELLA, ACTUANDO };
+enum Estado { SIN_PC, REPOSO, TECLEANDO, ESPERA_PC, HUELLA, RESULTADO, CERRANDO };
 static Estado estado = SIN_PC;
 static uint32_t tUltimoPing = 0, tFase = 0, tGenImg = 0;
 static bool hubo_ping = false;
@@ -132,18 +134,19 @@ static void comandoPc(const String &l) {
   } else if (l.startsWith("ACCESO:")) {
     int nivel = l.substring(7).toInt();
     actuadoresAcceso(nivel);
-    if (nivel > 0) {
-      cambiar(ACTUANDO);
-    } else {
-      cambiar(ESPERA_PC);  // LED rojo unos segundos y vuelve a reposo por tiempo
-      tFase = millis() - MS_FASE_PC + 4000;
-    }
+    cambiar(RESULTADO);  // se queda mostrando el resultado hasta CERRAR
     protocoloEnviar("OK:ACCESO");
+  } else if (l == "CERRAR") {
+    actuadoresCerrarTodo();
+    actuadoresLeds(false, false);
+    pantallaMostrar("Cerrando", "compartimentos");
+    cambiar(CERRANDO);
+    protocoloEnviar("OK:CERRAR");
   } else if (l.startsWith("CONFIG:")) {
     int a = l.indexOf(':', 7);
     String clave = l.substring(7, a), valor = l.substring(a + 1);
     if (clave == "ms_servos") actuadoresConfig(valor.toInt(), 0, 0);
-    else if (clave == "ms_abierto") actuadoresConfig(0, valor.toInt(), 0);
+    else if (clave == "ms_abierto") actuadoresAutoCierre(valor.toInt());  // 0: solo con CERRAR
     else if (clave == "ang_abierto") actuadoresConfig(0, 0, valor.toInt());
     else {
       protocoloEnviar("ERR:config");
@@ -219,8 +222,15 @@ void loop() {
         }
       }
       break;
-    case ACTUANDO:
-      if (!actuadoresOcupados()) aReposo();
+    case RESULTADO:
+      if (k == '#') protocoloEnviar("OTRA");  // la PC cierra y empieza otra verificación
+      if (!actuadoresOcupados() && actuadoresCerradosSolos()) aReposo();  // cierre automático (si está activo)
+      break;
+    case CERRANDO:
+      if (!actuadoresOcupados()) {
+        protocoloEnviar("CERRADO");
+        aReposo();
+      }
       break;
   }
 }

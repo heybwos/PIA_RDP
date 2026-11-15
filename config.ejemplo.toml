@@ -29,7 +29,7 @@ cuadros_rostro = 15
 
 [actuadores]
 ms_entre_servos = 300
-ms_abierto = 8000
+ms_abierto = 0              # 0: los servos quedan abiertos hasta "Intentar de nuevo" o la tecla #
 
 [datos]
 carpeta = "datos"

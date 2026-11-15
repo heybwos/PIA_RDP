@@ -123,3 +123,33 @@ def test_cancelar_con_d(preparado):
     assert r.concedido
     casillas = [d for t, d in ev if t == "casillas"]
     assert any(c["id"] == "" for c in casillas[2:])
+
+
+def test_resultado_espera_otra_y_cierra(preparado):
+    """Tras la decisión, la caja espera OTRA (tecla #) y CERRAR responde CERRADO."""
+    alm, cfg, datos = preparado
+    eventos = []
+
+    async def emitir(t, d):
+        eventos.append((t, d))
+
+    async def principal():
+        with Falso("--otra") as f:
+            disp = DispositivoESP32(f.url, emitir=emitir)
+            disp.limite_huella_s = 4.0
+            await disp.conectar()
+            try:
+                r = await asyncio.wait_for(
+                    Orquestador(alm, cfg, emitir).verificar(disp, CamaraArchivo(datos["rostro"]), "esp32"), 60)
+                await asyncio.wait_for(disp.esperar_otra(), 10)
+                await asyncio.wait_for(disp.cerrar_compartimentos(), 10)
+                return r
+            finally:
+                await disp.cerrar()
+
+    r = asyncio.run(principal())
+    assert r.concedido and r.nivel == 2
+    servos = [d for t, d in eventos if t == "servo"]
+    assert [s["abierto"] for s in servos] == [True, True, False, False]
+    salidas = [d["linea"] for t, d in eventos if t == "serie" and d["dir"] == "out"]
+    assert salidas.index("ACCESO:2") < salidas.index("CERRAR")
