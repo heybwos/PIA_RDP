@@ -440,3 +440,19 @@ html[data-dir="fundido"]::view-transition-new(root){animation:250ms ease both vt
 
 /* ?sinvidrio=1: respaldo de rendimiento para la laptop de la demo (R15) */
 .sin-vidrio *, .sin-vidrio *::before, .sin-vidrio *::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+
+/* Módulo Servos: panel flotante independiente del flujo de verificación */
+.mod-servos{position:fixed;right:16px;top:calc(var(--cab-h, 140px) + 12px);z-index:60;width:min(360px,calc(100vw - 32px));
+  border-radius:20px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;box-shadow:0 18px 50px rgba(0,0,0,.45)}
+.mod-servos[hidden]{display:none}
+.mod-servos .ms-cab{display:flex;align-items:center;gap:10px}
+.mod-servos .ms-cab h2{margin:0;font-size:17px}
+.mod-servos .ms-x{margin-left:auto;padding:6px}
+.mod-servos .ms-servo{background:var(--fill-2, rgba(120,120,128,.2));border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.mod-servos .ms-fila{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mod-servos .ms-ang{margin-left:auto;font-size:15px}
+.mod-servos input[type=range]{width:100%;accent-color:var(--acento-claro, #6fd39f)}
+.mod-servos .ms-ambos{justify-content:flex-end}
+.mod-servos .ms-msg{min-height:1.2em;margin:0}
+.mod-servos .ms-msg.no{color:var(--no, #ff6b6e)}
+@media (max-width:560px){.mod-servos{right:16px;left:16px;width:auto}}

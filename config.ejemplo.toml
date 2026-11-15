@@ -29,6 +29,8 @@ cuadros_rostro = 15
 
 [actuadores]
 ms_entre_servos = 300
+ang_cerrado = 0             # medido en P4.5 (los dos servos)
+ang_abierto = 90
 ms_abierto = 0              # 0: los servos quedan abiertos hasta "Intentar de nuevo" o la tecla #
 
 [datos]

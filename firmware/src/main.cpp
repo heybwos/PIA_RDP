@@ -136,6 +136,18 @@ static void comandoPc(const String &l) {
     actuadoresAcceso(nivel);
     cambiar(RESULTADO);  // se queda mostrando el resultado hasta CERRAR
     protocoloEnviar("OK:ACCESO");
+  } else if (l.startsWith("SERVO:")) {
+    // Control manual desde la app: SERVO:<1|2>:<ángulo>. No durante la huella (bloquea el loop).
+    int a = l.indexOf(':', 6);
+    int n = l.substring(6, a).toInt(), ang = l.substring(a + 1).toInt();
+    if (a < 0 || n < 1 || n > 2 || ang < 0 || ang > 180) {
+      protocoloEnviar("ERR:servo");
+    } else if (estado == HUELLA) {
+      protocoloEnviar("ERR:ocupado");
+    } else {
+      actuadoresMover(n - 1, ang);
+      protocoloEnviarf("OK:SERVO:%d:%d", n, ang);
+    }
   } else if (l == "CERRAR") {
     actuadoresCerrarTodo();
     actuadoresLeds(false, false);

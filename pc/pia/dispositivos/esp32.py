@@ -333,6 +333,11 @@ class DispositivoESP32(Dispositivo):
             await self.emitir("servo", {"n": n, "abierto": True})
             await asyncio.sleep(self.ms_entre_servos / 1000)
 
+    async def mover_servo(self, n: int, angulo: int, cerrado: int = 0) -> None:
+        """SERVO:<n>:<ángulo>; el firmware lo encola (uno a la vez) y lo rechaza durante una huella."""
+        self._tx(f"SERVO:{n}:{angulo}")
+        await self.emitir("servo", {"n": n, "abierto": angulo != cerrado, "angulo": angulo, "manual": True})
+
     async def esperar_otra(self) -> None:
         """La tecla # en la caja, con el resultado en pantalla, manda OTRA."""
         while True:

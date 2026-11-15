@@ -286,8 +286,10 @@ function compSVG(n){return `
   <circle cx="54" cy="62" r="2" fill="#1C1C1E"/>
   <text x="128" y="100" text-anchor="end" font-size="8" fill="${GRIS2}" font-family='${MONO}'>GPIO${n===1?18:19}</text>`}
 $('#c1').innerHTML=compSVG(1); $('#c2').innerHTML=compSVG(2);
-function servo(n,open){ $('#arm'+n).style.transform=open?'rotate(90deg)':'rotate(0deg)'; $('#lid'+n).style.transform=open?'rotate(-14deg)':'rotate(0deg)';
-  const s=$('#c'+n+'s'); s.innerHTML=ic(open?'lock-keyhole-open':'lock-keyhole')+(open?'Liberado':'Bloqueado'); s.className='pill'+(open?' ok':''); }
+/* angulo: el real del servo (control manual); sin él, 90° abierto y 0° cerrado */
+function servo(n,open,angulo){ const a=angulo??(open?90:0);
+  $('#arm'+n).style.transform=`rotate(${a}deg)`; $('#lid'+n).style.transform=`rotate(${-14*Math.min(a,90)/90}deg)`;
+  const s=$('#c'+n+'s'); s.innerHTML=ic(open?'lock-keyhole-open':'lock-keyhole')+(open?'Liberado':'Bloqueado')+(angulo!=null?` · ${a}°`:''); s.className='pill'+(open?' ok':''); }
 
 /* dibujo de rostro */
 function drawGray(cv,data,w,h,norm){const x=cv.getContext('2d'),d=x.createImageData(w,h);let mn=0,mx=1;

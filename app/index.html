@@ -27,6 +27,7 @@
       </div>
     </div>
     <div class="estado">
+      <button class="btn gris chico" id="servosBtn" aria-expanded="false" aria-controls="modServos"><i data-ic="lock-keyhole-open"></i>Servos</button>
       <span class="chip aviso" id="bancoChip" title="Origen de la huella y el rostro de la verificación"><i data-ic="flask-conical"></i><span id="bancoTxt">FVC2002 · ORL</span></span>
       <span class="chip ok" id="connChip"><i data-ic="monitor"></i><span id="connTxt">Dispositivo simulado</span></span>
     </div>
@@ -200,6 +201,28 @@
   <button class="btn principal" id="nextBtn" hidden>Siguiente<i data-ic="chevron-right"></i></button>
 </div>
 
+
+<!-- MÓDULO SERVOS: control manual, fuera del flujo de verificación -->
+<aside class="mod-servos vidrio-flota especular" id="modServos" hidden aria-labelledby="hServos">
+  <div class="ms-cab"><h2 id="hServos">Servos</h2><span class="meta mono" id="msModo">Simular · solo dibujo</span>
+    <button class="btn gris chico ms-x" id="msCerrar" aria-label="Cerrar el control de servos"><i data-ic="x"></i></button></div>
+  <p class="cap">Control manual de los compartimentos. Se mueven uno a la vez; no durante una verificación.</p>
+  <div class="ms-servo" data-n="1">
+    <div class="ms-fila"><b>1 · Lector</b><span class="meta mono">GPIO18</span><span class="ms-ang mono" id="msA1">—</span></div>
+    <input type="range" min="0" max="180" step="1" value="0" id="msR1" aria-label="Ángulo del servo 1">
+    <div class="ms-fila"><button class="btn gris chico" data-n="1" data-accion="cerrar"><i data-ic="lock-keyhole"></i>Cerrar</button>
+      <button class="btn gris chico" data-n="1" data-accion="abrir"><i data-ic="lock-keyhole-open"></i>Abrir</button></div>
+  </div>
+  <div class="ms-servo" data-n="2">
+    <div class="ms-fila"><b>2 · Editor (Compras)</b><span class="meta mono">GPIO19</span><span class="ms-ang mono" id="msA2">—</span></div>
+    <input type="range" min="0" max="180" step="1" value="0" id="msR2" aria-label="Ángulo del servo 2">
+    <div class="ms-fila"><button class="btn gris chico" data-n="2" data-accion="cerrar"><i data-ic="lock-keyhole"></i>Cerrar</button>
+      <button class="btn gris chico" data-n="2" data-accion="abrir"><i data-ic="lock-keyhole-open"></i>Abrir</button></div>
+  </div>
+  <div class="ms-fila ms-ambos"><button class="btn gris" data-n="ambos" data-accion="cerrar"><i data-ic="lock-keyhole"></i>Cerrar ambos</button>
+    <button class="btn principal" data-n="ambos" data-accion="abrir"><i data-ic="lock-keyhole-open"></i>Abrir ambos</button></div>
+  <p class="cap ms-msg" id="msMsg" role="status"></p>
+</aside>
 
 <script src="js/base.js"></script>
 <script src="js/dibujo.js"></script>

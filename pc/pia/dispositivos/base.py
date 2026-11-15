@@ -69,6 +69,10 @@ class Dispositivo(ABC):
     async def reiniciar(self) -> None:
         await self.mostrar("Listo", "Teclea tu ID")
 
+    async def mover_servo(self, n: int, angulo: int, cerrado: int = 0) -> None:
+        """Control manual (módulo Servos de la app). En el simulado solo se mueve el dibujo."""
+        await self.emitir("servo", {"n": n, "abierto": angulo != cerrado, "angulo": angulo, "manual": True})
+
     async def esperar_otra(self) -> None:
         """Espera a que alguien pida otra verificación desde el dispositivo (tecla # en la caja).
         Por defecto nunca pasa: el aviso viene de la app."""

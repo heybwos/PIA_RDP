@@ -155,7 +155,8 @@ H.casillas=m=>{idActual=m.id;setSlots(m.id,m.pin.replace(/\*/g,'•'));
 H.oled=m=>oled(m.l1,m.l2);
 H.serie=m=>serial(m.dir,m.linea);
 H.leds=m=>leds(m.verde,m.rojo);
-H.servo=async(m,id)=>{servo(m.n,m.abierto);await wait(300,id)};
+H.servo=async(m,id)=>{servo(m.n,m.abierto,m.angulo);modServoPinta(m.n,m.angulo??(m.abierto?90:0));if(!m.manual)await wait(300,id)};
+H.servos_error=m=>{const e=$('#msMsg');e.textContent=m.mensaje;e.className='cap ms-msg no'};
 
 /* ----- huella ----- */
 H.huella_inicio=async(m,id)=>{
@@ -371,7 +372,7 @@ document.querySelectorAll('#fuenteRostro button').forEach(b=>b.addEventListener(
 }));
 $('#showDigits').addEventListener('change',e=>{S.showDigits=e.target.checked; setSlots(slotsNow.id,slotsNow.pin,slotsNow.err)});
 function setMode(m){
-  S.mode=m; $('#mSim').setAttribute('aria-pressed',m==='sim'); $('#mEsp').setAttribute('aria-pressed',m==='esp32');
+  S.mode=m; if(!modServos.hidden) modServoModo(); $('#mSim').setAttribute('aria-pressed',m==='sim'); $('#mEsp').setAttribute('aria-pressed',m==='esp32');
   $('#espPanel').hidden=m!=='esp32';
   const chip=$('#connChip');
   if(m==='esp32'){ if(S.running){enviar({tipo:'cancelar'});detener();S.running=false} V.curso=0;V.seguir=true;pintarNav();
@@ -394,6 +395,27 @@ $('#scanBtn').addEventListener('click',()=>{
   enviar({tipo:'buscar_puertos',puerto:p||undefined,solo:!!p});
 });
 $('#port').addEventListener('change',e=>{ if(e.target.value) enviar({tipo:'conectar',puerto:e.target.value}) });
+
+/* ============================================================
+   Módulo Servos: control manual, fuera del flujo de verificación.
+   El backend mueve el servo (ESP32: SERVO:n:ángulo) y difunde el evento "servo".
+   ============================================================ */
+const modServos=$('#modServos');
+function modServoPinta(n,a){const r=$('#msR'+n);if(!r)return;$('#msA'+n).textContent=a+'°';
+  if(document.activeElement!==r) r.value=a}
+function modServoModo(){$('#msModo').textContent=S.mode==='esp32'?'ESP32 · servos reales':'Simular · solo dibujo'}
+$('#servosBtn').addEventListener('click',()=>{const abrir=modServos.hidden;modServos.hidden=!abrir;
+  $('#servosBtn').setAttribute('aria-expanded',abrir);if(abrir){modServoModo();$('#msMsg').textContent=''}});
+$('#msCerrar').addEventListener('click',()=>{modServos.hidden=true;$('#servosBtn').setAttribute('aria-expanded',false)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modServos.hidden){modServos.hidden=true;$('#servosBtn').setAttribute('aria-expanded',false)}});
+modServos.addEventListener('click',e=>{const b=e.target.closest('button[data-accion]');if(!b)return;
+  $('#msMsg').textContent='';$('#msMsg').className='cap ms-msg';
+  enviar({tipo:'servo',n:b.dataset.n==='ambos'?'ambos':+b.dataset.n,accion:b.dataset.accion})});
+[1,2].forEach(n=>{const r=$('#msR'+n);let t=0,pend=null;
+  const mandar=()=>{t=performance.now();enviar({tipo:'servo',n,angulo:+r.value})};
+  r.addEventListener('input',()=>{$('#msA'+n).textContent=r.value+'°';clearTimeout(pend);
+    if(performance.now()-t>90)mandar();else pend=setTimeout(mandar,90)});
+  r.addEventListener('change',()=>{clearTimeout(pend);mandar()})});
 
 /* ============================================================
    Arranque: sin verificación inventada; se muestra la bitácora real

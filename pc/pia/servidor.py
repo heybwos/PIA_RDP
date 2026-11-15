@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import camara as camara_, config, simular
 from .almacen import Almacen
-from .dispositivos import DispositivoESP32, ErrorDispositivo, esp32
+from .dispositivos import DispositivoESP32, DispositivoSimulado, ErrorDispositivo, esp32
 from .orquestador import Orquestador
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -60,6 +60,28 @@ class Estado:
             pass
         finally:
             ev.clear()
+
+    async def mover_servos(self, msg: dict) -> None:
+        """Módulo Servos de la app: {n: 1|2|"ambos", angulo} o {n, accion: "abrir"|"cerrar"}."""
+        if self.orq.en_verificacion or (self.tarea and not self.tarea.done()):
+            await self.difundir("servos_error", {"mensaje": "Hay una verificación en curso: espera al resultado"})
+            return
+        c = self.cfg.valor
+        cerrado, abierto = int(c("actuadores.ang_cerrado", 0)), int(c("actuadores.ang_abierto", 90))
+        accion = msg.get("accion")
+        angulo = abierto if accion == "abrir" else cerrado if accion == "cerrar" else int(msg.get("angulo", cerrado))
+        angulo = max(0, min(180, angulo))
+        servos = [1, 2] if msg.get("n") == "ambos" else [int(msg.get("n", 1))]
+        if any(n not in (1, 2) for n in servos):
+            return
+        disp = self.esp32 if (self.modo == "esp32" and self.esp32 and self.esp32.conectado) else None
+        if disp is None:  # Simular o sin placa: solo el dibujo
+            disp = DispositivoSimulado("", "", "", "", emitir=self.difundir, velocidad=0)
+        espera = int(c("actuadores.ms_entre_servos", 300)) / 1000
+        for k, n in enumerate(servos):  # uno a la vez, como el firmware
+            if k:
+                await asyncio.sleep(espera)
+            await disp.mover_servo(n, angulo, cerrado)
 
     def app_lista(self, punto: str) -> None:
         self.listos.setdefault(punto, asyncio.Event()).set()
@@ -218,6 +240,8 @@ def crear_app(cfg: config.Config | None = None) -> FastAPI:
                     est.app_lista(str(msg.get("punto", "")))
                 elif tipo == "otra":
                     est.otra.set()
+                elif tipo == "servo":
+                    await est.mover_servos(msg)
                 elif tipo == "buscar_puertos":
                     await est.buscar_puertos(msg.get("puerto"), bool(msg.get("solo")))
                 elif tipo == "conectar":

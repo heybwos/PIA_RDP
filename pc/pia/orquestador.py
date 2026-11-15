@@ -77,6 +77,8 @@ class Orquestador:
         self.alm, self.cfg = alm, cfg
         self.emitir: Emisor = emitir or _nada
         self._modelos_enviados: set[int] = set()
+        # True desde que se tecleó el PIN hasta que la caja actuó: el control manual de servos espera
+        self.en_verificacion = False
         # esperar(punto, limite_s): el servidor la reemplaza para esperar a que la app termine de
         # animar un punto ("huella", "veredicto"). Por defecto no espera (consola y pruebas).
         self.esperar: Callable[[str, float], Awaitable[None]] = _no_esperar
@@ -89,7 +91,13 @@ class Orquestador:
         t0 = time.perf_counter()
         fila: dict[str, Any] = {"modo": modo, "pin_ok": 0, "decision": 0}
         try:
-            return await self._verificar(disp, camara, fila, t0)
+            return await self._verificar_con_errores(disp, camara, fila, t0)
+        finally:
+            self.en_verificacion = False
+
+    async def _verificar_con_errores(self, disp: Dispositivo, camara: Camara, fila: dict, t0: float) -> Resultado:
+        try:
+            return await self._verificar_flujo(disp, camara, fila, t0)
         except CapturaCancelada:
             await self.emitir("error", {"mensaje": "Cancelado con la tecla D", "que_revisar": ""})
             return await self._cerrar(disp, fila, t0, fusion.Decision(False, 0, 0, 0, 0, "cancelado"))
@@ -100,7 +108,7 @@ class Orquestador:
             fila.update(decision=0, motivo=f"error: {e}")
             return await self._cerrar(disp, fila, t0, fusion.Decision(False, 0, 0, 0, 0, f"error: {e}"))
 
-    async def _verificar(self, disp: Dispositivo, camara: Camara, fila: dict, t0: float) -> Resultado:
+    async def _verificar_flujo(self, disp: Dispositivo, camara: Camara, fila: dict, t0: float) -> Resultado:
         # ---------------------------------------------------------------- 1. PIN
         await self._etapa(1, "curso")
         id_, pin = await disp.leer_pin()
@@ -108,6 +116,7 @@ class Orquestador:
         fila.update(usuario_id=id_, nombre=usuario["nombre"] if usuario else None)
         pin_ok = usuario is not None and await asyncio.to_thread(self.alm.verificar_pin, id_, pin)
         fila["pin_ok"] = int(pin_ok)
+        self.en_verificacion = True
         if not pin_ok:
             motivo = "PIN incorrecto" if usuario else "ID no registrado"
             await self._etapa(1, "no", motivo)

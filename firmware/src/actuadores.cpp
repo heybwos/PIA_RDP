@@ -89,6 +89,18 @@ void actuadoresTick() {
 
 bool actuadoresOcupados() { return abiertos || iCola < nCola; }
 
+void actuadoresMover(int servo, int angulo) {
+  // Control manual: se agrega a la cola para respetar el tiempo entre servos (nunca dos a la vez)
+  if (servo < 0 || servo > 1 || angulo < 0 || angulo > 180) return;
+  if (iCola >= nCola) {  // cola vacía: se reinicia
+    nCola = iCola = 0;
+    if ((int32_t)(millis() - tSiguiente) > 0) tSiguiente = millis();
+  }
+  if (nCola >= 6) return;
+  encolar(servo, angulo);
+  tCerrar = 0;  // un movimiento manual cancela el cierre automático pendiente
+}
+
 void actuadoresAutoCierre(uint32_t ms) { msAbierto = ms; }
 
 bool actuadoresCerradosSolos() { return cerradoAuto; }

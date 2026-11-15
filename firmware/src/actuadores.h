@@ -8,6 +8,7 @@ void actuadoresAcceso(int nivel);  // 0: rojo. 1: verde y servo 1. 2: verde, ser
 void actuadoresCerrarTodo();       // estado seguro: cierra en secuencia
 void actuadoresTick();             // llamar en cada loop()
 bool actuadoresOcupados();         // true mientras hay servos abiertos o en movimiento
+void actuadoresMover(int servo, int angulo);  // control manual: servo 0 o 1, en cola (uno a la vez)
 void actuadoresAutoCierre(uint32_t ms);  // 0: los servos solo se cierran con actuadoresCerrarTodo()
 bool actuadoresCerradosSolos();         // true si el cierre automático ya actuó
 void actuadoresConfig(uint32_t msEntreServos, uint32_t msAbierto, int angAbierto);

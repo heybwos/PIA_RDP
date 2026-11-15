@@ -255,3 +255,22 @@ def test_servidor_websocket(sembrado):
         assert tipos.index("huella_inicio") < tipos.index("huella_matching") < tipos.index("rostro_cuadro")
         img = next(m for m in [veredicto] if m)  # noqa: F841
         assert cliente.get("/api/bitacora").json()[0]["decision"] == 2
+
+
+def test_modulo_servos_por_websocket(sembrado):
+    """El módulo Servos mueve uno a la vez (en Simular, solo el dibujo) y respeta los ángulos."""
+    from fastapi.testclient import TestClient
+
+    from pia.servidor import crear_app
+
+    _, cfg = sembrado
+    with TestClient(crear_app(cfg)) as cliente, cliente.websocket_connect("/ws") as ws:
+        ws.receive_json()  # estado
+        ws.send_json({"tipo": "servo", "n": "ambos", "accion": "abrir"})
+        movs = [ws.receive_json() for _ in range(2)]
+        assert [(m["tipo"], m["n"], m["angulo"], m["abierto"]) for m in movs] == [("servo", 1, 90, True), ("servo", 2, 90, True)]
+        ws.send_json({"tipo": "servo", "n": 2, "angulo": 45})
+        m = ws.receive_json()
+        assert (m["n"], m["angulo"], m["abierto"], m["manual"]) == (2, 45, True, True)
+        ws.send_json({"tipo": "servo", "n": 1, "accion": "cerrar"})
+        assert ws.receive_json()["angulo"] == 0
