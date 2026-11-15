@@ -164,8 +164,11 @@ def escenarios(datasets: Path) -> dict[str, dict]:
 
 
 def cargar_escenarios(alm: Almacen) -> dict[str, dict]:
-    f = alm.carpeta / "escenarios.json"
-    return json.loads(f.read_text("utf-8")) if f.exists() else {}
+    """Los escenarios existen si se sembró el modo Simular. Las rutas a los datasets se calculan
+    aquí (no se leen del JSON) para que un respaldo funcione en otra PC con otra carpeta."""
+    if not (alm.carpeta / "escenarios.json").exists():
+        return {}
+    return escenarios(alm.carpeta / "datasets")
 
 
 def preparar(esc: dict, velocidad: float = 1.0, ms_entre_servos: int = 300):

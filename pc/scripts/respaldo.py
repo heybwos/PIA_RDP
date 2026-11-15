@@ -6,7 +6,8 @@
     python pc/scripts/respaldo.py borrar-todo --confirmo
 
 `crear` copia pia.db con la API de respaldo de SQLite (no el archivo abierto) y empaqueta
-usuarios/, modelos/, banco_as608/, calibracion/, escenarios.json y config.toml.
+usuarios/, modelos/, banco_as608/, calibracion/, rostros_tanda2/, intentos/, escenarios.json y
+config.toml. Los datasets no van: se bajan con descargar_datasets.py.
 `reprocesar` (regenerar plantillas y vectores desde los crudos) se hace en N7.
 """
 
@@ -24,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from pia import config, registro  # noqa: E402
 from pia.almacen import Almacen  # noqa: E402
 
-CARPETAS = ["usuarios", "modelos", "banco_as608", "calibracion"]
+CARPETAS = ["usuarios", "modelos", "banco_as608", "calibracion", "rostros_tanda2", "intentos"]
 SUELTOS = ["escenarios.json"]
 
 
@@ -34,8 +35,14 @@ def crear(cfg) -> Path:
     destino.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         copia = Path(tmp) / "pia.db"
-        with sqlite3.connect(datos / "pia.db") as src, sqlite3.connect(copia) as dst:
+        # `with sqlite3.connect()` no cierra la conexión (solo hace commit): en Windows el archivo
+        # quedaba bloqueado y fallaba al borrar la carpeta temporal. Se cierran a mano.
+        src, dst = sqlite3.connect(datos / "pia.db"), sqlite3.connect(copia)
+        try:
             src.backup(dst)
+        finally:
+            dst.close()
+            src.close()
         with zipfile.ZipFile(destino, "w", zipfile.ZIP_DEFLATED) as z:
             z.write(copia, "pia.db")
             for c in CARPETAS:
@@ -56,7 +63,10 @@ def restaurar(cfg, zip_: Path) -> None:
     with zipfile.ZipFile(zip_) as z:
         for info in z.infolist():
             if info.filename == "config.toml":
-                continue  # la configuración local no se pisa
+                local = config.RAIZ / "config.toml"
+                if not local.exists():  # en una PC nueva se trae la del respaldo (cámara, rotación…)
+                    local.write_bytes(z.read(info))
+                continue  # si ya hay una local, no se pisa
             destino = (datos / info.filename).resolve()
             if not destino.is_relative_to(datos.resolve()):
                 continue

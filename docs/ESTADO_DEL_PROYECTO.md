@@ -1,169 +1,85 @@
 # Estado del proyecto: PIA de Reconocimiento de Patrones
 
-Este archivo resume en qué va el proyecto: qué se decidió, qué está hecho y qué sigue. Sirve para retomar el trabajo en otra PC o en una sesión nueva de Claude Code.
+Resumen para retomar el trabajo en otra PC o en una sesión nueva de Claude Code.
 
-Última actualización: 13 de noviembre de 2026.
+**Última actualización: 14 de noviembre de 2026 (sábado).** Entrega: **martes 17 de noviembre**.
+El estado de la maqueta anterior (13 de noviembre) está en el historial de git de este archivo.
 
 **Orden de lectura para retomar:**
 1. Este archivo.
-2. `docs/CONTEXTO_PIA_RDP.md`, que trae el hardware, los pines, los métodos obligatorios y los riesgos. Donde los dos se contradigan, este archivo es el más reciente.
+2. `CLAUDE.md` (raíz): comandos, reglas y trampas conocidas.
+3. `docs/ROADMAP.md`: el plan día por día; el bloque N7 trae el estado de la calibración y los pasos pendientes.
+4. `docs/PROTOCOLO.md` (serie ESP32 ↔ PC) y `docs/EVENTOS.md` (WebSocket backend ↔ app) cuando haya que tocar esas partes.
 
 ---
 
-## 1. Resumen en una tabla
+## 1. Resumen
 
 | Parte | Estado |
 |---|---|
-| Contexto del proyecto | Listo (`docs/CONTEXTO_PIA_RDP.md`) |
-| Prompt para construir el sistema completo | Listo, sin ejecutar (`docs/PROMPT_FABLE_5_2.md`) |
-| Maqueta visual del modo Simular | **Terminada.** Rediseñada al estilo Apple y cerrada con mediciones en Windows (`docs/maqueta/acceso_biometrico.html`) |
-| Revisión crítica del rediseño | Lista (`docs/REVISION_REDISENO.md`, 24 puntos) |
-| Sistema real (Python, firmware, app conectada) | **No empezado.** No hay código del sistema todavía, solo documentos y la maqueta. |
-| Pruebas con hardware | **No empezadas.** El hardware no se ha conectado. |
+| Hardware | ESP32 (CH340, COM4), AS608, teclado 4×4, OLED SSD1306 (0x3C), 2 servos SG90. **LEDs sin conectar.** |
+| Firmware (`firmware/`) | `esp32dev` cargado y funcionando. Entornos de prueba por módulo aprobados en P4. |
+| Backend (`pc/pia/`) | Pipeline de huella y rostro, base SQLite, orquestador, FastAPI + WebSocket. 33 pruebas pasan. |
+| App (`app/`) | Modo Simular y modo ESP32 de punta a punta. Regresiones de Playwright OK. |
+| Compuertas | **G1** (imagen del AS608) y **G2** (verificación real con la caja, nivel 2 concedido) cumplidas. |
+| Calibración | Activa pero **provisional** (ver sección 3). |
+| Pendiente | N8 (robustez y `docs/DEMO.md`), N9 (reporte), P6 (registrar a los 6 de la demo y prueba de aceptación), LEDs. |
 
-## 2. Decisiones tomadas
+## 2. Cómo se usa (resumen; los detalles en `README.md`)
 
-Resuelven lo que el contexto original dejaba pendiente. No hay que volver a discutirlas, salvo que aparezca un dato nuevo.
+- Instalar en una PC nueva: `& .\pc\scripts\instalar.ps1 -Respaldo <zip>`.
+- Arrancar: `& .\pc\scripts\arrancar.ps1` y abrir `http://127.0.0.1:8000` (Ctrl + F5 tras actualizar).
+- Modo ESP32: botón **ESP32** → **Buscar ESP32** (una vez). La verificación empieza tecleando en la caja: `ID#PIN#`, dedo, cara dentro del óvalo.
+- Tras la decisión todo se queda en la etapa 4 (servos abiertos si se concedió) hasta **"Intentar de nuevo"** o la tecla **`#`**: los servos se cierran uno a uno y empieza otra.
+- Botón **Servos** (barra superior): control manual de los compartimentos, fuera de la verificación.
+- Cámara: **IP Webcam** (Android) a 640×480, celular en vertical (`rotacion = 90`), URL `http://<IP del celular>:8080/video` en `config.toml`.
 
-| Tema | Decisión |
-|---|---|
-| Tipo de app | **Web local:** Python (FastAPI + WebSocket) procesa y sirve la interfaz, y la interfaz corre en el navegador (`localhost`). Debe funcionar sin internet. El frontend no lleva Node ni paso de build. |
-| Niveles | **Los tres factores son obligatorios** para todos. El nivel (1 Lector, 2 Editor) es un atributo del usuario registrado. |
-| Identidad | **Verificación 1:1:** ID de 2 dígitos + `#`, luego PIN de 4 dígitos + `#`. `*` borra y `D` cancela. |
-| Regla de acceso | Se concede si el PIN es correcto, **cada factor pasa su propio umbral** (0.50 normalizado) **y** la suma ponderada 0.5/0.5 llega a **0.60**. La regla anterior (piso de 0.35 y fusión de 0.50) dejaba pasar a un impostor de rostro con buena huella; se cambió por eso. |
-| Modo Simular | Usa datasets públicos con el pipeline real: huella de **FVC2002** (subconjuntos B); rostro de **ORL/AT&T** o **LFW**, eligiendo el que dé mejor tasa de detección de Viola-Jones medida. El teclado se simula en pantalla. |
-| Quién manda | **La PC orquesta** todo el flujo; el ESP32 es un periférico. Si la PC deja de responder 5 s, el ESP32 niega el acceso y no abre nada. |
-| Comunicación | USB a **921600 baudios** (configurable, respaldo de 115200). El sensor se sube a 115200 si lo acepta: a 57600 la imagen tarda unos 6.4 s y a 115200 unos 3.2 s. La imagen se reenvía mientras llega del sensor, enmarcada con `IMG:<bytes>:<crc32>` … `IMG:FIN`. Cada tecla se manda al momento (`TECLA:<c>`). |
-| OLED | Sin acentos, porque la fuente por defecto de Adafruit GFX no los tiene. |
-| Firmware | **PlatformIO**, con entornos de prueba por módulo. |
-| Dónde se programa | Claude Code con **Fable 5.2**, en VS Code y Windows, **por fases**, deteniéndose al final de cada una para revisión. |
-| Estilo visual | Lenguaje de **Apple (HIG) en modo oscuro**, con grises neutros y el **verde FIME como único acento** (valor provisional). Vidrio solo en lo que flota; los datos van sobre superficies opacas. Letras Inter y JetBrains Mono, guardadas localmente. |
-| Vista por etapas | Control "Vista: Completa \| Por etapa". En "Por etapa" se ve solo la etapa actual: PIN → Huella → Rostro → Actuación, con transiciones animadas. **La maqueta arranca en "Por etapa"**; recuerda la última vista elegida, y `?vista=completa` en la URL abre la completa sin guardarla. |
-| Pantalla de la demo | Navegador en **pantalla completa (F11)** y en modo Simular. El alto mínimo soportado sin scroll es 768 px de viewport. |
+## 3. Calibración activa (provisional)
 
-## 3. La maqueta (`docs/maqueta/acceso_biometrico.html`)
+| Factor | Dominio | Umbral | FAR | FRR | Datos |
+|---|---|---|---|---|---|
+| Huella | `as608` | 0.180 | 0 % | 33 % | Banco de 6 dedos de **una sola persona** × 8 capturas (18 genuinos, 90 impostores). EER 16.7 %. |
+| Rostro | `camara` | 8.511 | 0 % | 10 % | 10 cuadros de la segunda tanda del usuario 21 contra **160 caras de ORL** (no de cámara). EER 10 %. |
+| Huella | `fvc2002` | 0.150 | — | — | Modo Simular (EER 0.2 %). |
+| Rostro | `dataset` | 8.75 | — | — | Modo Simular, ORL (EER 8.2 %). |
 
-Es un solo HTML que se abre con doble clic, sin servidor ni internet. Muestra la app en modo Simular.
+Perfil `as608` ajustado en N7: CLAHE, umbral de varianza 0.004, distancia mínima de minucias 6 (EER 34 % → 16.7 %).
+**Recalibrar cuando se sumen los compañeros**: pasos exactos en `docs/ROADMAP.md`, bloque N7, "PENDIENTE".
 
-**Qué es real y qué no:**
-- **Real (se calcula en el navegador):**
-  - Huella: Gabor orientado, adelgazamiento de Zhang-Suen, minucias por número de cruce y matching por grafos de 4 vecinos.
-  - Rostro: PCA con eigenvectores (Jacobi) y distancia euclidiana con umbral sacado de FAR/FRR.
-  - Decisión: fusión de puntajes.
-- **Sintético:** las huellas y las caras las genera la página; no son datasets reales.
-- **Viola-Jones no se ejecuta:** el rectángulo del rostro y los ojos son las posiciones conocidas del generador, y la página lo dice.
+## 4. Usuarios registrados
 
-**Números de la maqueta.** Son de datos sintéticos y no sirven como umbrales del sistema real.
+| ID | Nombre | Nivel | Huella | Rostro |
+|---|---|---|---|---|
+| 21 | Nestor | 2 | 5 capturas del AS608 | 15 cuadros de cámara |
+| 07, 12 | Ana T., Luis G. | 1, 2 | FVC2002 | ORL |
 
-| Dato | Valor |
-|---|---|
-| Umbral de huella | 0.30. El puntaje es m² / (nA · nB), con m = pares en correspondencia. |
-| Eigenfaces | k = 38 para el 95.1 % de la varianza; 72 imágenes de entrenamiento (12 identidades × 6). |
-| Umbral de rostro | Distancia ≈ 4.93, con EER ≈ 1.4 % en los datos sintéticos. |
+07 y 12 son los usuarios de prueba del modo Simular (PIN 4821 y 1593). El PIN real del 21 no está en ningún archivo (solo su hash).
 
-**Usuarios de prueba:**
+## 5. Qué se corrigió con el hardware real (para no repetirlo)
 
-| ID | Usuario | Nivel | PIN |
-|---|---|---|---|
-| 07 | Ana T. | 1 (Lector) | 4821 |
-| 12 | Luis G. | 2 (Editor) | 1593 |
-
-**Escenarios y resultado esperado.** `docs/maqueta/pruebas/regresion.js` los comprueba y todos pasan.
-
-| Escenario | Resultado esperado |
-|---|---|
-| Usuario legítimo de nivel 1 | Concedido, nivel 1 |
-| Usuario legítimo de nivel 2 | Concedido, nivel 2 |
-| Impostor de huella | Negado |
-| Impostor de rostro | Negado |
-| PIN incorrecto | Negado |
-
-**Cambiar de fondo:** en la línea 2 del HTML, `data-fondo="a"` pasa a `"b"`. Está elegido el A.
-
-**Link publicado:** https://claude.ai/artifact/ByghMje85waN9nQ8px4T8r. Muestra la versión final (rediseño y cierre), con las fuentes Inter y JetBrains Mono publicadas junto a la página. Es privado: para que otros lo abran hay que compartirlo desde el menú Share de la página.
-
-## 4. Estado de la maqueta (rediseño y cierre)
-
-Fable 5.2 hizo el rediseño y lo verificó en un contenedor Linux sin GPU. El cierre se hizo en Windows con GPU real: Fable 5.2 dio el plan, los criterios y la verificación, y Opus 5.5 ejecutó los cambios. El detalle está en `docs/REVISION_REDISENO.md`, sección 4.
-
-**Hecho y probado:**
-- Los cinco escenarios dan exactamente los mismos números que antes del cierre (15 casos: 5 escenarios × semillas 11, 4242 y 7).
-- **Transiciones fluidas en Windows:** el cuadro más largo dura 19 ms. Los 11–14 cuadros por segundo eran del contenedor sin GPU; no hace falta bajar el desenfoque.
-- **Todas las etapas caben sin scroll** en 1280×800, 1366×768, 1440×900, 1536×864 y 1920×1080 (el proyector), con al menos 12 px de margen sobre el pie.
-- La `σ` se cambió por texto; no queda ningún carácter fuera de las fuentes locales.
-- Las flechas del teclado se anuncian junto al navegador de etapas ("Cambiar de etapa", desde 1280 px de ancho).
-- La maqueta arranca en "Por etapa".
-- Cero errores en la consola, incluso con la pestaña oculta durante una verificación, y cero peticiones externas.
-- Sin scroll horizontal; la vista completa quedó idéntica al píxel.
-- Evidencia del rediseño: 9 capturas JPEG y un video de 43 s en `docs/maqueta/capturas/`.
-
-**Límites conocidos:**
-- Con menos de 768 px de alto de viewport (ventana sin maximizar) o con el panel del modo ESP32 abierto, las etapas necesitan scroll.
-- Sin probar: navegador sin `backdrop-filter` y lectores de pantalla.
-
-**Pendiente, fuera del código:**
-1. El verde FIME sigue provisional: hay que confirmar el valor oficial. Se cambia solo `--verde-fime` (línea 33) y hay que volver a medir el contraste del texto oscuro sobre el verde.
-2. Unos 28 PNG pesados (unos 15 MB) quedaron en el historial de git por un commit de punto de control. Ya no están en los archivos, pero siguen ocupando espacio al clonar. Recomendación: no reescribir la rama; usar squash al hacer el PR.
-
-**Decisiones que tomó Fable y conviene revisar:**
-- Texto oscuro sobre el verde FIME, porque el blanco daba 3.4:1.
-- Vidrio al 0.75 en la barra, el navegador de etapas y el pie, por legibilidad.
-- La verificación no se pausa si el usuario se regresa a una etapa anterior.
-- El navegador de etapas también aparece en la vista completa.
-- Fases 1 a 4 dentro de cada panel (huella y rostro), en lugar de un solo indicador en la barra.
-- La vista por etapas arranca en la etapa 4, con la verificación de ejemplo ya resuelta.
-- En la vista por etapa la bitácora se compacta y, con poco alto (≤ 800 px), se reducen algunos márgenes y la OLED, para que todo quepa.
-- `systemRed` y `systemOrange` se ajustaron a la guía actual de Apple: `#FF4245` y `#FF9230`.
-
-## 5. Archivos del repositorio
-
-| Ruta | Qué es |
-|---|---|
-| `docs/ESTADO_DEL_PROYECTO.md` | Este archivo |
-| `docs/CONTEXTO_PIA_RDP.md` | Contexto original: materia, hardware, pines, métodos y riesgos |
-| `docs/PROMPT_FABLE_5_2.md` | Prompt para construir el sistema completo por fases (0 a 5) |
-| `docs/PROMPT_FABLE_REDISENO.md` | Prompt del rediseño, ya corregido con la revisión |
-| `docs/REVISION_REDISENO.md` | Revisión crítica y tablas de verificación del rediseño |
-| `docs/maqueta/acceso_biometrico.html` | Maqueta rediseñada |
-| `docs/maqueta/fonts/`, `docs/maqueta/icons/` | Fuentes e iconos locales, con licencias |
-| `docs/maqueta/capturas/` | Capturas y video de la verificación |
-| `docs/maqueta/pruebas/regresion.js` | Prueba de los cinco escenarios |
-
-La rama de trabajo es `claude/exciting-davinci-aqy6kg` en `heybwos/PIA_RDP`. No se ha abierto ningún pull request.
+| Problema | Causa | Arreglo |
+|---|---|---|
+| El ESP32 borraba el PIN cada segundo | `millis()` tomado antes de leer el `PING` (resta sin signo) | `firmware/src/main.cpp`, comentado |
+| Huella "CRC incorrecto" | Redibujar la OLED en cada paquete desbordaba el búfer de UART2 | Barra cada 32 paquetes (`huella.cpp`) |
+| Teclas cambiadas | Conector del teclado al revés | Orden invertido en `pines.h` |
+| Cámara girada 90° y marca de agua | Celular en vertical; DroidCam gratis | `rotacion = 90`; se usa IP Webcam |
+| Foto del rostro instantánea | Se tomaba el primer cuadro | Vista en vivo con óvalo guía, cuenta regresiva y 1.5 s dentro de la guía |
+| Servos antes que la animación | El backend actuaba al calcular | La caja espera el aviso "listo" de la app |
+| La app mostraba JS viejo | Caché de Edge | `Cache-Control: no-cache` |
 
 ## 6. Siguientes pasos, en orden
 
-1. **Semana 1 del plan (hardware):** son las primeras pruebas y no dependen del software:
-   - Probar la imagen cruda del AS608 con SFGDemo.
-   - Medir el TX del sensor contra GND antes de conectarlo al ESP32.
-   - Leer el teclado, leer DroidCam desde Python y mover los servos sin que se reinicie el ESP32.
-2. **Ejecutar `docs/PROMPT_FABLE_5_2.md` desde la fase 0** (entorno y dependencias en Python 3.14). Revisar al final de cada fase.
-3. **Calibrar de nuevo los umbrales con huellas reales del AS608.** Los de los datasets no sirven tal cual para ese sensor.
-4. **Confirmar el verde FIME** y, si cambia, volver a medir el contraste de la maqueta.
+1. **N8:** `docs/DEMO.md` (guion de 5 minutos, lista previa, solución de problemas) y robustez que falte.
+2. **P6 con los compañeros:** sumar sus dedos al banco, registrarlos (huella y cámara), segunda tanda, recalibrar los dos factores y la prueba de aceptación (10 genuinos y 10 impostores por persona).
+3. **N9:** reporte técnico con los números reales y las gráficas de `datos/calibracion/`.
+4. Hardware: conectar los LEDs (verde GPIO23, rojo GPIO5, 220 Ω) y conseguir un cargador de 5 V / 2 A o power bank para los servos.
+5. El martes: registrar de nuevo las caras **en el salón** (luz real) y probar la red (IP Webcam).
 
 ## 7. Riesgos abiertos
 
 | Riesgo | Estado |
 |---|---|
-| El AS608 no entrega la imagen cruda | Sin probar. Es lo primero. Plan B: R307 o FPM10. |
-| El orden de los nibbles de la imagen de 4 bits | Sin confirmar. El prompt pide hacerlo configurable y detectarlo con una prueba. |
-| Algunas dependencias de Python no tienen wheel para 3.14 | Sin verificar. El prompt pide comprobarlo en la fase 0, con respaldo en Python 3.13. |
-| Viola-Jones no detecta las caras recortadas de ORL | Sin medir. El prompt pide medirlo y, si falla, usar LFW. |
-| Rendimiento del vidrio en la laptop de la demo | Medido en Windows con GPU: cuadro más largo de 19 ms en las transiciones. Si la laptop de la demo es otra, conviene repetir la prueba. |
-| El cerrojo del servo choca con el gancho si la tapa se cierra trabada | Sin revisar en el diseño 3D. |
-
-## 8. Cómo retomar con Claude Code
-
-En la PC nueva, abre una terminal en la carpeta donde quieras el proyecto.
-
-Baja el proyecto:
-```bash
-git clone -b claude/exciting-davinci-aqy6kg https://github.com/heybwos/PIA_RDP.git
-```
-
-Entra a la carpeta:
-```bash
-cd PIA_RDP
-```
-
-Abre la carpeta en VS Code e inicia Claude Code con Fable 5.2. Para empezar el sistema, pega `docs/PROMPT_FABLE_5_2.md`. La maqueta ya está terminada; para verla, abre `docs/maqueta/acceso_biometrico.html` con doble clic.
+| Huella del AS608 débil (4 bits, área chica) | EER 16.7 % con dedos de una sola persona. Mitigado con FAR = 0, reintentos (hasta 3) y la fusión con el rostro. Recalibrar con más gente. |
+| Luz del salón distinta para Eigenfaces | Registrar las caras en el salón el día de la demo. |
+| Red de la escuela aísla celular y laptop | Plan: hotspot del celular con la laptop conectada a él. Probar antes. |
+| Brownout de los servos con otra fuente | Probado sin brownout con 5 V / 0.9 A (USB de monitor). Llevar cargador de 2 A. |
