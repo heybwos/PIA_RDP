@@ -199,6 +199,41 @@ def test_cinco_escenarios_y_bitacora(sembrado):
     assert (alm.carpeta / fila["archivo_huella"]).exists()
 
 
+def test_caja_espera_a_la_app_y_reintenta_huella(sembrado):
+    """La caja actúa (ACCESO, servos) solo después de que la app mostró el veredicto, y una
+    huella débil pide hasta 3 capturas sin volver a teclear el PIN."""
+    alm, cfg = sembrado
+    orden: list[str] = []
+
+    async def emitir(tipo, datos):
+        if tipo in ("huella_reintento", "veredicto", "servo", "leds"):
+            orden.append(tipo)
+        if tipo == "serie" and datos["linea"].startswith("ACCESO"):
+            orden.append("ACCESO")
+
+    async def esperar(punto, limite):
+        orden.append(f"espera:{punto}")
+
+    escs = simular.cargar_escenarios(alm)
+
+    async def correr(clave):
+        orq = Orquestador(alm, cfg, emitir)
+        orq.esperar = esperar
+        disp, cam = simular.preparar(escs[clave], velocidad=0)
+        disp.permite_reintentos = True  # como el sensor real
+        return await orq.verificar(disp, cam)
+
+    r = asyncio.run(correr("l2"))
+    assert r.concedido
+    i_ver, i_esp = orden.index("veredicto"), orden.index("espera:veredicto")
+    assert i_ver < i_esp < orden.index("ACCESO") < orden.index("servo")
+    assert orden.index("espera:huella") < i_ver
+    orden.clear()
+    r = asyncio.run(correr("ih"))  # impostor de huella: puntaje bajo en cada intento
+    assert not r.concedido
+    assert orden.count("huella_reintento") == 2 and orden.count("espera:huella") == 3
+
+
 def test_servidor_websocket(sembrado):
     from fastapi.testclient import TestClient
 

@@ -26,6 +26,7 @@ Toda imagen va como `{"ancho": W, "alto": H, "tipo": "u8" | "f32", "datos": "<ba
 | `huella_minucias` | `minucias` [{x, y, t, tipo}], `calidad` | |
 | `huella_matching` | `puntaje`, `umbral`, `pares` [[i, j]], `plantilla` {minucias, esqueleto}, `aristas_a`, `aristas_b`, `muestra_id` | Contra la mejor plantilla del usuario |
 | `rostro_vivo` | `imagen` (u8, 240 px de ancho), `rostro`, `ojos` (en esa escala), `estado` (`preparate`, `buscando`, `estable`, `tomado`), `falta_s`, `seguidos`, `necesarios`, `limite_s` | Solo con cámara real: ~8 por segundo hasta que hay rostro con dos ojos en 3 cuadros seguidos (tras 2 s de reacción; límite 20 s). La app los dibuja sin esperar la cola |
+| `huella_reintento` | `intento`, `de`, `puntaje`, `umbral` | Huella débil (normalizada < 0.6): se pide otra captura sin volver a teclear el PIN; hasta 3, se queda la mejor. `huella_matching` trae `intento` y `de` |
 | `rostro_cuadro` | `imagen` (u8, gris), `fuente` | Cuadro capturado |
 | `rostro_deteccion` | `rostro` [x, y, w, h] o null, `ojos` [[x, y, w, h]…], `con_relleno` | Rectángulos reales de Viola-Jones |
 | `rostro_alineado` | `imagen` (64×64 u8), `metodo` (`ojos`, `respaldo`, `sin_rostro`), `angulo` | |
@@ -50,6 +51,7 @@ En modo ESP32 el estado trae `conexion` = {puerto, version, sensor, oled}. Cada 
 | `iniciar` | `escenario` (`l1`, `l2`, `ih`, `ir`, `pin`), `fuente_rostro` (`dataset` o `camara`) |
 | `tecla` | `c` |
 | `cancelar` | — |
+| `listo` | `punto` (`huella`, `veredicto`) | Solo en modo ESP32: la app terminó de animar ese punto. El backend espera este aviso (máximo 30 s) antes de encender la cámara y antes de mandar `ACCESO` a la caja, para que lo físico vaya al ritmo de la pantalla |
 | `modo` | `modo` (`simular` o `esp32`) |
 | `buscar_puertos` | `puerto` (opcional, `socket://…` del ESP32 falso), `solo` (true: no prueba los COM reales) |
 | `conectar` | `puerto` |

@@ -12,7 +12,7 @@ import json
 import time
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 import cv2
 import numpy as np
@@ -28,6 +28,9 @@ REACCION_S = 3.0         # cuenta regresiva para acomodarse antes de evaluar
 MANTENER_S = 1.5         # tiempo seguido dentro de la guía para tomar la foto
 LIMITE_ROSTRO_S = 30.0   # sin foto en este tiempo, se niega con mensaje
 VIVO_ANCHO = 240         # ancho de la vista previa que se manda a la app
+MAX_INTENTOS_HUELLA = 3  # capturas de huella por verificación
+REINTENTO_SI_MENOR = 0.6 # huella normalizada debajo de esto: se pide otra captura
+ESPERA_APP_S = 30.0      # máximo que el backend espera a que la app termine de animar
 # Guía (óvalo) en fracciones del cuadro: centro, y ancho del rostro aceptado
 GUIA = {"cx": 0.5, "cy": 0.42, "tol": 0.12, "ancho_min": 0.28, "ancho_max": 0.62}
 
@@ -59,6 +62,10 @@ class Resultado:
     fila: dict
 
 
+async def _no_esperar(punto: str, limite_s: float) -> None:
+    return None
+
+
 class ErrorVerificacion(Exception):
     def __init__(self, mensaje: str, que_revisar: str = ""):
         super().__init__(mensaje)
@@ -70,6 +77,9 @@ class Orquestador:
         self.alm, self.cfg = alm, cfg
         self.emitir: Emisor = emitir or _nada
         self._modelos_enviados: set[int] = set()
+        # esperar(punto, limite_s): el servidor la reemplaza para esperar a que la app termine de
+        # animar un punto ("huella", "veredicto"). Por defecto no espera (consola y pruebas).
+        self.esperar: Callable[[str, float], Awaitable[None]] = _no_esperar
 
     async def _etapa(self, n: int, estado: str, dato: str = "") -> None:
         await self.emitir("etapa", {"n": n, "estado": estado, "dato": dato})
@@ -107,38 +117,58 @@ class Orquestador:
         await self._etapa(1, "ok", f"ID {id_}")
 
         # ---------------------------------------------------------------- 2. Huella
+        # Hasta MAX_INTENTOS_HUELLA capturas si la huella sale floja (normalizada < REINTENTO_SI_MENOR);
+        # se queda el mejor puntaje. No hace falta volver a teclear el PIN.
         await self._etapa(2, "curso")
-        img, fuente_h = await disp.capturar_huella()
-        fila["fuente_huella"] = fuente_h
-        cal_h = self.alm.calibracion_activa("huella", fuente_h)
-        if not cal_h:
-            raise ErrorVerificacion(f"No hay calibración de huella para '{fuente_h}'",
-                                    "Corre pc/scripts/sembrar_simular.py o calibrar.py")
-        plantillas = self.alm.plantillas(id_, [fuente_h])
-        if not plantillas:
-            raise ErrorVerificacion(f"El usuario {id_} no tiene huellas de '{fuente_h}'",
-                                    "Regístralo con huellas de esa fuente")
-        r_h = await asyncio.to_thread(huella.procesar, img, fuente_h)
-        await self._emitir_huella(r_h)
-        mejor, mejor_p = None, None
-        for p in plantillas:
-            m = await asyncio.to_thread(huella.comparar, p["minucias"], r_h.minucias)
-            if mejor is None or m.puntaje > mejor.puntaje:
-                mejor, mejor_p = m, p
-        umbral_h = cal_h["umbral"]
-        # La plantilla se dibuja desde su imagen cruda guardada (fuente de verdad)
-        img_t = leer_png(self.alm.ruta(mejor_p["archivo"]))
-        r_t = await asyncio.to_thread(huella.procesar, img_t, mejor_p["perfil"])
-        await self.emitir("huella_matching", {
-            "puntaje": mejor.puntaje, "umbral": umbral_h, "pares": mejor.pares,
-            "aristas_a": mejor.aristas_a, "aristas_b": mejor.aristas_b, "muestra_id": mejor_p["muestra_id"],
-            "plantilla": {"minucias": [m.como_dict() for m in mejor_p["minucias"]],
-                          "esqueleto": imagen_json(r_t.etapas["esqueleto"] * 255),
-                          "binaria": imagen_json(r_t.etapas["binaria"] * 255)},
-            "eer": cal_h.get("eer"),
-        })
-        fila["puntaje_huella"] = mejor.puntaje
-        await self._etapa(2, "ok" if mejor.puntaje >= umbral_h else "no", f"{mejor.puntaje:.2f}")
+        intento, puntaje_h, img = 0, -1.0, None
+        # En Simular la huella es un archivo: repetirla daría la misma imagen. Solo el sensor reintenta.
+        max_int = MAX_INTENTOS_HUELLA if getattr(disp, "permite_reintentos", not disp.simulado) else 1
+        while True:
+            intento += 1
+            img_i, fuente_h = await disp.capturar_huella()
+            if intento == 1:
+                fila["fuente_huella"] = fuente_h
+                cal_h = self.alm.calibracion_activa("huella", fuente_h)
+                if not cal_h:
+                    raise ErrorVerificacion(f"No hay calibración de huella para '{fuente_h}'",
+                                            "Corre pc/scripts/sembrar_simular.py o calibrar.py")
+                plantillas = self.alm.plantillas(id_, [fuente_h])
+                if not plantillas:
+                    raise ErrorVerificacion(f"El usuario {id_} no tiene huellas de '{fuente_h}'",
+                                            "Regístralo con huellas de esa fuente")
+                umbral_h = cal_h["umbral"]
+            r_h = await asyncio.to_thread(huella.procesar, img_i, fuente_h)
+            await self._emitir_huella(r_h)
+            mejor, mejor_p = None, None
+            for p in plantillas:
+                m = await asyncio.to_thread(huella.comparar, p["minucias"], r_h.minucias)
+                if mejor is None or m.puntaje > mejor.puntaje:
+                    mejor, mejor_p = m, p
+            # La plantilla se dibuja desde su imagen cruda guardada (fuente de verdad)
+            img_t = leer_png(self.alm.ruta(mejor_p["archivo"]))
+            r_t = await asyncio.to_thread(huella.procesar, img_t, mejor_p["perfil"])
+            await self.emitir("huella_matching", {
+                "puntaje": mejor.puntaje, "umbral": umbral_h, "pares": mejor.pares,
+                "aristas_a": mejor.aristas_a, "aristas_b": mejor.aristas_b, "muestra_id": mejor_p["muestra_id"],
+                "plantilla": {"minucias": [m.como_dict() for m in mejor_p["minucias"]],
+                              "esqueleto": imagen_json(r_t.etapas["esqueleto"] * 255),
+                              "binaria": imagen_json(r_t.etapas["binaria"] * 255)},
+                "eer": cal_h.get("eer"), "intento": intento, "de": max_int,
+            })
+            if mejor.puntaje > puntaje_h:
+                puntaje_h, img = mejor.puntaje, img_i
+            floja = fusion.normalizar_huella(mejor.puntaje, umbral_h) < REINTENTO_SI_MENOR
+            if not floja or intento >= max_int:
+                break
+            await self.esperar("huella", ESPERA_APP_S)  # que la app termine de mostrar este intento
+            await self.emitir("huella_reintento", {"intento": intento + 1, "de": max_int,
+                                                   "puntaje": mejor.puntaje, "umbral": umbral_h})
+            await disp.mostrar("Huella debil", f"Intento {intento + 1} de {max_int}")
+            await asyncio.sleep(1.5)
+        fila["puntaje_huella"] = puntaje_h
+        await self._etapa(2, "ok" if puntaje_h >= umbral_h else "no",
+                          f"{puntaje_h:.2f}" + (f" ({intento} int.)" if intento > 1 else ""))
+        await self.esperar("huella", ESPERA_APP_S)  # la cámara empieza cuando la app terminó con la huella
 
         # ---------------------------------------------------------------- 3. Rostro
         await self._etapa(3, "curso")
@@ -171,7 +201,7 @@ class Orquestador:
 
         # ---------------------------------------------------------------- 4. Decisión
         dc = self.cfg.valor
-        s_h = fusion.normalizar_huella(mejor.puntaje, umbral_h)
+        s_h = fusion.normalizar_huella(puntaje_h, umbral_h)
         s_r = fusion.normalizar_rostro(d, cal_r["umbral"])
         dec = fusion.decidir(usuario["nivel"], s_h, s_r, dc("decision.peso_huella", 0.5), dc("decision.peso_rostro", 0.5),
                              dc("decision.umbral_factor", 0.5), dc("decision.umbral_fusion", 0.6))
@@ -229,6 +259,9 @@ class Orquestador:
         fila.update(decision=dec.nivel if dec.concedido else 0, motivo=dec.motivo or None,
                     duracion_ms=int((time.perf_counter() - t0) * 1000))
         await self.emitir("veredicto", {"concedido": dec.concedido, "nivel": dec.nivel, "motivo": dec.motivo})
+        # La caja (OLED, LEDs, servos) actúa cuando la app ya muestra el veredicto: así lo físico
+        # y la animación van juntos (en P5 los servos se movían mientras se animaba la huella).
+        await self.esperar("veredicto", ESPERA_APP_S)
         if dec.concedido:
             await disp.mostrar("Acceso concedido", f"Nivel {dec.nivel}")
         else:

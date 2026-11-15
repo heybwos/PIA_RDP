@@ -44,6 +44,24 @@ class Estado:
         self.orq = Orquestador(alm, cfg, self.difundir)
         self.esp32: DispositivoESP32 | None = None
         self.tarea_esp32: asyncio.Task | None = None
+        self.listos: dict[str, asyncio.Event] = {}
+        self.orq.esperar = self.esperar_app
+
+    async def esperar_app(self, punto: str, limite_s: float) -> None:
+        """En modo ESP32, la caja espera a que la app termine de animar `punto` (la app manda
+        {"tipo": "listo", "punto": …}). Sin app conectada, o al pasar el límite, sigue sola."""
+        if self.modo != "esp32" or not self.clientes:
+            return
+        ev = self.listos.setdefault(punto, asyncio.Event())
+        try:
+            await asyncio.wait_for(ev.wait(), limite_s)
+        except asyncio.TimeoutError:
+            pass
+        finally:
+            ev.clear()
+
+    def app_lista(self, punto: str) -> None:
+        self.listos.setdefault(punto, asyncio.Event()).set()
 
     async def difundir(self, tipo: str, datos: dict[str, Any]) -> None:
         texto = json.dumps({"tipo": tipo, **datos}, default=_a_json, ensure_ascii=False)
@@ -133,6 +151,8 @@ class Estado:
         disp = self.esp32
         await disp.mostrar("Listo", "Teclea tu ID")
         while disp.conectado:
+            for ev in self.listos.values():  # avisos viejos de la app no cuentan para este intento
+                ev.clear()
             cam = camara_.desde_config(self.cfg)
             try:
                 await self.orq.verificar(disp, cam, "esp32")
@@ -178,6 +198,8 @@ def crear_app(cfg: config.Config | None = None) -> FastAPI:
                     if est.modo == "simular":
                         await est.desconectar()
                     await est.difundir("estado", est.resumen())
+                elif tipo == "listo":
+                    est.app_lista(str(msg.get("punto", "")))
                 elif tipo == "buscar_puertos":
                     await est.buscar_puertos(msg.get("puerto"), bool(msg.get("solo")))
                 elif tipo == "conectar":

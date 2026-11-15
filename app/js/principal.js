@@ -159,6 +159,10 @@ H.servo=async(m,id)=>{servo(m.n,m.abierto);await wait(300,id)};
 
 /* ----- huella ----- */
 H.huella_inicio=async(m,id)=>{
+  if(F){ // reintento: se limpia el panel de la captura anterior
+    thumbs.forEach(t=>{t.b.classList.remove('done','cur');t.c.getContext('2d').clearRect(0,0,128,144)});
+    overlayState=null; drawOverlay(); lctx.clearRect(0,0,512,576);
+    $('#mMin').textContent='—'; $('#mScore').textContent='—'; $('#mScoreBar').style.width='0%'; $('#mPairs').textContent='Pares en correspondencia: —'}
   F={rawW:m.ancho,rawH:m.alto,w:m.ancho,h:m.alto,img:new Uint8Array(m.ancho*m.alto),filas:0,fuente:m.fuente,bytes:m.ancho*m.alto/2};
   F.cruda=mkCanvas(m.ancho,m.alto); S.lastF=F;
   setPhase(1,'huella'); $('#fpSt').innerHTML=est('wait','recibiendo');
@@ -220,8 +224,18 @@ H.huella_matching=async(m,id)=>{
   const hOk=M.score>=m.umbral;
   $('#mScoreBar').style.background=hOk?'var(--acento-claro)':'var(--no)';
   $('#fpSt').innerHTML=est(hOk?'ok':'no',hOk?'coincide':'no coincide'); setPhase(5,'huella');
-  await beat('fase 4',`Puntaje de huella ${fmt(M.score)} contra umbral ${fmt(m.umbral)}${m.eer!=null?` (EER ${(m.eer*100).toFixed(1)} %)`:''}: ${hOk?'coincide':'no coincide'}.`,1000,id);
+  await beat('fase 4',`Puntaje de huella ${fmt3(M.score,m.umbral)} contra umbral ${fmt(m.umbral)}${m.eer!=null?` (EER ${(m.eer*100).toFixed(1)} %)`:''}: ${hOk?'coincide':'no coincide'}.${m.de>1?` Intento ${m.intento} de ${m.de}.`:''}`,1000,id);
+  listo('huella'); // la caja sigue (otro intento o la cámara) cuando la app ya mostró esta huella
 };
+H.huella_reintento=async(m,id)=>{
+  $('#fpSt').innerHTML=est('wait',`intento ${m.intento} de ${m.de}`);
+  caption('fase 1',`Huella débil (${fmt3(m.puntaje,m.umbral)}): levanta el dedo y vuelve a ponerlo, plano y cubriendo el sensor. Intento ${m.intento} de ${m.de}.`,'wait');
+  await wait(1200,id);
+};
+/* avisa al backend que la app terminó de mostrar un punto (solo con el ESP32: sincroniza la caja) */
+function listo(punto){ if(S.mode==='esp32') enviar({tipo:'listo',punto}) }
+/* 3 decimales cerca del umbral: que no se vea "0.60" y luego salga negado */
+function fmt3(v,u){ return Math.abs(v-u)<0.01?v.toFixed(3):fmt(v) }
 
 /* ----- rostro ----- */
 let DET=null;
@@ -289,9 +303,9 @@ H.fusion=async(m,id)=>{
   const ok=m.fusion>=m.umbral_fusion&&m.huella>=m.umbral_factor&&m.rostro>=m.umbral_factor;
   caption('fase 5',`Fusión: los puntajes se normalizan y se combinan con pesos ${m.pesos.huella} y ${m.pesos.rostro}. Cada factor debe pasar su propio umbral (${fmt(m.umbral_factor)} normalizado) y la suma, ${fmt(m.umbral_fusion)}.`);
   await anim(900,e=>{
-    $('#zH').textContent=fmt(m.huella*e);$('#zHb').style.width=(m.huella*e*100)+'%';$('#zHb').className=m.huella<m.umbral_factor?'low':'';
-    $('#zR').textContent=fmt(m.rostro*e);$('#zRb').style.width=(m.rostro*e*100)+'%';$('#zRb').className=m.rostro<m.umbral_factor?'low':'';},id);
-  await anim(700,e=>{$('#zS').textContent=fmt(m.fusion*e);$('#zSb').style.width=(m.fusion*e*100)+'%';$('#zSb').className=ok?'':'low'},id);
+    $('#zH').textContent=fmt3(m.huella*e,m.umbral_factor);$('#zHb').style.width=(m.huella*e*100)+'%';$('#zHb').className=m.huella<m.umbral_factor?'low':'';
+    $('#zR').textContent=fmt3(m.rostro*e,m.umbral_factor);$('#zRb').style.width=(m.rostro*e*100)+'%';$('#zRb').className=m.rostro<m.umbral_factor?'low':'';},id);
+  await anim(700,e=>{$('#zS').textContent=fmt3(m.fusion*e,m.umbral_fusion);$('#zSb').style.width=(m.fusion*e*100)+'%';$('#zSb').className=ok?'':'low'},id);
 };
 H.veredicto=async(m,id)=>{
   const u=S.usuarios[idActual];
@@ -300,6 +314,8 @@ H.veredicto=async(m,id)=>{
   else{verdict({ok:false,t:'Acceso negado',s:/PIN|registrado/.test(m.motivo)?m.motivo+(u?' para el ID '+idActual:'')+'.':'Motivo: '+m.motivo+'.'});
     caption('fase 5','Acceso negado: '+m.motivo+'. Los compartimentos siguen bloqueados.','no')}
   S.lastResult={ok:m.concedido,nivel:m.nivel,motivo:m.motivo};
+  await wait(600,id);
+  listo('veredicto'); // ahora la caja muestra el resultado en la OLED y mueve los servos
 };
 H.bitacora_fila=m=>logRow(filaLog(m));
 function filaLog(f){const hora=(f.fecha||'').slice(11,19);
