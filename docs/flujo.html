@@ -1,0 +1,195 @@
+<title>Flujo del acceso biométrico</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Dos diagramas apilados: primero lo que vive la persona frente a la caja, luego quién hace qué por dentro. */
+:root{
+  --bg:#F3F5F6; --surface:#FFFFFF; --inset:#EAEEF0; --line:#D5DCE0; --line-strong:#A9B4BB;
+  --fg:#162027; --muted:#56636C; --faint:#87929A;
+  --caja:#B26A00; --caja-bg:#FFF3E0;
+  --pc:#2A64AD;   --pc-bg:#E9F1FB;
+  --app:#0E7F72;  --app-bg:#E3F5F2;
+  --datos:#5C6670;--datos-bg:#EEF1F3;
+  --ok:#23864F;   --ok-bg:#E5F4EA;
+  --no:#C0392B;   --no-bg:#FBE9E7;
+  --sans:"IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101417; --surface:#171D21; --inset:#1D252A; --line:#2B353B; --line-strong:#4A5760;
+  --fg:#E5EBEE; --muted:#A3AFB6; --faint:#6F7C84;
+  --caja:#F0A33C; --caja-bg:#2C2416;
+  --pc:#7DB0F5;   --pc-bg:#172434;
+  --app:#4CC9B6;  --app-bg:#13292A;
+  --datos:#A7B1B8;--datos-bg:#20282D;
+  --ok:#5FD08D;   --ok-bg:#15291E;
+  --no:#F2786B;   --no-bg:#2E1B19; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101417; --surface:#171D21; --inset:#1D252A; --line:#2B353B; --line-strong:#4A5760;
+  --fg:#E5EBEE; --muted:#A3AFB6; --faint:#6F7C84;
+  --caja:#F0A33C; --caja-bg:#2C2416;
+  --pc:#7DB0F5;   --pc-bg:#172434;
+  --app:#4CC9B6;  --app-bg:#13292A;
+  --datos:#A7B1B8;--datos-bg:#20282D;
+  --ok:#5FD08D;   --ok-bg:#15291E;
+  --no:#F2786B;   --no-bg:#2E1B19; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--fg)}
+body{margin:0;font-family:var(--sans);font-size:15px;line-height:1.55;
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));padding-block:28px 56px}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:32px}
+h1{font-size:30px;line-height:1.15;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:20px;margin:0;text-wrap:balance}
+p{margin:0}
+.lede{color:var(--muted);max-width:66ch;margin-top:8px}
+.mono{font-family:var(--mono)}
+section{display:flex;flex-direction:column;gap:12px}
+.sub{color:var(--muted);max-width:70ch}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.diag{overflow-x:auto;min-height:120px}
+.diag svg{display:block;margin:0 auto;height:auto}
+#d-usuario svg{max-width:640px!important}
+#d-interno svg{min-width:1080px}
+.wait,.fail{color:var(--faint);font-size:14px;text-align:center;padding:40px 0}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.legend i{width:14px;height:14px;border-radius:4px;border:1.5px solid var(--c);background:var(--b)}
+ul.notes{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:14px;max-width:80ch}
+ul.notes b{color:var(--fg);font-weight:600}
+figcaption{margin-top:12px;font-size:13px;color:var(--muted)}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Flujo del acceso biométrico</h1>
+    <p class="lede">Una verificación completa en la caja del PIA, en modo ESP32: desde que alguien se para frente al teclado hasta que los compartimentos se vuelven a cerrar.</p>
+  </header>
+
+  <section aria-labelledby="h1u">
+    <h2 id="h1u">Lo que ve la persona</h2>
+    <p class="sub">La OLED de la caja va dando las instrucciones y la app en la laptop muestra cada paso al mismo tiempo.</p>
+    <figure>
+      <div class="diag" id="d-usuario" role="img" aria-label="Diagrama de flujo para el usuario: teclear ID y PIN; si el PIN es incorrecto se niega el acceso. Si es correcto, poner el dedo; si la huella sale débil se repite hasta 3 veces. Luego mirar a la cámara dentro del óvalo. Si el sistema confirma la identidad se abren los compartimentos según el nivel; si no, se niega. Con la tecla # se cierran y vuelve al inicio."><p class="wait">Cargando el diagrama…</p></div>
+      <figcaption>Nivel 1 (Lector) abre el compartimento 1. Nivel 2 (Editor) abre los dos.</figcaption>
+    </figure>
+  </section>
+
+  <section aria-labelledby="h2i">
+    <h2 id="h2i">Lo que pasa por dentro</h2>
+    <p class="sub">Los mismos cuatro pasos, de izquierda a derecha, con lo que hace cada parte del sistema. Las fases de huella y rostro son las que pide el PIA: preprocesamiento, extracción de características, matching y decisión.</p>
+    <div class="legend" aria-label="Quién hace cada paso">
+      <span style="--c:var(--caja);--b:var(--caja-bg)"><i></i>Caja (ESP32, sensor, OLED, servos)</span>
+      <span style="--c:var(--pc);--b:var(--pc-bg)"><i></i>PC (Python)</span>
+      <span style="--c:var(--app);--b:var(--app-bg)"><i></i>App en el navegador</span>
+      <span style="--c:var(--datos);--b:var(--datos-bg)"><i></i>Base de datos</span>
+    </div>
+    <figure>
+      <div class="diag" id="d-interno" role="img" aria-label="Diagrama de procesos internos en cuatro bloques. PIN: el ESP32 lee el teclado y manda ID y PIN; la PC compara el PIN con su hash. Huella: el sensor toma la imagen y la reenvía; la PC comprueba el CRC, preprocesa con campo de orientación, Gabor, binarización y adelgazamiento, extrae minucias y compara por grafos, con hasta 3 intentos. Rostro: la PC lee la cámara, Viola-Jones busca rostro y ojos, alinea, normaliza, proyecta en Eigenfaces y mide la distancia euclidiana. Decisión: normaliza puntajes, exige 0.50 por factor y 0.60 fusionado, la app muestra el veredicto, la caja actúa y se guarda en la bitácora."><p class="wait">Cargando el diagrama…</p></div>
+    </figure>
+    <ul class="notes">
+      <li><b>La app solo dibuja.</b> Cada paso de la PC le manda sus imágenes y números por WebSocket; ningún cálculo del reconocimiento se hace en el navegador.</li>
+      <li><b>La huella y el rostro se evalúan siempre los dos.</b> Aunque la huella falle, se toma la cara, y la decisión se hace al final con ambos puntajes.</li>
+      <li><b>La caja espera a la app.</b> Los servos se mueven cuando la pantalla ya muestra el veredicto, para que lo físico y la animación vayan juntos.</li>
+      <li><b>Si la PC deja de responder 5 segundos,</b> el ESP32 muestra «Sin conexión con la PC», niega el acceso y no abre nada.</li>
+      <li><b>El sensor nunca decide.</b> El AS608 solo entrega la imagen cruda; su comparación interna no se usa.</li>
+    </ul>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<script>
+"use strict";
+const USUARIO = `flowchart TD
+  A(["La caja espera<br/>OLED: «Teclea tu ID»"]) --> B["Teclea tu ID y #<br/>luego tu PIN de 4 dígitos y #"]
+  B --> C{"¿PIN correcto?"}
+  C -- "No" --> N1["«Acceso negado»<br/>LED rojo"]
+  C -- "Sí" --> D["OLED: «Coloca el dedo»<br/>Deja el dedo quieto unos 7 s"]
+  D --> E["La app dibuja tu huella<br/>mientras llega"]
+  E --> F{"¿La huella salió clara?"}
+  F -- "No · hasta 3 intentos" --> F2["OLED: «Huella débil,<br/>intento 2 de 3»"]
+  F2 --> D
+  F -- "Sí, o ya van 3" --> G["OLED: «Mira a la cámara»<br/>Acomoda la cara dentro del óvalo"]
+  G --> H["Cuenta regresiva y foto"]
+  H --> I{"¿Eres quien dijiste ser?"}
+  I -- "Sí" --> OK["«Acceso concedido»<br/>LED verde"]
+  OK --> J["Se abre el compartimento 1<br/>y el 2 si eres Editor"]
+  I -- "No" --> N2["«Acceso negado»<br/>LED rojo y el motivo"]
+  J --> K["Presiona # en la caja<br/>o «Intentar de nuevo» en la app"]
+  N1 --> K
+  N2 --> K
+  K --> L["Los compartimentos se cierran<br/>uno por uno"]
+  L --> A
+  class OK ok
+  class N1,N2 no`;
+
+const INTERNO = `flowchart LR
+  subgraph P1["1 · PIN"]
+    direction TB
+    K1["Lee el teclado 4×4<br/>y manda cada tecla"]:::caja --> K2["Manda ID y PIN<br/>por USB"]:::caja
+    K2 --> K3["Busca al usuario<br/>y compara el PIN<br/>con su hash PBKDF2"]:::pc
+    K3 --> K4{"¿Coincide?"}:::pc
+  end
+  subgraph P2["2 · Huella"]
+    direction TB
+    H1["Pide la huella"]:::pc --> H2["El AS608 detecta el dedo<br/>y toma la imagen<br/>256 × 288, 4 bits"]:::caja
+    H2 --> H3["Reenvía la imagen<br/>por partes, con CRC"]:::caja
+    H3 --> H4["Comprueba el CRC"]:::pc
+    H4 --> H5["Preprocesamiento<br/>campo de orientación,<br/>Gabor, binarización<br/>y adelgazamiento"]:::pc
+    H5 --> H6["Extrae minucias<br/>terminaciones<br/>y bifurcaciones"]:::pc
+    H6 --> H7["Matching por grafos<br/>contra cada plantilla;<br/>gana la mejor"]:::pc
+    H7 --> H8{"¿Floja y menos<br/>de 3 intentos?"}:::pc
+    H8 -- "Sí, otra vez" --> H2
+  end
+  subgraph P3["3 · Rostro"]
+    direction TB
+    R1["Lee el video<br/>del celular"]:::pc --> R2["Viola-Jones busca<br/>rostro y ojos"]:::pc
+    R2 --> R3["Foto cuando la cara<br/>lleva 1.5 s en el óvalo"]:::pc
+    R3 --> R4["Alinea por los ojos<br/>y normaliza la luz<br/>CLAHE y máscara"]:::pc
+    R4 --> R5["Proyecta en Eigenfaces:<br/>vector de pesos"]:::pc
+    R5 --> R6["Distancia euclidiana<br/>mínima al usuario"]:::pc
+  end
+  subgraph P4["4 · Decisión y actuación"]
+    direction TB
+    D1["Normaliza los<br/>dos puntajes"]:::pc --> D2{"¿Cada factor ≥ 0.50<br/>y la suma ≥ 0.60?"}:::pc
+    D2 --> D3["Muestra el veredicto<br/>y avisa que terminó"]:::app
+    D3 --> D4["Manda el texto de la OLED<br/>y el nivel concedido"]:::pc
+    D4 --> D5["OLED, LED y servos<br/>uno a uno, 300 ms"]:::caja
+    D4 --> D6[("Bitácora SQLite<br/>e imágenes del intento")]:::datos
+  end
+  P1 -- "PIN correcto" --> P2
+  P2 -- "huella lista" --> P3
+  P3 -- "distancia lista" --> P4
+  P1 -. "PIN incorrecto:<br/>se niega sin huella ni cara" .-> P4`;
+
+const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let ronda = 0;
+async function dibujar(){
+  const box = {usuario: document.getElementById('d-usuario'), interno: document.getElementById('d-interno')};
+  if (!window.mermaid){ Object.values(box).forEach(b => b.innerHTML = '<p class="fail">No se pudo cargar el dibujo. Recarga la página.</p>'); return; }
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'strict', theme:'base',
+    flowchart:{htmlLabels:true, curve:'basis', nodeSpacing:26, rankSpacing:38, padding:10, useMaxWidth:true},
+    themeVariables:{
+      fontFamily:tok('--sans'), fontSize:'14px', background:tok('--surface'),
+      primaryColor:tok('--surface'), primaryTextColor:tok('--fg'), primaryBorderColor:tok('--line-strong'),
+      secondaryColor:tok('--inset'), tertiaryColor:tok('--inset'), lineColor:tok('--muted'), textColor:tok('--fg'),
+      clusterBkg:tok('--inset'), clusterBorder:tok('--line'), edgeLabelBackground:tok('--surface'), titleColor:tok('--fg')
+    }
+  });
+  const cls = (n, c, b) => `classDef ${n} fill:${tok(b)},stroke:${tok(c)},color:${tok('--fg')},stroke-width:1.6px`;
+  const defs = [cls('caja','--caja','--caja-bg'), cls('pc','--pc','--pc-bg'), cls('app','--app','--app-bg'),
+                cls('datos','--datos','--datos-bg'), cls('ok','--ok','--ok-bg'), cls('no','--no','--no-bg')].join('\n');
+  const r = ++ronda;
+  for (const [k, src] of [['usuario', USUARIO], ['interno', INTERNO]]){
+    try {
+      const {svg} = await mermaid.render(`m-${k}-${r}`, src + '\n' + defs);
+      if (r === ronda) box[k].innerHTML = svg;
+    } catch(e){ box[k].innerHTML = '<p class="fail">El diagrama no se pudo dibujar.</p>'; console.error(e); }
+  }
+}
+dibujar();
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', dibujar); } catch(e){}
+new MutationObserver(dibujar).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+</script>
