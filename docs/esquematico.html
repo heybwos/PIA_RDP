@@ -1,0 +1,180 @@
+<title>Esquemático del PIA</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap">
+<style>
+/* Hoja de esquemático en blanco: negro = GND y contornos, rojo = alimentación, azul = señales. Un solo tema, a propósito. */
+:root{
+  color-scheme: light;
+  --paper:#FFFFFF; --ink:#111111; --pwr:#D0201A; --sig:#1E4FC2; --muted:#5A5F66; --rule:#D9DCE0; --tint:#F5F6F8;
+  --sans:"IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+*{box-sizing:border-box}
+html,body{background:var(--paper);color:var(--ink)}
+body{margin:0;font-family:var(--sans);font-size:15px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));padding-block:24px 48px}
+.wrap{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+h1{font-size:26px;margin:0;letter-spacing:-.01em}
+h2{font-size:17px;margin:0 0 10px}
+p{margin:0}
+.lede{color:var(--muted);margin-top:6px;max-width:72ch}
+.key{display:flex;flex-wrap:wrap;gap:6px 20px;font-size:13px;color:var(--muted);margin-top:12px}
+.key span{display:inline-flex;align-items:center;gap:8px}
+.key i{display:inline-block;width:26px;height:0;border-top:3px solid var(--c)}
+.sheet{border:1.5px solid var(--ink);overflow-x:auto;background:var(--paper)}
+.sheet svg{display:block;min-width:1000px;width:100%;height:auto}
+svg text{font-family:var(--mono);font-size:13px;fill:var(--ink)}
+svg .ref{font-weight:600;font-size:14px}
+svg .small{font-size:11.5px;fill:var(--muted)}
+svg .pwrt{fill:var(--pwr);font-weight:600}
+svg .sigt{fill:var(--sig)}
+.cols{display:grid;gap:20px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:900px){.cols{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:460px}
+th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;border-bottom:1.5px solid var(--ink);padding:6px 8px}
+td{border-bottom:1px solid var(--rule);padding:6px 8px;vertical-align:top}
+td.m{font-family:var(--mono);white-space:nowrap}
+ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Esquemático del PIA</h1>
+    <p class="lede">Conexiones del control de acceso biométrico tal como quedaron armadas en la caja (firmware <span style="font-family:var(--mono)">firmware/src/pines.h</span>, 14 de noviembre).</p>
+    <div class="key">
+      <span style="--c:var(--pwr)"><i></i>Alimentación (+5 V, +3.3 V)</span>
+      <span style="--c:var(--ink)"><i></i>GND</span>
+      <span style="--c:var(--sig)"><i></i>Señales</span>
+    </div>
+  </header>
+
+  <div class="sheet">
+    <svg id="sch" viewBox="0 0 1400 1000" role="img" aria-label="Esquemático: el ESP32 al centro. A la izquierda el teclado 4×4 en GPIO4, 32, 33, 25, 26, 27, 14 y 13. A la derecha el AS608 en GPIO16 y 17 con 5 V, la OLED en GPIO21 y 22 con 3.3 V, los servos en GPIO18 y 19 alimentados por una fuente externa de 5 V con capacitor de 470 µF, y los LEDs en GPIO23 y 5 con resistencias de 220 Ω. Todas las tierras unidas."></svg>
+  </div>
+
+  <div class="cols">
+    <section>
+      <h2>Lista de materiales</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>Ref.</th><th>Componente</th><th>Valor / modelo</th></tr></thead>
+        <tbody>
+          <tr><td class="m">U1</td><td>Microcontrolador</td><td>ESP32 DevKit V1, ESP32-WROOM-32 (USB CH340)</td></tr>
+          <tr><td class="m">U2</td><td>Sensor de huella</td><td>AS608, UART 57600</td></tr>
+          <tr><td class="m">U3</td><td>Pantalla</td><td>OLED 0.96″ SSD1306 128×64, I2C 0x3C</td></tr>
+          <tr><td class="m">K1</td><td>Teclado</td><td>Matricial 4×4 de membrana</td></tr>
+          <tr><td class="m">M1, M2</td><td>Servomotores</td><td>SG90, 5 V</td></tr>
+          <tr><td class="m">R1, R2</td><td>Resistencias</td><td>220 Ω, 1/4 W</td></tr>
+          <tr><td class="m">D1, D2</td><td>LEDs</td><td>5 mm, verde y rojo</td></tr>
+          <tr><td class="m">C1</td><td>Capacitor electrolítico</td><td>470 µF, 10 V o más</td></tr>
+          <tr><td class="m">J2</td><td>Fuente de los servos</td><td>Cargador o power bank de 5 V, 2 A</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+    <section>
+      <h2>Notas</h2>
+      <ol>
+        <li>El TX del AS608 se midió en 3.3 V: va directo a GPIO16, sin divisor.</li>
+        <li>Del AS608 solo se usan Vi, GND, TXD y RXD. D−, D+, Vt y WAK quedan sin conectar. Se conecta por la serigrafía de su placa, no por el color del cable.</li>
+        <li>El conector del teclado quedó al revés en la caja: el pin 1 va a GPIO4 y el pin 8 a GPIO13. El firmware ya usa ese orden.</li>
+        <li>Los servos se alimentan de J2, no del pin 3V3. El GND de J2 se une al GND del ESP32, pero el +5 V de J2 no se conecta al VIN mientras el ESP32 esté en USB.</li>
+        <li>C1 va lo más cerca posible de los servos, con la franja (negativo) hacia GND.</li>
+        <li>D1 y D2 aparecen en el firmware; al 14 de noviembre todavía no estaban soldados.</li>
+      </ol>
+    </section>
+  </div>
+</div>
+
+<script>
+"use strict";
+const NS='http://www.w3.org/2000/svg', S=document.getElementById('sch');
+const C={pwr:'var(--pwr)',gnd:'var(--ink)',sig:'var(--sig)',ink:'var(--ink)'};
+function el(t,a,txt){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;S.appendChild(e);return e}
+function L(x1,y1,x2,y2,c='sig',w=2.2){el('line',{x1,y1,x2,y2,style:`stroke:${C[c]};stroke-width:${w};stroke-linecap:square`})}
+function P(pts,c='sig',w=2.2){el('polyline',{points:pts.map(p=>p.join(',')).join(' '),style:`fill:none;stroke:${C[c]};stroke-width:${w};stroke-linejoin:miter`})}
+function T(x,y,s,cls='',anchor='start'){return el('text',{x,y,'text-anchor':anchor,class:cls},s)}
+function box(x,y,w,h){el('rect',{x,y,width:w,height:h,style:'fill:var(--paper);stroke:var(--ink);stroke-width:2'})}
+function flag(x,y,lab){L(x-14,y,x+14,y,'pwr',2.6);T(x,y-8,lab,'pwrt','middle')}
+function gnd(x,y){L(x-15,y,x+15,y,'gnd',2.6);L(x-9,y+6,x+9,y+6,'gnd',2.4);L(x-4,y+12,x+4,y+12,'gnd',2.2)}
+function dot(x,y,c){el('circle',{cx:x,cy:y,r:4,style:`fill:${C[c]}`})}
+function res(x1,x2,y,lab,val){const n=6,w=(x2-x1-16)/n,pts=[[x1,y],[x1+8,y]];
+  for(let i=0;i<n;i++)pts.push([x1+8+w*(i+.5),y+(i%2?7:-7)]);pts.push([x2-8,y],[x2,y]);P(pts,'ink',2);
+  T((x1+x2)/2,y-14,lab,'ref','middle');T((x1+x2)/2,y+24,val,'small','middle')}
+function led(x,y,lab,col){el('polygon',{points:`${x},${y-11} ${x},${y+11} ${x+20},${y}`,style:'fill:var(--paper);stroke:var(--ink);stroke-width:2'});
+  L(x+20,y-11,x+20,y+11,'ink',2.2);
+  for(const d of [0,8]){L(x+8+d,y-14,x+16+d,y-22,'ink',1.4);el('polygon',{points:`${x+16+d},${y-22} ${x+11+d},${y-21} ${x+15+d},${y-17}`,style:'fill:var(--ink)'})}
+  T(x+10,y-30,lab,'ref','middle');T(x+10,y+28,col,'small','middle')}
+
+/* ---------------- U1 ESP32 ---------------- */
+const UX1=560,UX2=800,UY1=120,UY2=900;
+box(UX1,UY1,UX2-UX1,UY2-UY1);
+T(680,672,'U1','ref','middle');T(680,692,'ESP32 DevKit V1','', 'middle');T(680,710,'ESP32-WROOM-32','small','middle');
+T(680,734,'USB en la placa','small','middle');T(680,750,'→ laptop: datos y 5 V','small','middle');
+/* alimentación de U1 */
+L(620,UY1,620,82,'pwr',2.6);flag(620,82,'+5V');T(620,UY1+18,'VIN','', 'middle');
+L(740,UY1,740,82,'pwr',2.6);flag(740,82,'+3V3');T(740,UY1+18,'3V3','', 'middle');
+L(680,UY2,680,930,'gnd',2.6);gnd(680,930);T(680,UY2-8,'GND','', 'middle');
+
+/* ---------------- K1 teclado (izquierda) ---------------- */
+const KG=[4,32,33,25,26,27,14,13], KN=['F1','F2','F3','F4','C1','C2','C3','C4'];
+const ky=k=>220+k*60;
+box(150,180,210,ky(7)-180+40);
+T(150,168,'K1','ref');T(184,168,'Teclado 4×4');
+['1','2','3','A','4','5','6','B','7','8','9','C','*','0','#','D'].forEach((k,i)=>{const x=172+(i%4)*30,y=300+Math.floor(i/4)*34;
+  el('rect',{x,y,width:24,height:26,rx:3,style:'fill:var(--tint);stroke:var(--ink);stroke-width:1'});T(x+12,y+18,k,'small','middle')});
+T(232,460,'sin VCC ni GND','small','middle');
+KG.forEach((g,k)=>{const y=ky(k);
+  T(348,y+4,`${k+1}  ${KN[k]}`,'','end');
+  L(360,y,UX1,y,'sig');
+  T(UX1+10,y+4,'GPIO'+g);
+  T(460,y-6,k<4?'fila':'columna','small','middle')});
+
+/* ---------------- U2 AS608 ---------------- */
+const R0=UX2, RX=960;
+box(RX,165,170,90);T(RX,155,'U2','ref');T(RX+30,155,'AS608 huella');
+[[190,'GPIO16','RX2','TXD'],[230,'GPIO17','TX2','RXD']].forEach(([y,g,n,p])=>{L(R0,y,RX,y,'sig');T(UX2-10,y+4,g,'','end');T(880,y-6,n,'sigt','middle');T(RX+10,y+4,p)});
+L(1100,165,1100,125,'pwr',2.6);flag(1100,125,'+5V');T(1100,182,'Vi','', 'middle');
+L(1100,255,1100,282,'gnd',2.6);gnd(1100,282);T(1100,250,'GND','', 'middle');
+T(RX+175,205,'D−, D+, Vt, WAK','small');T(RX+175,221,'sin conectar','small');
+
+/* ---------------- U3 OLED ---------------- */
+box(RX,355,170,90);T(RX,345,'U3','ref');T(RX+30,345,'OLED SSD1306');
+[[380,'GPIO21','SDA'],[420,'GPIO22','SCL']].forEach(([y,g,p])=>{L(R0,y,RX,y,'sig');T(UX2-10,y+4,g,'','end');T(880,y-6,p,'sigt','middle');T(RX+10,y+4,p)});
+L(1100,355,1100,315,'pwr',2.6);flag(1100,315,'+3V3');T(1100,372,'VCC','', 'middle');
+L(1100,445,1100,472,'gnd',2.6);gnd(1100,472);T(1100,440,'GND','', 'middle');
+
+/* ---------------- M1, M2 servos + J2 + C1 ---------------- */
+[[560,'M1','GPIO18','compartimento 1'],[640,'M2','GPIO19','compartimento 2']].forEach(([y,ref,g,sub])=>{
+  L(R0,y,RX,y,'sig');T(UX2-10,y+4,g,'','end');T(880,y-6,'PWM','sigt','middle');
+  box(RX,y-28,140,56);T(RX+10,y+4,'SIG');T(RX+70,y-34,ref+' · SG90 · '+sub,'small','middle');
+  el('circle',{cx:RX+95,cy:y,r:15,style:'fill:var(--paper);stroke:var(--ink);stroke-width:2'});T(RX+95,y+5,'M','ref','middle');
+  L(RX+140,y-14,1180,y-14,'pwr',2.6);T(RX+128,y-10,'+','small','end');
+  L(RX+140,y+14,1150,y+14,'gnd',2.6);L(1150,y+14,1150,y+24,'gnd',2.6);gnd(1150,y+24);T(RX+128,y+18,'−','small','end')});
+/* bus de +5V de los servos */
+L(1180,546,1180,700,'pwr',2.6);dot(1180,546,'pwr');dot(1180,626,'pwr');
+/* J2 */
+box(1270,520,90,160);T(1270,510,'J2','ref');T(1300,510,'5 V · 2 A');
+T(1315,700,'fuente externa','small','middle');
+L(1180,546,1270,546,'pwr',2.6);T(1282,550,'+');T(1225,538,'+5V SERVOS','pwrt','middle');
+L(1270,654,1240,654,'gnd',2.6);T(1282,658,'−');L(1240,654,1240,670,'gnd',2.6);gnd(1240,670);
+/* C1 */
+L(1180,700,1180,742,'pwr',2.6);
+L(1164,742,1196,742,'ink',3);el('path',{d:'M1164 756 Q1180 746 1196 756',style:'fill:none;stroke:var(--ink);stroke-width:3'});
+T(1158,744,'+','small','end');L(1180,752,1180,782,'gnd',2.6);gnd(1180,782);
+T(1205,748,'C1','ref');T(1205,764,'470 µF','small');
+
+/* ---------------- LEDs ---------------- */
+[[780,'GPIO23','R1','D1','verde'],[868,'GPIO5','R2','D2','rojo']].forEach(([y,g,r,d,col])=>{
+  L(R0,y,880,y,'sig');T(UX2-10,y+4,g,'','end');
+  res(880,950,y,r,'220 Ω');L(950,y,990,y,'sig');led(990,y,d,col);L(1010,y,1060,y,'gnd',2.6);L(1060,y,1060,y+14,'gnd',2.6);gnd(1060,y+14)});
+
+/* ---------------- cuadro de título ---------------- */
+el('rect',{x:40,y:840,width:420,height:130,style:'fill:var(--paper);stroke:var(--ink);stroke-width:2'});
+L(40,876,460,876,'ink',1.2);L(40,912,460,912,'ink',1.2);L(260,912,260,970,'ink',1.2);
+T(52,864,'Control de acceso biométrico · PIA RDP','ref');
+T(52,899,'Esquemático de conexiones · FIME UANL','small');
+T(52,936,'Rev. 1 · 23/11/2026','small');T(52,956,'Fuente: firmware/src/pines.h','small');
+T(272,936,'Hoja 1 de 1','small');T(272,956,'GND común en todo','small');
+</script>
