@@ -9,6 +9,7 @@ se saltan. Escriben en una carpeta temporal, nunca en datos/.
 from __future__ import annotations
 
 import asyncio
+import shutil
 import socket
 import subprocess
 import sys
@@ -162,6 +163,9 @@ def sembrado(tmp_path_factory):
     if not HAY_DATASETS:
         pytest.skip("sin datasets: python pc/scripts/descargar_datasets.py")
     carpeta = tmp_path_factory.mktemp("datos")
+    # cargar_escenarios calcula las rutas desde <carpeta>/datasets: se copia lo que usa Simular
+    for sub in ("orl", Path("fvc2002") / simular.DB_HUELLA):
+        shutil.copytree(DATASETS / sub, carpeta / "datasets" / sub)
     alm = Almacen(carpeta)
     simular.sembrar(alm, DATASETS, imprimir=lambda *_: None)
     cfg = config.cargar(datos__carpeta=str(carpeta), datos__guardar_intentos=True)
