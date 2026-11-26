@@ -6,7 +6,11 @@
 
 Toma cuadros durante unos segundos, imprime cuántos tienen rostro y ojos, cuánto tarda cada
 uno, y guarda el último cuadro con los rectángulos y su cara alineada y normalizada en
-datos/pruebas/camara_<hora>.png. Con --guardar-url escribe la URL en config.toml.
+datos/pruebas/camara_<hora>.png. Con --guardar-url escribe la URL en config.toml; con --respaldo
+la escribe como url_respaldo (la que se usa si la principal no contesta):
+
+    python pc/scripts/probar_camara.py --url http://<IP en la WiFi de la facultad>:8080/video --guardar-url
+    python pc/scripts/probar_camara.py --url http://10.28.183.166:8080/video --guardar-url --respaldo
 """
 
 from __future__ import annotations
@@ -86,11 +90,15 @@ def vista_en_vivo(cam: camara.Camara, rot: int, segundos: float) -> list[np.ndar
         cv2.destroyAllWindows()
 
 
-def guardar_url(url: str, rotacion: int | None) -> None:
+def guardar_url(url: str, rotacion: int | None, clave: str = "url") -> None:
     ruta = config.RAIZ / "config.toml"
     config.cargar()  # crea config.toml desde el ejemplo si no existe
     texto = ruta.read_text("utf-8")
-    texto = re.sub(r'(?m)^url\s*=\s*".*?"', f'url = "{url}"', texto, count=1)
+    patron = rf'(?m)^{clave}\s*=\s*".*?"'
+    if re.search(patron, texto):
+        texto = re.sub(patron, f'{clave} = "{url}"', texto, count=1)
+    else:  # url_respaldo en un config.toml anterior: va debajo de url
+        texto = re.sub(r"(?m)^(url\s*=.*)$", lambda m: f'{m.group(1)}\n{clave} = "{url}"', texto, count=1)
     texto = re.sub(r'(?m)^fuente\s*=\s*"(url|indice|dataset|archivo)"', 'fuente = "url"', texto, count=1)
     if rotacion is not None:
         if re.search(r"(?m)^rotacion\s*=", texto):
@@ -98,7 +106,7 @@ def guardar_url(url: str, rotacion: int | None) -> None:
         else:
             texto = re.sub(r"(?m)^(url\s*=.*)$", rf"\1\nrotacion = {rotacion}", texto, count=1)
     ruta.write_text(texto, "utf-8")
-    print(f"config.toml: [camara] url = {url}" + (f", rotacion = {rotacion}" if rotacion is not None else ""))
+    print(f"config.toml: [camara] {clave} = {url}" + (f", rotacion = {rotacion}" if rotacion is not None else ""))
 
 
 def main() -> int:
@@ -108,6 +116,7 @@ def main() -> int:
     ap.add_argument("--indice", type=int)
     ap.add_argument("--segundos", type=float, default=6.0)
     ap.add_argument("--guardar-url", action="store_true", help="guarda la URL y la mejor rotación en config.toml")
+    ap.add_argument("--respaldo", action="store_true", help="con --guardar-url: la guarda como url_respaldo (hotspot)")
     ap.add_argument("--rotacion", type=int, choices=[0, 90, 180, 270], help="fija la rotación en lugar de probar las cuatro")
     ap.add_argument("--vista", action="store_true", help="ventana en vivo para acomodarse; Espacio mide")
     args = ap.parse_args()
@@ -115,7 +124,7 @@ def main() -> int:
     if args.indice is not None:
         cam, origen = camara.CamaraIndice(args.indice), f"índice {args.indice}"
     else:
-        url = args.url or cfg.valor("camara.url")
+        url = args.url or camara.elegir_url(cfg)
         cam, origen = camara.CamaraURL(url), url
     crudos, lecturas = [], [0.0]
     try:
@@ -164,7 +173,7 @@ def main() -> int:
     cv2.imencode(".png", lamina(cuadro, r))[1].tofile(str(destino))
     print(f"Último cuadro con rostro: {destino}")
     if args.guardar_url and args.url:
-        guardar_url(args.url, rot if ojos else None)
+        guardar_url(args.url, rot if ojos else None, "url_respaldo" if args.respaldo else "url")
     return 0 if con_rostro else 1
 
 

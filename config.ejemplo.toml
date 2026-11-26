@@ -12,7 +12,9 @@ banco_simular = "fvc2002"  # "fvc2002" o "sintetico"
 
 [camara]
 fuente = "url"             # "url", "indice" o "dataset"
-url = "http://10.28.183.166:8080/video"   # IP Webcam en el hotspot del celular (demo, 25 nov). 640x480. DroidCam: :4747/video
+url = ""                   # PRINCIPAL: IP Webcam en la WiFi de la facultad. Se llena en el salón con
+                           #   probar_camara.py --url http://<IP>:8080/video --guardar-url
+url_respaldo = "http://10.28.183.166:8080/video"   # hotspot del celular: se usa si la principal no contesta
 indice = 1
 rotacion = 90             # 0, 90, 180 o 270 (horario). Celular en vertical: 90. probar_camara.py la detecta
 rostro_simular = "dataset" # "dataset" o "camara"

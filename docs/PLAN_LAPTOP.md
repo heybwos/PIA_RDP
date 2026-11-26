@@ -37,13 +37,14 @@ Los datos biométricos **no viajan por git** (`datos/` está en `.gitignore`). V
       una verificación en Simular. Debe verse la píldora deslizante y, en modo ESP32, desaparecer escenario/rostro/velocidad.
 - [ ] Opcional: `npm i --no-save playwright` y las dos regresiones de `CLAUDE.md`.
 
-- [ ] **IP de la cámara.** La laptop y el celular van en el **hotspot del celular**. IP Webcam mostró
-      `http://10.28.183.166:8080` el 25 nov. Si la laptop ya tenía `config.toml`, ni el instalador ni el respaldo lo
-      reemplazan, así que hay que escribir la URL a mano: en VS Code, línea `url = ...` de `[camara]`, o desde la raíz del repo:
-      `$c = (Get-Content config.toml -Raw -Encoding UTF8) -replace '(?m)^url = .*', 'url = "http://10.28.183.166:8080/video"'; [IO.File]::WriteAllText("$PWD\config.toml", $c)`
-      (**no** usar `Set-Content -Encoding utf8`: en PowerShell 5.1 agrega BOM y el backend ya no puede leer el TOML),
-      y comprobar con `.\.venv\Scripts\python.exe pc\scripts\probar_camara.py`.
-      Antes de cada sesión, ver la IP en la pantalla de IP Webcam: Android puede cambiarla al apagar y prender el hotspot.
+- [ ] **Cámara: dos URL.** `[camara] url` es la **principal** (IP Webcam en la WiFi de la facultad) y
+      `url_respaldo` la del **hotspot del celular** (`http://10.28.183.166:8080/video`, vista el 25 nov). Antes de cada
+      verificación el backend prueba la principal (1.5 s) y, si no contesta, usa el respaldo solo; en la consola
+      del backend sale "se usa la de respaldo". Si la laptop ya tenía `config.toml`, ni el instalador ni el respaldo
+      lo reemplazan: guardar el hotspot con (celular en hotspot y la laptop conectada a él)
+      `.\.venv\Scripts\python.exe pc\scripts\probar_camara.py --url http://10.28.183.166:8080/video --guardar-url --respaldo`.
+      No editar `config.toml` con `Set-Content -Encoding utf8`: en PowerShell 5.1 agrega BOM y el backend ya no lo lee.
+      Android puede cambiar la IP del hotspot al apagarlo y prenderlo: revisarla en la pantalla de IP Webcam.
 
 El ESP32 de la caja ya tiene el firmware `esp32dev` con los pines nuevos del teclado: no hace falta cargarlo en casa.
 
@@ -54,8 +55,11 @@ El ESP32 de la caja ya tiene el firmware `esp32dev` con los pines nuevos del tec
 - [ ] Celular en su soporte, en vertical, a la altura de la cara, en el lugar exacto donde va a estar en la demo.
       Anotar dónde (foto del montaje) para repetirlo el viernes.
 - [ ] Luz: la del salón a la hora de la demo. Evitar ventana detrás de la persona.
-- [ ] Red: **hotspot del celular** con la laptop conectada a él (decidido el 25 nov; no depende de la red de la escuela).
-      Revisar en IP Webcam que la IP siga siendo `10.28.183.166`; si cambió, actualizar `config.toml` (paso de la sección 1).
+- [ ] Red **principal: WiFi de la facultad**, con la laptop y el celular conectados a ella. Leer la IP en la pantalla de
+      IP Webcam y guardarla como principal:
+      `.\.venv\Scripts\python.exe pc\scripts\probar_camara.py --url http://<IP en la facultad>:8080/video --guardar-url`.
+      Si la red de la facultad no deja que la laptop vea al celular (la prueba falla), pasar los dos al **hotspot** del
+      celular: el backend cambia solo a `url_respaldo`. Revisar que la IP del hotspot siga siendo `10.28.183.166`.
 - [ ] Probar la cámara: `.\.venv\Scripts\python.exe pc\scripts\probar_camara.py` (IP Webcam a 640 × 480, `rotacion = 90`).
 
 ### 2.2 Datos de cada compañero (llenar antes de empezar)
@@ -102,7 +106,8 @@ Tiempo aproximado: unos 15 minutos por persona (banco, registro y segunda tanda)
 
 ## 3. Viernes 27, antes de la demo
 
-- [ ] Montar el celular igual que el jueves (foto del montaje). Misma red; si es hotspot, revisar que la IP no cambió.
+- [ ] Montar el celular igual que el jueves (foto del montaje). WiFi de la facultad; si falla, hotspot (el backend cambia
+      solo). En cualquiera de las dos, revisar en IP Webcam que la IP sea la guardada; la de la facultad puede cambiar de un día a otro.
 - [ ] `& .\pc\scripts\arrancar.ps1`, abrir la app con Ctrl + F5 → **ESP32** → **Buscar ESP32** (debe ponerse verde: "Conectado").
 - [ ] Una verificación de nivel 1, una de nivel 2 y una de impostor. "Intentar de nuevo" (o `#`) cierra los servos.
 - [ ] Cargador de 5 V / 2 A a la mano por si hay brownout con los servos.

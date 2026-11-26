@@ -7,7 +7,9 @@ imagen de relleno.
 
 from __future__ import annotations
 
+import socket
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -115,8 +117,8 @@ class CamaraURL(Camara):
             raise CamaraError(f"La cámara no responde en {self.url}: {'DroidCam está ocupado' if ocupado else e}",
                               "DroidCam acepta un solo cliente: cierra la pestaña del navegador o el cliente de "
                               "PC que lo esté usando, o reinicia la app en el celular." if ocupado else
-                              "Abre DroidCam en el celular, misma red WiFi, y revisa la IP y el puerto "
-                              "en config.toml ([camara].url). Prueba la URL en el navegador.") from e
+                              "Abre IP Webcam (o DroidCam) en el celular, misma red WiFi, y revisa la IP y el puerto "
+                              "en config.toml ([camara].url y url_respaldo). Prueba la URL en el navegador.") from e
 
     def cerrar(self) -> None:
         if self.cap:
@@ -138,10 +140,35 @@ class CamaraIndice(Camara):
         self.cap.release()
 
 
+def _responde(url: str, limite_s: float = 1.5) -> bool:
+    """¿Hay algo escuchando en el host y puerto de la URL? Solo abre y cierra un socket TCP:
+    no baja video ni ocupa el único cliente que acepta DroidCam."""
+    p = urllib.parse.urlsplit(url)
+    if not p.hostname:
+        return False
+    try:
+        with socket.create_connection((p.hostname, p.port or (443 if p.scheme == "https" else 80)), timeout=limite_s):
+            return True
+    except OSError:
+        return False
+
+
+def elegir_url(cfg) -> str:
+    """[camara].url es la principal (WiFi de la facultad) y url_respaldo la del hotspot del celular.
+    Se usa la primera que contesta; si ninguna contesta, la principal, y su error dice qué revisar."""
+    urls = [u for u in (cfg.valor("camara.url", ""), cfg.valor("camara.url_respaldo", "")) if u]
+    for i, u in enumerate(urls):
+        if _responde(u):
+            if i:
+                print(f"Cámara: la URL principal no contesta; se usa la de respaldo {u}", flush=True)
+            return u
+    return urls[0] if urls else ""
+
+
 def desde_config(cfg) -> Camara:
     fuente = cfg.valor("camara.fuente", "url")
     if fuente == "archivo":  # pruebas: una imagen fija de un dataset
         return CamaraArchivo(cfg.valor("camara.archivo"), cfg.valor("camara.fuente_archivo", "orl"))
-    cam = CamaraIndice(int(cfg.valor("camara.indice", 0))) if fuente == "indice" else CamaraURL(cfg.valor("camara.url"))
+    cam = CamaraIndice(int(cfg.valor("camara.indice", 0))) if fuente == "indice" else CamaraURL(elegir_url(cfg))
     cam.rotacion = int(cfg.valor("camara.rotacion", 0))
     return cam
