@@ -13,7 +13,7 @@ const C_OK=[48,209,88], C_NO=[255,66,69], C_AV=[255,146,48]; // systemGreen, sys
 const rgb=(c,a=1)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
 RAIZ.style.setProperty('--acento-claro',rgb(C_AC));
 const GRIS2='rgba(235,235,245,.6)', LINEA='#48484A', MONO='"JetBrains Mono", monospace';
-const ic=n=>`<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${IC[n]||''}</svg>`;
+const ic=n=>`<svg class="ic" data-n="${n}" viewBox="0 0 24 24" aria-hidden="true">${IC[n]||''}</svg>`;
 document.querySelectorAll('[data-ic]').forEach(e=>{e.outerHTML=ic(e.dataset.ic)});
 /* estado con icono y texto: no depende solo del color */
 const est=(s,txt='')=>`<span class="est ${s}">${s==='ok'?ic('check'):s==='no'?ic('x'):'<span class="punto"></span>'}${txt}</span>`;
@@ -107,7 +107,7 @@ function caption(k,text,state='wait'){ $('#capK').textContent=k; $('#capText').t
 async function beat(k,text,ms,id){
   caption(k,text);
   if(S.instant) return;
-  if(S.step){ $('#nextBtn').hidden=false; await new Promise(r=>nextResolver=r); $('#nextBtn').hidden=true; guard(id); }
+  if(S.step){ verOcultar($('#nextBtn'),true,'crece'); await new Promise(r=>nextResolver=r); verOcultar($('#nextBtn'),false,'crece'); guard(id); }
   else await wait(ms,id);
 }
 
@@ -128,14 +128,15 @@ function posInd(){ // desliza el indicador hasta el paso visible, como el select
   ind.style.width=b.offsetWidth+'px'; ind.style.transform=`translateX(${b.offsetLeft}px)`;
 }
 function pintarNav(){
-  pasos.forEach((b,i)=>{const n=i+1,e=V.est[n];
+  pasos.forEach((b,i)=>{const n=i+1,e=V.est[n],antes=b.dataset.est;
     b.dataset.est=e; if(n===V.etapa) b.setAttribute('aria-current','step'); else b.removeAttribute('aria-current');
     b.querySelector('.fig').innerHTML=e==='ok'?ic('check'):e==='no'?ic('x'):e==='curso'?'<i></i>':e==='omit'?ic('minus'):String(n);
+    if(antes&&antes!==e&&/^(ok|no|omit)$/.test(e)) pop(b.querySelector('.fig'),220);
     b.querySelector('.dato').textContent=e==='curso'&&!V.dato[n]?'en curso':e==='omit'?'no se pidió':V.dato[n];
     b.setAttribute('aria-label',`Etapa ${n}, ${ETAPAS[n].n}: ${EST_TXT[e]}${V.dato[n]?', '+V.dato[n]:''}`);});
   posInd();
   const fuera=S.running&&V.curso>0&&!V.seguir;
-  $('#volver').hidden=!fuera; if(fuera) $('#volverTxt').textContent='En curso: '+ETAPAS[V.curso].n;
+  verOcultar($('#volver'),fuera,'lado'); if(fuera) cambiarTexto($('#volverTxt'),'En curso: '+ETAPAS[V.curso].n);
 }
 function marcar(n,e,dato=''){V.est[n]=e;V.dato[n]=dato;pintarNav()}
 function limpiarNav(){for(let n=1;n<=4;n++){V.est[n]='pend';V.dato[n]=''}V.curso=0;V.seguir=true;pintarNav()}
@@ -216,8 +217,10 @@ function setVista(v,guardar=true){
   return transicion(aplicar,'fundido').then(redibujar);
 }
 document.querySelectorAll('#vista button').forEach(b=>b.addEventListener('click',()=>setVista(b.dataset.v)));
-$('#verLog').addEventListener('click',()=>{const on=$('#pBitacora').classList.toggle('completa');
-  $('#verLog').setAttribute('aria-expanded',on);$('#verLogTxt').textContent=on?'Ver solo el último':'Ver bitácora completa'});
+$('#verLog').addEventListener('click',()=>{const p=$('#pBitacora'),on=!p.classList.contains('completa');
+  desplegar(p.querySelector('.tbl-wrap'),v=>p.classList.toggle('completa',v),on);
+  $('#verLog').setAttribute('aria-expanded',on);cambiarTexto($('#verLogTxt'),on?'Ver solo el último':'Ver bitácora completa');
+  cambiarIcono(icono($('#verLog')),on?'chevron-up':'list')});
 /* la cabecera fija cambia de alto al envolver: se mide para los márgenes de scroll y el alto libre */
 new ResizeObserver(()=>{RAIZ.style.setProperty('--cab-h',$('#cabecera').offsetHeight+'px');posInd()}).observe($('#cabecera'));
 
@@ -268,9 +271,12 @@ function serial(dir,txt){const el=$('#serial'),d=document.createElement('div');
   el.appendChild(d);while(el.children.length>40)el.removeChild(el.firstChild);el.scrollTop=el.scrollHeight}
 let slotsNow={id:'',pin:'',err:false};
 function setSlots(id,pin,err){
-  slotsNow={id,pin,err:!!err};
-  [...$('#slotId').children].forEach((s,i)=>{s.textContent=id[i]??'';s.className='slot'+(id[i]?' fill':'')});
-  [...$('#slotPin').children].forEach((s,i)=>{s.textContent=pin[i]?(S.showDigits?pin[i]:'•'):'';s.className='slot'+(pin[i]?(err?' err':' fill'):'')});
+  const errAntes=slotsNow.err; slotsNow={id,pin,err:!!err};
+  const poner=(s,txt,cls)=>{const antes=s.textContent; s.textContent=txt; s.className=cls; if(antes===txt) return;
+    if(!antes) pop(s,160); else if(txt) animar(s,[{opacity:.2,filter:'blur(2px)'},{opacity:1,filter:'blur(0)'}],150)};
+  [...$('#slotId').children].forEach((s,i)=>poner(s,id[i]??'','slot'+(id[i]?' fill':'')));
+  [...$('#slotPin').children].forEach((s,i)=>poner(s,pin[i]?(S.showDigits?pin[i]:'•'):'','slot'+(pin[i]?(err?' err':' fill'):'')));
+  if(err&&!errAntes) sacudir($('#slotPin'));
 }
 function panel(id,state){$(id).dataset.state=state}
 
@@ -289,7 +295,9 @@ $('#c1').innerHTML=compSVG(1); $('#c2').innerHTML=compSVG(2);
 /* angulo: el real del servo (control manual); sin él, 90° abierto y 0° cerrado */
 function servo(n,open,angulo){ const a=angulo??(open?90:0);
   $('#arm'+n).style.transform=`rotate(${a}deg)`; $('#lid'+n).style.transform=`rotate(${-14*Math.min(a,90)/90}deg)`;
-  const s=$('#c'+n+'s'); s.innerHTML=ic(open?'lock-keyhole-open':'lock-keyhole')+(open?'Liberado':'Bloqueado')+(angulo!=null?` · ${a}°`:''); s.className='pill'+(open?' ok':''); }
+  const s=$('#c'+n+'s'), antes=s.dataset.abierto; s.dataset.abierto=open;
+  s.innerHTML=ic(open?'lock-keyhole-open':'lock-keyhole')+(open?'Liberado':'Bloqueado')+(angulo!=null?` · ${a}°`:''); s.className='pill'+(open?' ok':'');
+  if(antes!=null&&antes!==String(open)) pop(icono(s),200); }
 
 /* dibujo de rostro */
 function drawGray(cv,data,w,h,norm){const x=cv.getContext('2d'),d=x.createImageData(w,h);let mn=0,mx=1;

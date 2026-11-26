@@ -17,7 +17,7 @@ Archivo de contexto para trabajar el proyecto con Claude Code. Reúne qué es el
 | Alumno | Nestor (Mecatrónica) |
 | Tipo de entrega | PIA en equipo: demostración física funcionando + reporte técnico al final |
 | Avance presentado | 2 de noviembre de 2026 (idea y plan de trabajo) |
-| Entrega final | Aproximadamente 4 semanas después del avance; fecha exacta por confirmar |
+| Entrega final | **Viernes 27 de noviembre de 2026** |
 
 **Título del PIA:** Diseño e implementación de un sistema de reconocimiento biométrico multimodal para control y acceso de información confidencial (según jerarquía).
 

@@ -1,6 +1,8 @@
 # Roadmap ejecutable: del repositorio actual a la demo del martes 17
 
-Escrito el viernes 13 de noviembre de 2026. Entrega: **martes 17 de noviembre de 2026**.
+Escrito el viernes 13 de noviembre de 2026. Entrega original: martes 17 de noviembre de 2026.
+
+> **Actualización 25 de noviembre:** la entrega se movió al **viernes 27 de noviembre de 2026**. Donde este plan dice "el martes" o "martes 17", léase "el viernes 27". El estado vigente y los pasos que faltan están en `docs/ESTADO_DEL_PROYECTO.md`.
 
 Este documento es el plan que va a ejecutar otra sesión (Claude Opus 5.5) cuando el usuario lo apruebe. Sustituye al calendario de 4 semanas de `docs/CONTEXTO_PIA_RDP.md` y a las "Fases y puntos de revisión" de `docs/PROMPT_FABLE_5_2.md`. Todo lo demás de esos dos documentos sigue vigente (métodos obligatorios, pines, restricciones duras, dirección visual), salvo las correcciones que se listan en la sección 1.4.
 

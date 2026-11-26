@@ -2,7 +2,7 @@
 
 Resumen para retomar el trabajo en otra PC o en una sesión nueva de Claude Code.
 
-**Última actualización: 14 de noviembre de 2026 (sábado).** Entrega: **martes 17 de noviembre**.
+**Última actualización: 25 de noviembre de 2026 (miércoles).** Entrega: **viernes 27 de noviembre de 2026** (se movió del martes 17).
 El estado de la maqueta anterior (13 de noviembre) está en el historial de git de este archivo.
 
 **Orden de lectura para retomar:**
@@ -23,7 +23,7 @@ El estado de la maqueta anterior (13 de noviembre) está en el historial de git 
 | App (`app/`) | Modo Simular y modo ESP32 de punta a punta. Regresiones de Playwright OK. |
 | Compuertas | **G1** (imagen del AS608) y **G2** (verificación real con la caja, nivel 2 concedido) cumplidas. |
 | Calibración | Activa pero **provisional** (ver sección 3). |
-| Pendiente | N8 (robustez y `docs/DEMO.md`), N9 (reporte), P6 (registrar a los 6 de la demo y prueba de aceptación), LEDs. |
+| Pendiente | P6 (registrar a los compañeros el **jueves 26**, recalibrar y prueba de aceptación), N8 (robustez y `docs/DEMO.md`), N9 (reporte), LEDs. |
 
 ## 2. Cómo se usa (resumen; los detalles en `README.md`)
 
@@ -61,7 +61,7 @@ Perfil `as608` ajustado en N7: CLAHE, umbral de varianza 0.004, distancia mínim
 |---|---|---|
 | El ESP32 borraba el PIN cada segundo | `millis()` tomado antes de leer el `PING` (resta sin signo) | `firmware/src/main.cpp`, comentado |
 | Huella "CRC incorrecto" | Redibujar la OLED en cada paquete desbordaba el búfer de UART2 | Barra cada 32 paquetes (`huella.cpp`) |
-| Teclas cambiadas | Conector del teclado al revés | Orden invertido en `pines.h` |
+| Teclas cambiadas | Conector del teclado al revés (14 nov); recableado el 25 nov | `pines.h` con el orden medido por `test_teclado_crudo` (filas 13, 14, 27, 26; columnas 25, 33, 32, 4) |
 | Cámara girada 90° y marca de agua | Celular en vertical; DroidCam gratis | `rotacion = 90`; se usa IP Webcam |
 | Foto del rostro instantánea | Se tomaba el primer cuadro | Vista en vivo con óvalo guía, cuenta regresiva y 1.5 s dentro de la guía |
 | Servos antes que la animación | El backend actuaba al calcular | La caja espera el aviso "listo" de la app |
@@ -69,11 +69,13 @@ Perfil `as608` ajustado en N7: CLAHE, umbral de varianza 0.004, distancia mínim
 
 ## 6. Siguientes pasos, en orden
 
+**Calendario:** jueves 26 = registrar a los compañeros y recalibrar; viernes 27 = entrega y demo.
+
 1. **N8:** `docs/DEMO.md` (guion de 5 minutos, lista previa, solución de problemas) y robustez que falte.
-2. **P6 con los compañeros:** sumar sus dedos al banco, registrarlos (huella y cámara), segunda tanda, recalibrar los dos factores y la prueba de aceptación (10 genuinos y 10 impostores por persona).
+2. **P6 con los compañeros (jueves 26):** sumar sus dedos al banco, registrarlos (huella y cámara), segunda tanda, recalibrar los dos factores y la prueba de aceptación (10 genuinos y 10 impostores por persona).
 3. **N9:** reporte técnico con los números reales y las gráficas de `datos/calibracion/`.
 4. Hardware: conectar los LEDs (verde GPIO23, rojo GPIO5, 220 Ω) y conseguir un cargador de 5 V / 2 A o power bank para los servos.
-5. El martes: registrar de nuevo las caras **en el salón** (luz real) y probar la red (IP Webcam).
+5. El viernes 27, antes de la demo: registrar de nuevo las caras **en el salón** (luz real) y probar la red (IP Webcam).
 
 ## 7. Riesgos abiertos
 

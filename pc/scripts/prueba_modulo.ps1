@@ -1,8 +1,8 @@
-# P4: carga un entorno de prueba del firmware y abre el monitor serie.
+﻿# P4: carga un entorno de prueba del firmware y abre el monitor serie.
 # Uso (desde la raíz del repo):  & .\pc\scripts\prueba_modulo.ps1 -Entorno test_oled -Puerto COM4
 # Con esta placa hay que mantener BOOT cuando aparece "Connecting...". Ctrl+C cierra el monitor.
 param(
-    [Parameter(Mandatory = $true)][ValidateSet("test_teclado", "test_oled", "test_leds", "test_servos", "test_huella_imagen", "esp32dev")]
+    [Parameter(Mandatory = $true)][ValidateSet("test_teclado", "test_teclado_crudo", "test_oled", "test_leds", "test_servos", "test_huella_imagen", "esp32dev")]
     [string]$Entorno,
     [string]$Puerto = "COM4",
     [switch]$SinCargar,

@@ -52,7 +52,7 @@ ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-si
   </header>
 
   <div class="sheet">
-    <svg id="sch" viewBox="0 0 1400 1000" role="img" aria-label="Esquemático: el ESP32 al centro. A la izquierda el teclado 4×4 en GPIO4, 32, 33, 25, 26, 27, 14 y 13. A la derecha el AS608 en GPIO16 y 17 con 5 V, la OLED en GPIO21 y 22 con 3.3 V, los servos en GPIO18 y 19 alimentados por una fuente externa de 5 V con capacitor de 470 µF, y los LEDs en GPIO23 y 5 con resistencias de 220 Ω. Todas las tierras unidas."></svg>
+    <svg id="sch" viewBox="0 0 1400 1000" role="img" aria-label="Esquemático: el ESP32 al centro. A la izquierda el teclado 4×4 en GPIO13, 14, 27, 26 (filas) y 25, 33, 32, 4 (columnas). A la derecha el AS608 en GPIO16 y 17 con 5 V, la OLED en GPIO21 y 22 con 3.3 V, los servos en GPIO18 y 19 alimentados por una fuente externa de 5 V con capacitor de 470 µF, y los LEDs en GPIO23 y 5 con resistencias de 220 Ω. Todas las tierras unidas."></svg>
   </div>
 
   <div class="cols">
@@ -78,7 +78,7 @@ ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-si
       <ol>
         <li>El TX del AS608 se midió en 3.3 V: va directo a GPIO16, sin divisor.</li>
         <li>Del AS608 solo se usan Vi, GND, TXD y RXD. D−, D+, Vt y WAK quedan sin conectar. Se conecta por la serigrafía de su placa, no por el color del cable.</li>
-        <li>El conector del teclado quedó al revés en la caja: el pin 1 va a GPIO4 y el pin 8 a GPIO13. El firmware ya usa ese orden.</li>
+        <li>Teclado recableado el 25 de noviembre: filas en GPIO13, 14, 27, 26 y columnas en GPIO25, 33, 32, 4 (medido con <code>test_teclado_crudo</code>).</li>
         <li>Los servos se alimentan de J2, no del pin 3V3. El GND de J2 se une al GND del ESP32, pero el +5 V de J2 no se conecta al VIN mientras el ESP32 esté en USB.</li>
         <li>C1 va lo más cerca posible de los servos, con la franja (negativo) hacia GND.</li>
         <li>D1 y D2 aparecen en el firmware; al 14 de noviembre todavía no estaban soldados.</li>
@@ -118,7 +118,7 @@ L(740,UY1,740,82,'pwr',2.6);flag(740,82,'+3V3');T(740,UY1+18,'3V3','', 'middle')
 L(680,UY2,680,930,'gnd',2.6);gnd(680,930);T(680,UY2-8,'GND','', 'middle');
 
 /* ---------------- K1 teclado (izquierda) ---------------- */
-const KG=[4,32,33,25,26,27,14,13], KN=['F1','F2','F3','F4','C1','C2','C3','C4'];
+const KG=[13,14,27,26,25,33,32,4], KN=['F1','F2','F3','F4','C1','C2','C3','C4'];
 const ky=k=>220+k*60;
 box(150,180,210,ky(7)-180+40);
 T(150,168,'K1','ref');T(184,168,'Teclado 4×4');

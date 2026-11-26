@@ -35,6 +35,8 @@
   /* Forma: radio interno = radio externo - padding */
   --r-panel:24px; --pad:16px; --r-in:calc(var(--r-panel) - var(--pad));
   --curva:cubic-bezier(.32,.72,0,1);
+  --ent:cubic-bezier(.22,1,.36,1);   /* entradas y presión de botones */
+  --mov:cubic-bezier(.25,1,.5,1);    /* deslizamientos cortos (píldora de los selectores) */
   --cab-h:132px;  /* alto de la cabecera fija; el script lo mide */
 }
 *{box-sizing:border-box}
@@ -45,9 +47,11 @@ body{margin:0;font-family:var(--sans);font-size:15px;line-height:1.4;min-height:
   font-feature-settings:"cv11","ss03";-webkit-font-smoothing:antialiased}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 button,select,input{font:inherit;color:inherit}
-button{-webkit-tap-highlight-color:transparent}
-:focus-visible{outline:2px solid var(--acento-claro);outline-offset:2px}
-svg.ic{width:1.15em;height:1.15em;flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.18em}
+button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+/* el anillo de foco aparece en 150 ms en lugar de saltar */
+:focus-visible{outline:2px solid var(--acento-claro);outline-offset:2px;animation:anillo .15s var(--ent)}
+@keyframes anillo{from{outline-offset:-1px;outline-color:transparent}}
+svg.ic{transform-origin:50% 50%;width:1.15em;height:1.15em;flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.18em}
 
 /* ---------- Fondo: estático, se pinta una sola vez ---------- */
 .fondo{position:fixed;inset:0;z-index:-1;pointer-events:none;background-color:#060607}
@@ -96,17 +100,22 @@ html[data-fondo="b"] .fondo{background-image:
 .grupo{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--label-2)}
 .estado{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
 .chip{display:inline-flex;align-items:center;gap:6px;padding:0 12px;min-height:32px;border-radius:16px;font-size:13px;color:var(--label-2);background:var(--fill-2);white-space:nowrap}
-.chip .ic{font-size:14px}
+.chip .ic{font-size:14px;transition:color .2s}
 .chip.aviso .ic{color:var(--aviso)} .chip.ok .ic{color:var(--ok)} .chip.no .ic{color:var(--no)}
 
 /* control segmentado en cápsula; el seleccionado lleva el acento */
-.seg{display:inline-flex;padding:4px;border-radius:22px;gap:2px}
+.seg{position:relative;display:inline-flex;padding:4px;border-radius:22px;gap:2px}
 .barra .seg{background:var(--fill-2)}   /* dentro de la barra no lleva su propio blur: ya está sobre vidrio */
 .seg button{position:relative;border:0;background:transparent;padding:0 14px;min-height:36px;min-width:44px;border-radius:18px;color:var(--label-2);cursor:pointer;font-size:14px;font-weight:500;white-space:nowrap;
-  transition:background .2s var(--curva),color .2s var(--curva)}
+  transition:background .2s var(--curva),color .2s var(--curva),scale .16s var(--ent)}
 .seg button::after{content:"";position:absolute;inset:-4px 0}   /* objetivo táctil de 44 px */
 .seg button:hover{color:var(--label)}
 .seg button[aria-pressed="true"]{background:var(--verde-fime);color:var(--sobre-acento);font-weight:600}
+/* con la píldora (movimiento.js) el fondo verde lo pinta ella y se desliza a la opción elegida */
+.seg-ind{position:absolute;top:4px;left:0;height:calc(100% - 8px);width:0;border-radius:18px;background:var(--verde-fime);pointer-events:none;opacity:0;
+  transition:transform .25s var(--mov),width .25s var(--mov)}
+.seg.con-ind button[aria-pressed="true"]{background:transparent}
+html.sin-anim .seg-ind{transition:none}
 
 /* navegador de etapas */
 .fila-nav{position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 12px}
@@ -115,7 +124,7 @@ html[data-fondo="b"] .fondo{background-image:
   transition:transform .5s var(--curva),width .5s var(--curva)}
 html.vt .nav-ind,html.sin-anim .nav-ind{transition:none}
 .paso{position:relative;z-index:1;border:0;background:transparent;border-radius:26px;min-height:52px;padding:4px 14px 4px 10px;cursor:pointer;
-  display:flex;align-items:center;gap:10px;min-width:0;text-align:left;color:var(--label-2);transition:color .2s}
+  display:flex;align-items:center;gap:10px;min-width:0;text-align:left;color:var(--label-2);transition:color .2s,scale .16s var(--ent)}
 .paso[aria-current="step"],.paso:hover{color:var(--label)}
 .paso .fig{flex:none;width:28px;height:28px;display:grid;place-items:center;border-radius:14px;border:1.5px solid var(--label-3);font-family:var(--mono);font-size:13px;font-weight:500;color:var(--label-2);transition:background .25s,border-color .25s,border-radius .25s}
 .paso .txt{display:flex;flex-direction:column;min-width:0;line-height:1.25}
@@ -131,7 +140,9 @@ html.vt .nav-ind,html.sin-anim .nav-ind{transition:none}
 .paso[data-est="omit"] .fig{border-style:dashed}
 .paso .fig .ic{width:16px;height:16px;stroke-width:2.5}
 .volver{border:0;border-radius:22px;min-height:44px;padding:0 16px 0 18px;display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:600;
-  background:var(--verde-fime);color:var(--sobre-acento)}
+  background:var(--verde-fime);color:var(--sobre-acento);transition:scale .16s var(--ent),filter .2s}
+.volver .ic{transition:translate .15s var(--ent)}
+@media (hover:hover) and (pointer:fine){.volver:hover{filter:brightness(1.15)}.volver:hover .ic{translate:2px 0}}
 @media (min-width:1280px){.volver{position:absolute;right:0;top:50%;transform:translateY(-50%)}}
 /* pista de las flechas del teclado: no es un control, va en el hueco izquierdo del navegador (espejo de .volver) */
 .atajo{display:none}
@@ -150,15 +161,26 @@ html.vt .nav-ind,html.sin-anim .nav-ind{transition:none}
 select{-webkit-appearance:none;appearance:none;border-radius:22px;padding:0 40px 0 16px;min-height:44px;max-width:100%;font-size:15px;color:var(--label);cursor:pointer;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ebebf5' stroke-opacity='.6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 14px center}
+select{transition:opacity .2s}
 select:disabled{opacity:.5;cursor:not-allowed}
 select option{background:#2C2C2E;color:#fff}
 .btn{border:0;border-radius:22px;min-height:44px;padding:0 18px;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-size:15px;font-weight:500;color:var(--label);white-space:nowrap;
-  transition:filter .2s,opacity .2s,transform .15s var(--curva)}
+  transition:filter .2s,opacity .2s,scale .16s var(--ent),background-color .2s,color .2s}
 .btn:hover{filter:brightness(1.15)}
-.btn:active{transform:scale(.97)}
 .btn.principal{background:var(--verde-fime);color:var(--sobre-acento);font-weight:600}
 .btn.gris{background:var(--fill)}
-.btn:disabled{opacity:.4;cursor:not-allowed;filter:none;transform:none}
+.btn:disabled{opacity:.4;cursor:not-allowed;filter:none;scale:none}
+/* presión: al instante, se suelta con la curva de entrada */
+.btn:active:not(:disabled),.seg button:active,.paso:active,.volver:active,.thumb:active{scale:.97;transition-duration:0s}
+.key:active:not(:disabled){scale:.95;transition-duration:0s}
+/* resultado en el mismo botón (Buscar ESP32) y estado ocupado (servos) */
+.btn.exito{background:var(--ok);color:#03200C}
+.btn.fallo{background:rgba(255,66,69,.3);color:var(--label)}
+.btn[aria-busy="true"]{cursor:progress}
+#servosBtn[aria-expanded="true"]{background:var(--verde-fime);color:var(--sobre-acento)}
+/* icono de carga */
+svg.ic[data-n="loader-circle"]{animation:giro .8s linear infinite}
+@keyframes giro{to{rotate:360deg}}
 .controles .hueco{flex:1}
 .esp{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;width:100%;padding:12px 12px 12px 16px;border-radius:28px}
 .esp p{margin:0;color:var(--label-2);flex:1 1 280px;font-size:14px}
@@ -213,7 +235,7 @@ select option{background:#2C2C2E;color:#fff}
 .kp-row{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
 .keypad{display:grid;grid-template-columns:repeat(4,minmax(44px,1fr));gap:8px;padding:8px;background:var(--hueco);border-radius:var(--r-panel);flex:0 1 216px}
 .key{aspect-ratio:1/.82;min-height:44px;border-radius:var(--r-panel);border:0;background:var(--bg-3);font-family:var(--mono);font-size:19px;cursor:pointer;
-  transition:transform .15s var(--curva),background .2s,color .2s}
+  transition:transform .15s var(--curva),background .2s,color .2s,scale .16s var(--ent)}
 .keypad .key{border-radius:16px}
 .key.fn{color:var(--label-2)}
 .key.hit{transform:scale(.93);background:var(--verde-fime);color:var(--sobre-acento)}
@@ -238,7 +260,7 @@ select option{background:#2C2C2E;color:#fff}
 .fp-cell canvas{width:100%;height:auto;aspect-ratio:256/288;border-radius:var(--r-in);background:var(--hueco);display:block}
 .fp-overlay{position:absolute;inset:0;pointer-events:none;width:100%;height:100%}
 .strip{grid-area:tira;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;align-self:start}
-.thumb{display:flex;flex-direction:column;gap:4px;border:0;background:none;padding:0;cursor:pointer;text-align:left;min-width:0;border-radius:var(--r-in)}
+.thumb{display:flex;flex-direction:column;gap:4px;border:0;background:none;padding:0;cursor:pointer;text-align:left;min-width:0;border-radius:var(--r-in);transition:scale .16s var(--ent)}
 .thumb canvas{width:100%;aspect-ratio:256/288;border-radius:var(--r-in);background:var(--hueco);transition:box-shadow .25s,opacity .25s;opacity:.3}
 .thumb span{font-size:12px;color:var(--label-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .thumb.done canvas{opacity:1}
@@ -451,6 +473,9 @@ html[data-dir="fundido"]::view-transition-new(root){animation:250ms ease both vt
 .mod-servos .ms-servo{background:var(--fill-2, rgba(120,120,128,.2));border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .mod-servos .ms-fila{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .mod-servos .ms-ang{margin-left:auto;font-size:15px}
+.mod-servos .ms-lock{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:13px;background:var(--fill);color:var(--label-2);transition:background .2s,color .2s}
+.mod-servos .ms-lock .ic{width:14px;height:14px}
+.mod-servos .ms-lock.ok{background:rgba(48,209,88,.18);color:var(--ok)}
 .mod-servos input[type=range]{width:100%;accent-color:var(--acento-claro, #6fd39f)}
 .mod-servos .ms-ambos{justify-content:flex-end}
 .mod-servos .ms-msg{min-height:1.2em;margin:0}

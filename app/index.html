@@ -47,7 +47,7 @@
 
 <main class="wrap">
   <section class="controles" aria-label="Controles de la simulación">
-    <label class="campo" for="scn"><span>Escenario</span>
+    <label class="campo solo-sim" for="scn"><span>Escenario</span>
       <select id="scn" class="vidrio">
         <option value="l1">Usuario legítimo · nivel 1 (ID 07)</option>
         <option value="l2" selected>Usuario legítimo · nivel 2 (ID 12)</option>
@@ -56,13 +56,13 @@
         <option value="pin">PIN incorrecto (ID 07)</option>
       </select>
     </label>
-    <div class="campo"><span id="lblRostro">Rostro</span>
+    <div class="campo solo-sim"><span id="lblRostro">Rostro</span>
       <div class="seg vidrio" id="fuenteRostro" role="group" aria-labelledby="lblRostro">
         <button data-v="dataset" aria-pressed="true">Dataset</button>
         <button data-v="camara" aria-pressed="false">DroidCam</button>
       </div>
     </div>
-    <div class="campo"><span id="lblVel">Velocidad</span>
+    <div class="campo solo-sim"><span id="lblVel">Velocidad</span>
       <div class="seg vidrio" id="speed" role="group" aria-labelledby="lblVel">
         <button data-v="2" aria-pressed="false">2×</button>
         <button data-v="1" aria-pressed="true">1×</button>
@@ -208,24 +208,25 @@
     <button class="btn gris chico ms-x" id="msCerrar" aria-label="Cerrar el control de servos"><i data-ic="x"></i></button></div>
   <p class="cap">Control manual de los compartimentos. Se mueven uno a la vez; no durante una verificación.</p>
   <div class="ms-servo" data-n="1">
-    <div class="ms-fila"><b>1 · Lector</b><span class="meta mono">GPIO18</span><span class="ms-ang mono" id="msA1">—</span></div>
+    <div class="ms-fila"><span class="ms-lock" id="msL1" title="Estado del compartimento 1"><i data-ic="lock-keyhole"></i></span><b>1 · Lector</b><span class="meta mono">GPIO18</span><span class="ms-ang mono" id="msA1">—</span></div>
     <input type="range" min="0" max="180" step="1" value="0" id="msR1" aria-label="Ángulo del servo 1">
-    <div class="ms-fila"><button class="btn gris chico" data-n="1" data-accion="cerrar"><i data-ic="lock-keyhole"></i>Cerrar</button>
-      <button class="btn gris chico" data-n="1" data-accion="abrir"><i data-ic="lock-keyhole-open"></i>Abrir</button></div>
+    <div class="ms-fila"><button class="btn gris chico" data-n="1" data-accion="cerrar"><i data-ic="lock-keyhole"></i><span class="t">Cerrar</span></button>
+      <button class="btn gris chico" data-n="1" data-accion="abrir"><i data-ic="lock-keyhole-open"></i><span class="t">Abrir</span></button></div>
   </div>
   <div class="ms-servo" data-n="2">
-    <div class="ms-fila"><b>2 · Editor (Compras)</b><span class="meta mono">GPIO19</span><span class="ms-ang mono" id="msA2">—</span></div>
+    <div class="ms-fila"><span class="ms-lock" id="msL2" title="Estado del compartimento 2"><i data-ic="lock-keyhole"></i></span><b>2 · Editor (Compras)</b><span class="meta mono">GPIO19</span><span class="ms-ang mono" id="msA2">—</span></div>
     <input type="range" min="0" max="180" step="1" value="0" id="msR2" aria-label="Ángulo del servo 2">
-    <div class="ms-fila"><button class="btn gris chico" data-n="2" data-accion="cerrar"><i data-ic="lock-keyhole"></i>Cerrar</button>
-      <button class="btn gris chico" data-n="2" data-accion="abrir"><i data-ic="lock-keyhole-open"></i>Abrir</button></div>
+    <div class="ms-fila"><button class="btn gris chico" data-n="2" data-accion="cerrar"><i data-ic="lock-keyhole"></i><span class="t">Cerrar</span></button>
+      <button class="btn gris chico" data-n="2" data-accion="abrir"><i data-ic="lock-keyhole-open"></i><span class="t">Abrir</span></button></div>
   </div>
-  <div class="ms-fila ms-ambos"><button class="btn gris" data-n="ambos" data-accion="cerrar"><i data-ic="lock-keyhole"></i>Cerrar ambos</button>
-    <button class="btn principal" data-n="ambos" data-accion="abrir"><i data-ic="lock-keyhole-open"></i>Abrir ambos</button></div>
+  <div class="ms-fila ms-ambos"><button class="btn gris" data-n="ambos" data-accion="cerrar"><i data-ic="lock-keyhole"></i><span class="t">Cerrar ambos</span></button>
+    <button class="btn principal" data-n="ambos" data-accion="abrir"><i data-ic="lock-keyhole-open"></i><span class="t">Abrir ambos</span></button></div>
   <p class="cap ms-msg" id="msMsg" role="status"></p>
 </aside>
 
 <script src="js/base.js"></script>
 <script src="js/dibujo.js"></script>
+<script src="js/movimiento.js"></script>
 <script src="js/principal.js"></script>
 </body>
 </html>

@@ -5,11 +5,11 @@
 constexpr int PIN_HUELLA_RX = 16;  // RX2 <- TXD del AS608
 constexpr int PIN_HUELLA_TX = 17;  // TX2 -> RXD del AS608
 
-// Teclado 4x4. El conector quedó al revés en la caja (pin 1 del teclado en GPIO4 … pin 8 en GPIO13);
-// medido en P4 el 14 de noviembre: la tecla 1 salía como D. En lugar de recablear se invierte aquí.
-// Pines del teclado: 1-4 filas, 5-8 columnas.
-constexpr int PINES_FILAS[4] = {4, 32, 33, 25};     // pines 1, 2, 3, 4 del teclado
-constexpr int PINES_COLUMNAS[4] = {26, 27, 14, 13}; // pines 5, 6, 7, 8 del teclado
+// Teclado 4x4. Recableado el 25 de noviembre; calibrado con el entorno test_teclado_crudo
+// (cada tecla imprime los dos GPIO que une). Ya no hace falta la inversión del 14 de noviembre.
+// Filas: 1 2 3 A / 4 5 6 B / 7 8 9 C / * 0 # D. Columnas: 1 4 7 * / 2 5 8 0 / 3 6 9 # / A B C D.
+constexpr int PINES_FILAS[4] = {13, 14, 27, 26};
+constexpr int PINES_COLUMNAS[4] = {25, 33, 32, 4};
 
 // OLED I2C
 constexpr int PIN_SDA = 21;

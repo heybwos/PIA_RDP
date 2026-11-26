@@ -14,8 +14,8 @@ Placa: ESP32 DevKit V1 con módulo **ESP32-WROOM-32**. Diagrama completo en `doc
 | | GND | GND | |
 | | TXD | GPIO16 (RX2) | Directo (TX medido a 3.3 V) |
 | | RXD | GPIO17 (TX2) | Directo |
-| Teclado 4×4 | Pines 1, 2, 3, 4 (filas) | GPIO4, 32, 33, 25 | Sin alimentación ni GND. **Así quedó en la caja** (conector al revés respecto al plan original); el firmware usa este orden. Verificado en P4: las 16 teclas correctas |
-| | Pines 5, 6, 7, 8 (columnas) | GPIO26, 27, 14, 13 | |
+| Teclado 4×4 | Pines 1, 2, 3, 4 (filas) | GPIO13, 14, 27, 26 | Sin alimentación ni GND. **Recableado el 25 de noviembre** al orden del plan original. Calibrado con `test_teclado_crudo`: las 16 teclas correctas |
+| | Pines 5, 6, 7, 8 (columnas) | GPIO25, 33, 32, 4 | |
 | OLED | SDA / SCL | GPIO21 / GPIO22 | |
 | | VCC / GND | 3.3 V / GND | |
 | Servo 1 (compartimento 1) | Señal | GPIO18 | Alimentación a 5 V, nunca del pin de 3.3 V. Cerrado 0°, abierto 90° (P4.5) |

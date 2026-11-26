@@ -1,7 +1,7 @@
 # Guía para Claude Code en este repositorio
 
 Proyecto: control de acceso biométrico (PIN + huella + rostro) para el PIA de Reconocimiento de Patrones,
-FIME UANL. Entrega el **martes 17 de noviembre de 2026**. Antes de trabajar, lee
+FIME UANL. Entrega el **viernes 27 de noviembre de 2026** (se movió del martes 17). Antes de trabajar, lee
 `docs/ESTADO_DEL_PROYECTO.md` (qué está hecho y qué sigue) y, para el plan, `docs/ROADMAP.md`.
 
 ## Reglas

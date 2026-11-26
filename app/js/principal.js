@@ -26,7 +26,7 @@ function conectar(){
     /* la cámara en vivo tampoco: si la cola sigue animando la huella, se adelanta hasta alcanzarla */
     if(m.tipo==='rostro_vivo'){if(procesando||cola.length)alcanzar=true;vivo(m);return}
     cola.push(m); if(!procesando) procesar()};
-  ws.onclose=()=>{const chip=$('#connChip');chip.className='chip no';$('#connTxt').textContent='Backend desconectado';
+  ws.onclose=()=>{const chip=$('#connChip');chip.className='chip no';cambiarIcono(icono(chip),'unplug');cambiarTexto($('#connTxt'),'Backend desconectado');
     caption('sin backend','No hay conexión con el backend. Arráncalo con: python -m pia (desde pc/). Reintentando…','no');
     S.running=false;updateButtons();reintento=setTimeout(conectar,2000)};
 }
@@ -112,34 +112,35 @@ H.estado=m=>{
   else sel.innerHTML='<option value="">Sin escenarios: corre sembrar_simular.py</option>';
   const chip=$('#connChip');
   if(m.modo==='esp32'&&typeof m.conexion==='object'){const c=m.conexion;
-    if(S.mode!=='esp32'){S.mode='esp32';$('#mSim').setAttribute('aria-pressed',false);$('#mEsp').setAttribute('aria-pressed',true);$('#espPanel').hidden=false}
-    chip.className='chip ok';chip.querySelector('.ic').outerHTML=ic('monitor');$('#connTxt').textContent=`ESP32 · ${c.puerto.replace('socket://','')} · v${c.version}`;
+    if(S.mode!=='esp32'){S.mode='esp32';$('#mSim').setAttribute('aria-pressed',false);$('#mEsp').setAttribute('aria-pressed',true);verOcultar($('#espPanel'),true,'baja');updateButtons()}
+    chip.className='chip ok';cambiarIcono(icono(chip),'monitor');cambiarTexto($('#connTxt'),`ESP32 · ${c.puerto.replace('socket://','')} · v${c.version}`);
+    if(busqueda) scanFin(true);
     $('#bancoTxt').textContent='AS608 · '+(S.camara||'cámara');
     $('#espMsg').innerHTML=`Conectado a <span class="mono">${c.puerto}</span> · firmware ${c.version} · sensor ${c.sensor?'OK':'<strong>ERR</strong>'} · OLED ${c.oled?'OK':'<strong>ERR</strong>'}. La verificación empieza al teclear el ID en la caja.`;
-  }else if(S.mode==='esp32'){chip.className='chip no';chip.querySelector('.ic').outerHTML=ic('unplug');$('#connTxt').textContent='ESP32 · sin conexión'}
+  }else if(S.mode==='esp32'){chip.className='chip no';cambiarIcono(icono(chip),'unplug');cambiarTexto($('#connTxt'),'ESP32 · sin conexión')}
   else{$('#bancoTxt').textContent=`${(m.bancos.huella||'').toUpperCase()} · ${(m.bancos.rostro||'').toUpperCase()}`;
-    chip.className='chip ok';$('#connTxt').textContent='Dispositivo simulado'}
+    chip.className='chip ok';cambiarIcono(icono(chip),'monitor');cambiarTexto($('#connTxt'),'Dispositivo simulado')}
   S.running=S.mode==='sim'&&!!m.ocupado; updateButtons();
 };
 H.puertos=m=>{
-  const sel=$('#port'), b=$('#scanBtn'); b.disabled=false; $('#scanTxt').textContent='Buscar ESP32';
+  const sel=$('#port');
   /* un firmware de prueba (test_…) contesta HOLA pero no sabe verificar: se lista y no se conecta solo */
   const prueba=p=>p.responde&&/^test_/.test(p.version||'');
   const ok=m.puertos.filter(p=>p.responde&&!prueba(p));
-  if(!m.puertos.length){sel.innerHTML='<option>Ningún puerto detectado</option>';sel.disabled=true;
+  if(!m.puertos.length){sel.innerHTML='<option>Ningún puerto detectado</option>';sel.disabled=true;scanFin(false);
     $('#espMsg').innerHTML='<strong>No hay puertos serie.</strong> Revisa el cable USB (que sea de datos) y el driver CP210x o CH340.';return}
   sel.innerHTML=m.puertos.map(p=>`<option value="${p.puerto}"${p.responde&&!prueba(p)?'':' disabled'}>${p.puerto}${!p.responde?' · no contesta':prueba(p)?` · firmware de prueba (${p.version})`:` · v${p.version} · sensor ${p.sensor?'OK':'ERR'} · OLED ${p.oled?'OK':'ERR'}`}</option>`).join('');
   sel.disabled=!ok.length;
-  if(!ok.length){$('#espMsg').innerHTML=m.puertos.some(prueba)
+  if(!ok.length){scanFin(false);$('#espMsg').innerHTML=m.puertos.some(prueba)
       ?'<strong>La placa tiene un firmware de prueba.</strong> Carga el entorno principal (esp32dev) para verificar.'
       :'<strong>Ningún puerto contestó HOLA.</strong> Carga el firmware principal (esp32dev) y cierra el monitor serie de PlatformIO.';return}
-  sel.value=ok[0].puerto; $('#espMsg').innerHTML=`Conectando a <span class="mono">${ok[0].puerto}</span>…`;
+  sel.value=ok[0].puerto; $('#espMsg').innerHTML=`Conectando a <span class="mono">${ok[0].puerto}</span>…`; scanEstado('conectando');
   enviar({tipo:'conectar',puerto:ok[0].puerto});
 };
 H.etapa=async(m,id)=>{
   const sel=ETAPAS[m.n].panel;
   if(S.mode==='esp32'&&m.n===1&&m.estado==='curso'){ // con el ESP32 cada verificación empieza sola, en la caja
-    resetUI(); limpiarNav(); F=T=M=null; idActual=''; S.running=true; S.lastResult=null; S.esperandoOtra=false; updateButtons();
+    resetUI(); limpiarNav(); F=T=M=null; idActual=''; S.running=true; S.lastResult=null; S.esperandoOtra=false; S.cerrando=false; updateButtons();
     caption('ESP32','Teclea tu ID y PIN en el teclado de la caja.','wait')}
   if(m.estado==='curso'){await etapaFlujo(m.n,id);panel(sel,'active');
     if(m.n===4) caption('fase 5','Decisión: PIN, umbral de cada factor y fusión ponderada.');}
@@ -152,11 +153,15 @@ H.etapa=async(m,id)=>{
 H.tecla=m=>{flashKey(m.c);serial('in','TECLA:'+(S.showDigits||'#*D'.includes(m.c)?m.c:'•'))};
 H.casillas=m=>{idActual=m.id;setSlots(m.id,m.pin.replace(/\*/g,'•'));
   caption('fase 1',m.fase==='id'?'El usuario escribe su ID de 2 dígitos y presiona #.':'Ahora el PIN de 4 dígitos y #.')};
-H.oled=m=>oled(m.l1,m.l2);
+H.oled=m=>{oled(m.l1,m.l2);
+  if(S.mode!=='esp32') return;
+  if(m.l1==='Cerrando'&&S.esperandoOtra){S.esperandoOtra=false;cerrando(true)}
+  else if(m.l1==='Listo'&&S.cerrando) cerrando(false)};
 H.serie=m=>serial(m.dir,m.linea);
 H.leds=m=>leds(m.verde,m.rojo);
-H.servo=async(m,id)=>{servo(m.n,m.abierto,m.angulo);modServoPinta(m.n,m.angulo??(m.abierto?90:0));if(!m.manual)await wait(300,id)};
-H.servos_error=m=>{const e=$('#msMsg');e.textContent=m.mensaje;e.className='cap ms-msg no'};
+H.servo=async(m,id)=>{servo(m.n,m.abierto,m.angulo);modServoPinta(m.n,m.angulo??(m.abierto?90:0),m.abierto);
+  if(m.manual) servoLlego(m.n); else await wait(300,id)};
+H.servos_error=m=>{const e=$('#msMsg');e.textContent=m.mensaje;e.className='cap ms-msg no';servosError()};
 
 /* ----- huella ----- */
 H.huella_inicio=async(m,id)=>{
@@ -327,7 +332,7 @@ function filaLog(f){const hora=(f.fecha||'').slice(11,19);
   return {hora,id:f.usuario_id??'—',user:f.nombre||'—',pin:!!f.pin_ok,h:f.puntaje_huella!=null?fmt(f.puntaje_huella):null,
     r:f.distancia_rostro!=null?f.distancia_rostro.toFixed(2):null,s:f.fusion!=null?fmt(f.fusion):null,ok:f.decision>0,
     res:f.decision>0?'Nivel '+f.decision:f.pin_ok?'Negado':'Negado · PIN'}}
-H.error=m=>{caption('error',m.mensaje+(m.que_revisar?'. '+m.que_revisar:''),'no');
+H.error=m=>{caption('error',m.mensaje+(m.que_revisar?'. '+m.que_revisar:''),'no'); if(busqueda) scanFin(false);
   if(/cancelada/.test(m.mensaje)){S.running=false;updateButtons()}};
 
 /* ============================================================
@@ -338,12 +343,22 @@ function manualKey(k){flashKey(k);
 function updateButtons(){
   const sim=S.mode==='sim', sinWs=!ws||ws.readyState!==1;
   /* con el ESP32 la verificación empieza en la caja; el botón solo sirve para "Intentar de nuevo" */
-  $('#runBtn').disabled=sinWs||(sim?false:!S.esperandoOtra);
-  $('#runTxt').textContent=!sim?'Intentar de nuevo':S.running?'Reiniciar verificación':'Iniciar verificación';
+  const run=$('#runBtn'), cerr=!sim&&S.cerrando;
+  run.disabled=sinWs||(sim?false:!S.esperandoOtra);
+  cambiarTexto($('#runTxt'),!sim?(cerr?'Cerrando…':'Intentar de nuevo'):S.running?'Reiniciar verificación':'Iniciar verificación');
+  cambiarIcono(icono(run),cerr?'loader-circle':(!sim||S.running)?'rotate-ccw':'play','giro');
+  /* las opciones de simulación (escenario, rostro, velocidad) solo se ven en Simular; en ESP32 el botón
+     principal se oculta: aparece como "Intentar de nuevo" con una decisión en pantalla y "Cerrando…" después */
+  document.querySelectorAll('.solo-sim').forEach(e=>verOcultar(e,sim,'sube'));
+  const llega=!sim&&S.esperandoOtra&&run.hidden;
+  verOcultar(run,sim||S.esperandoOtra||cerr,'crece'); if(llega) brillo(run);
   Object.values(keyEls).forEach(b=>b.disabled=!sim||S.running);
 }
 const LISTO='Elige un escenario y pulsa Iniciar verificación.';
-function detener(){S.runId++;cola=[];$('#nextBtn').hidden=true;nextResolver=null}
+function detener(){S.runId++;cola=[];verOcultar($('#nextBtn'),false,'crece');nextResolver=null}
+/* ESP32: tras "Intentar de nuevo" (o # en la caja) el botón dice "Cerrando…" hasta que la OLED vuelve a "Listo" */
+let cerrandoTope=null;
+function cerrando(on){clearTimeout(cerrandoTope); S.cerrando=on; if(on) cerrandoTope=setTimeout(()=>cerrando(false),8000); updateButtons()}
 function iniciar(){
   if(S.running) enviar({tipo:'cancelar'});
   detener(); resetUI(); limpiarNav(); $('#serial').innerHTML=''; F=T=M=null; DET=null; idActual='';
@@ -352,17 +367,21 @@ function iniciar(){
 }
 $('#runBtn').addEventListener('click',()=>{
   if(S.mode==='esp32'){ if(!S.esperandoOtra) return;
-    S.esperandoOtra=false; updateButtons(); enviar({tipo:'otra'});
+    S.esperandoOtra=false; cerrando(true); enviar({tipo:'otra'});
     caption('ESP32','Cerrando los compartimentos uno a la vez; después empieza una verificación nueva.','wait'); return }
   S.instant=false;iniciar()});
-$('#resetBtn').addEventListener('click',()=>{ if(S.running) enviar({tipo:'cancelar'}); detener(); S.running=false; resetUI(); limpiarNav(); $('#serial').innerHTML='';
+$('#resetBtn').addEventListener('click',()=>{ const quieta=V.vista==='completa'||V.etapa===1; // si la etapa cambia, su transición ya es la señal
+  if(S.running) enviar({tipo:'cancelar'}); detener(); S.running=false; resetUI(); limpiarNav(); $('#serial').innerHTML='';
   if(S.mode==='sim'){oled('Listo','Teclea tu ID'); caption('listo',LISTO,'ok');}
-  updateButtons(); mostrarEtapa(1); });
-$('#nextBtn').addEventListener('click',()=>{ if(nextResolver){const r=nextResolver;nextResolver=null;r()} });
+  updateButtons(); mostrarEtapa(1);
+  animar(icono($('#resetBtn')),[{rotate:'0deg'},{rotate:'-360deg'}],400,CURVA);
+  if(quieta) animar(grid,[{opacity:.35},{opacity:1}],200,'ease-out'); });
+$('#nextBtn').addEventListener('click',()=>{ animar(icono($('#nextBtn')),[{translate:'0 0'},{translate:'4px 0'},{translate:'0 0'}],150,'ease-out');
+  if(nextResolver){const r=nextResolver;nextResolver=null;r()} });
 document.querySelectorAll('#speed button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#speed button').forEach(x=>x.setAttribute('aria-pressed',x===b));
   const v=b.dataset.v; S.step=v==='paso'; S.speed=S.step?1:+v;
-  if(!S.step && nextResolver){const r=nextResolver;nextResolver=null;$('#nextBtn').hidden=true;r()}
+  if(!S.step && nextResolver){const r=nextResolver;nextResolver=null;verOcultar($('#nextBtn'),false,'crece');r()}
 }));
 S.fuenteRostro='dataset';
 document.querySelectorAll('#fuenteRostro button').forEach(b=>b.addEventListener('click',()=>{
@@ -373,13 +392,13 @@ document.querySelectorAll('#fuenteRostro button').forEach(b=>b.addEventListener(
 $('#showDigits').addEventListener('change',e=>{S.showDigits=e.target.checked; setSlots(slotsNow.id,slotsNow.pin,slotsNow.err)});
 function setMode(m){
   S.mode=m; if(!modServos.hidden) modServoModo(); $('#mSim').setAttribute('aria-pressed',m==='sim'); $('#mEsp').setAttribute('aria-pressed',m==='esp32');
-  $('#espPanel').hidden=m!=='esp32';
+  verOcultar($('#espPanel'),m==='esp32','baja'); S.cerrando=false; clearTimeout(cerrandoTope);
   const chip=$('#connChip');
   if(m==='esp32'){ if(S.running){enviar({tipo:'cancelar'});detener();S.running=false} V.curso=0;V.seguir=true;pintarNav();
-    chip.className='chip no'; chip.querySelector('.ic').outerHTML=ic('unplug'); $('#connTxt').textContent='ESP32 · sin conexión';
+    chip.className='chip no'; cambiarIcono(icono(chip),'unplug'); cambiarTexto($('#connTxt'),'ESP32 · sin conexión');
     oled('Sin conexion','con la PC'); caption('ESP32','Modo ESP32: conecta la placa por USB y pulsa Buscar ESP32.','no');
   } else {
-    chip.className='chip ok'; chip.querySelector('.ic').outerHTML=ic('monitor'); $('#connTxt').textContent='Dispositivo simulado';
+    chip.className='chip ok'; cambiarIcono(icono(chip),'monitor'); cambiarTexto($('#connTxt'),'Dispositivo simulado');
     oled('Listo','Teclea tu ID'); caption('listo',LISTO,'ok');
   }
   if(m==='sim') enviar({tipo:'modo',modo:'simular'}); // en ESP32, el backend cambia de modo al conectar
@@ -387,29 +406,42 @@ function setMode(m){
 }
 $('#mSim').addEventListener('click',()=>setMode('sim'));
 $('#mEsp').addEventListener('click',()=>setMode('esp32'));
+/* Buscar ESP32: buscando → conectando → "Conectado" (verde, 1.2 s) o sacudida en rojo; luego vuelve a su estado */
+let busqueda=null, scanTope=null, scanVuelta=null;
+function scanEstado(e){const b=$('#scanBtn'); busqueda=e; clearTimeout(scanTope); clearTimeout(scanVuelta);
+  b.classList.remove('exito','fallo'); b.disabled=true;
+  cambiarIcono(icono(b),'loader-circle'); cambiarTexto($('#scanTxt'),e==='buscando'?'Buscando…':'Conectando…');
+  scanTope=setTimeout(()=>scanFin(false),e==='buscando'?20000:10000)}
+function scanFin(ok){const b=$('#scanBtn'); busqueda=null; clearTimeout(scanTope); clearTimeout(scanVuelta); b.disabled=false;
+  b.classList.toggle('exito',ok); b.classList.toggle('fallo',!ok);
+  cambiarIcono(icono(b),ok?'check':'search'); cambiarTexto($('#scanTxt'),ok?'Conectado':'Buscar ESP32');
+  if(!ok) sacudir(b);
+  scanVuelta=setTimeout(()=>{b.classList.remove('exito','fallo'); cambiarIcono(icono(b),'search'); cambiarTexto($('#scanTxt'),'Buscar ESP32')},1200)}
 $('#scanBtn').addEventListener('click',()=>{
-  $('#scanBtn').disabled=true; $('#scanTxt').textContent='Buscando…';
+  scanEstado('buscando');
   $('#espMsg').innerHTML='Revisando los puertos COM y esperando <span class="mono">HOLA</span>…';
   /* ?puerto=socket://127.0.0.1:5333 busca solo ese puerto (el ESP32 falso) y no toca los COM reales */
   const p=new URLSearchParams(location.search).get('puerto');
   enviar({tipo:'buscar_puertos',puerto:p||undefined,solo:!!p});
 });
-$('#port').addEventListener('change',e=>{ if(e.target.value) enviar({tipo:'conectar',puerto:e.target.value}) });
+$('#port').addEventListener('change',e=>{ if(e.target.value){scanEstado('conectando');enviar({tipo:'conectar',puerto:e.target.value})} });
 
 /* ============================================================
    Módulo Servos: control manual, fuera del flujo de verificación.
    El backend mueve el servo (ESP32: SERVO:n:ángulo) y difunde el evento "servo".
    ============================================================ */
 const modServos=$('#modServos');
-function modServoPinta(n,a){const r=$('#msR'+n);if(!r)return;$('#msA'+n).textContent=a+'°';
-  if(document.activeElement!==r) r.value=a}
+function modServoPinta(n,a,abierto){const r=$('#msR'+n);if(!r)return;$('#msA'+n).textContent=a+'°';
+  if(document.activeElement!==r) r.value=a;
+  if(abierto!=null){const l=$('#msL'+n); l.classList.toggle('ok',!!abierto); l.title=`Compartimento ${n}: ${abierto?'liberado':'bloqueado'}`;
+    cambiarIcono(icono(l),abierto?'lock-keyhole-open':'lock-keyhole');
+    if(!modServos.hidden) destello(r.closest('.ms-servo'))}}
 function modServoModo(){$('#msModo').textContent=S.mode==='esp32'?'ESP32 · servos reales':'Simular · solo dibujo'}
-$('#servosBtn').addEventListener('click',()=>{const abrir=modServos.hidden;modServos.hidden=!abrir;
-  $('#servosBtn').setAttribute('aria-expanded',abrir);if(abrir){modServoModo();$('#msMsg').textContent=''}});
-$('#msCerrar').addEventListener('click',()=>{modServos.hidden=true;$('#servosBtn').setAttribute('aria-expanded',false)});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modServos.hidden){modServos.hidden=true;$('#servosBtn').setAttribute('aria-expanded',false)}});
-modServos.addEventListener('click',e=>{const b=e.target.closest('button[data-accion]');if(!b)return;
-  $('#msMsg').textContent='';$('#msMsg').className='cap ms-msg';
+$('#servosBtn').addEventListener('click',()=>panelServos($('#servosBtn').getAttribute('aria-expanded')!=='true'));
+$('#msCerrar').addEventListener('click',()=>panelServos(false));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#servosBtn').getAttribute('aria-expanded')==='true')panelServos(false)});
+modServos.addEventListener('click',e=>{const b=e.target.closest('button[data-accion]');if(!b||b._ocupado)return;
+  $('#msMsg').textContent='';$('#msMsg').className='cap ms-msg'; servoOcupado(b);
   enviar({tipo:'servo',n:b.dataset.n==='ambos'?'ambos':+b.dataset.n,accion:b.dataset.accion})});
 [1,2].forEach(n=>{const r=$('#msR'+n);let t=0,pend=null;
   const mandar=()=>{t=performance.now();enviar({tipo:'servo',n,angulo:+r.value})};
@@ -424,7 +456,7 @@ modServos.addEventListener('click',e=>{const b=e.target.closest('button[data-acc
   const q=new URLSearchParams(location.search).get('vista');
   let v='etapa';
   if(q==='completa'||q==='etapa') v=q; else {try{v=localStorage.getItem('pia.vista')||'etapa'}catch(e){}}
-  RAIZ.classList.add('sin-anim'); setVista(v,false); verdict(null); resetUI(); pintarNav(); mostrarEtapa(1,false);
+  RAIZ.classList.add('sin-anim'); pildoras(); setVista(v,false); verdict(null); resetUI(); pintarNav(); mostrarEtapa(1,false);
   try{await Promise.all(['500 9px','600 12px','500 13px'].map(f=>document.fonts.load(f+' '+MONO)))}catch(e){}
   await (document.fonts?document.fonts.ready:Promise.resolve());
   oled('Listo','Teclea tu ID'); caption('listo',LISTO,'ok');
