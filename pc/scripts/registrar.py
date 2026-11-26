@@ -92,13 +92,20 @@ def main() -> int:
     if args.rostros:
         cuadros = [leer_png(Path(f), color=True) for p in args.rostros for f in sorted(glob.glob(p))]
     else:
-        cam = camara.desde_config(cfg)
-        print(f"\nRostro: se abre la vista previa. Acomódate y presiona Espacio; gira un poco la cabeza "
-              f"mientras toma {n_r} cuadros.")
-        try:
-            cuadros = vista.capturar_cuadros(cam, n_r, f"PIA - registro de {args.id}")
-        finally:
-            cam.cerrar()
+        # Pausa: da tiempo de pasar la laptop a la red de la cámara (p. ej. el hotspot del celular)
+        input("\nHuellas listas. Si hay que cambiar de red para la cámara, hazlo ahora. Enter para abrir la cámara... ")
+        while True:
+            cam = camara.desde_config(cfg)
+            print(f"\nRostro: se abre la vista previa. Acomódate y presiona Espacio; gira un poco la cabeza "
+                  f"mientras toma {n_r} cuadros.")
+            try:
+                cuadros = vista.capturar_cuadros(cam, n_r, f"PIA - registro de {args.id}")
+                break
+            except camara.CamaraError as e:  # las huellas ya tomadas no se pierden
+                print(f"\nLa cámara no responde: {e}\n  {e.que_revisar}")
+                input("Revisa la red y la IP de IP Webcam; Enter para reintentar (Ctrl+C cancela)... ")
+            finally:
+                cam.cerrar()
         if len(cuadros) < 10:
             print(f"Solo {len(cuadros)} cuadros con rostro (mínimo 10). Registro cancelado; no se guardó nada.")
             return 1
