@@ -17,7 +17,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import camara as camara_, config, simular
+from . import camara as camara_, config, seccion_datos, simular
 from .almacen import Almacen
 from .dispositivos import DispositivoESP32, DispositivoSimulado, ErrorDispositivo, esp32
 from .orquestador import Orquestador
@@ -257,6 +257,8 @@ def crear_app(cfg: config.Config | None = None) -> FastAPI:
     @app.get("/api/bitacora")
     async def bitacora(limite: int = 50):
         return est.alm.bitacora(limite)
+
+    app.include_router(seccion_datos.router(est.alm))
 
     carpeta_app = RAIZ / "app"
     if (carpeta_app / "index.html").exists():

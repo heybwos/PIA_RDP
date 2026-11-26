@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es" data-fondo="a" class="privado">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Datos registrados · PIA</title>
+<link rel="icon" href="icons/fingerprint.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/estilos.css">
+</head>
+<body class="d-pagina">
+<div class="fondo" aria-hidden="true"></div>
+
+<div class="cabecera">
+  <header class="barra vidrio-barra especular">
+    <div class="marca">
+      <div class="marca-ic" aria-hidden="true"><i data-ic="fingerprint"></i></div>
+      <div><strong>Datos registrados</strong><span class="sub">Solo lectura · no sale de esta laptop</span></div>
+    </div>
+    <div class="seg" id="tabs" role="tablist" aria-label="Secciones de datos">
+      <button role="tab" data-t="usuarios" aria-pressed="true" aria-selected="true">Usuarios</button>
+      <button role="tab" data-t="modelo" aria-pressed="false" aria-selected="false">Modelo de rostro</button>
+      <button role="tab" data-t="calibracion" aria-pressed="false" aria-selected="false">Calibración</button>
+      <button role="tab" data-t="banco" aria-pressed="false" aria-selected="false">Banco de huellas</button>
+    </div>
+    <div class="estado">
+      <button class="btn gris chico" id="verImg" aria-pressed="false" title="Las imágenes de huellas y caras empiezan difuminadas"><i data-ic="scan-face"></i><span id="verImgTxt">Mostrar imágenes</span></button>
+      <button class="btn gris chico" id="actualizar" title="Se actualiza solo cada 15 s y al volver a esta pestaña"><i data-ic="rotate-ccw"></i>Actualizar</button>
+      <a class="btn gris chico" href="index.html"><i data-ic="arrow-left"></i>Verificación</a>
+    </div>
+  </header>
+</div>
+
+<main class="wrap d-main">
+  <p class="cap d-estado" id="estado" role="status" aria-live="polite">Cargando…</p>
+
+  <section class="d-tab" id="t-usuarios" role="tabpanel" aria-label="Usuarios">
+    <div class="d-barra-tab">
+      <p class="cap" id="usResumen"></p>
+      <label class="toggle" for="verMin"><input type="checkbox" id="verMin" checked>Dibujar minucias</label>
+      <div class="legend"><span><i class="lg-end"></i>Terminación</span><span><i class="lg-bif"></i>Bifurcación</span></div>
+    </div>
+    <div class="d-rejilla" id="usLista"></div>
+  </section>
+
+  <section class="d-tab" id="t-modelo" role="tabpanel" aria-label="Modelo de rostro" hidden>
+    <div class="d-barra-tab">
+      <div class="seg vidrio" id="dominio" role="group" aria-label="Modelo">
+        <button data-d="camara" aria-pressed="true">Cámara (caja)</button>
+        <button data-d="dataset" aria-pressed="false">ORL (Simular)</button>
+      </div>
+      <p class="cap" id="modResumen"></p>
+    </div>
+    <div id="modCuerpo"></div>
+  </section>
+
+  <section class="d-tab" id="t-calibracion" role="tabpanel" aria-label="Calibración" hidden>
+    <div class="d-barra-tab"><p class="cap">Distribución de puntajes de <b>genuinos</b> (la misma persona) e <b>impostores</b> (otra persona) con los que se eligió cada umbral. Cada distribución está escalada a su propio máximo.</p></div>
+    <div class="d-rejilla d-rejilla-cal" id="calLista"></div>
+  </section>
+
+  <section class="d-tab" id="t-banco" role="tabpanel" aria-label="Banco de huellas" hidden>
+    <div class="d-barra-tab"><p class="cap">Huellas del AS608 para calibrar el umbral: cada dedo es una identidad (no son usuarios del sistema). Las primeras 5 de cada dedo hacen de registro y las demás de prueba.</p></div>
+    <div class="d-rejilla" id="bancoLista"></div>
+  </section>
+</main>
+
+<dialog class="d-visor" id="visor" aria-labelledby="visorTit">
+  <div class="d-visor-cab"><h2 id="visorTit"></h2><span class="meta mono" id="visorMeta"></span>
+    <button class="btn gris chico" id="visorX" aria-label="Cerrar"><i data-ic="x"></i></button></div>
+  <div class="d-visor-cuerpo" id="visorCuerpo"></div>
+</dialog>
+
+<script src="js/base.js"></script>
+<script src="js/datos.js"></script>
+</body>
+</html>

@@ -278,3 +278,40 @@ def test_modulo_servos_por_websocket(sembrado):
         assert (m["n"], m["angulo"], m["abierto"], m["manual"]) == (2, 45, True, True)
         ws.send_json({"tipo": "servo", "n": 1, "accion": "cerrar"})
         assert ws.receive_json()["angulo"] == 0
+
+
+def test_seccion_datos_solo_lectura_y_se_llena_sola(sembrado):
+    """/api/datos: sin PIN, imágenes y minucias de cada muestra, nada fuera de datos/, y un alta
+    nueva aparece sin reiniciar el servidor. Va al final: agrega un usuario al almacén compartido."""
+    from fastapi.testclient import TestClient
+
+    from pia import registro
+    from pia.huella import leer
+    from pia.servidor import crear_app
+
+    alm, cfg = sembrado
+    with TestClient(crear_app(cfg)) as cliente:
+        d = cliente.get("/api/datos").json()
+        assert {u["id"] for u in d["usuarios"]} == {"07", "12"} and all(u["de_prueba"] for u in d["usuarios"])
+        assert "pin" not in str(d["usuarios"]).lower()
+        assert {m["dominio"] for m in d["modelos"]} == {"dataset"} and {c["factor"] for c in d["calibraciones"]} == {"huella", "rostro"}
+        u = d["usuarios"][0]
+        h, r = u["huellas"][0], u["rostros"][0]
+        assert cliente.get(f"/api/datos/huella/{h['id']}.png").headers["content-type"] == "image/png"
+        ms = cliente.get(f"/api/datos/huella/{h['id']}/minucias").json()
+        assert len(ms) == h["n_minucias"] and {"x", "y", "t", "tipo"} <= set(ms[0])
+        rec = cliente.get(f"/api/datos/rostro/{r['id']}/reconstruccion.png?k=5")
+        assert rec.status_code == 200 and rec.content[:4] == b"\x89PNG"
+        assert cliente.get("/api/datos/modelo/dataset/media.png").status_code == 200
+        assert cliente.get("/api/datos/modelo/dataset/eigenface/9999.png").status_code == 404
+        assert cliente.get("/api/datos/modelo/camara/media.png").status_code == 404
+        assert cliente.get("/api/datos/banco/..%2F..%2Fpia.db/01.png").status_code == 404
+        assert cliente.get("/api/datos/tanda2/07/..%2Fpia.db").status_code == 404
+
+        img = leer(DATASETS / "fvc2002" / simular.DB_HUELLA / "105_1.tif")
+        registro.registrar(alm, "33", "Nuevo", 1, "1357", [(img, "fvc2002")], [], {"fvc2002": "fvc2002"})
+        try:
+            nuevo = next(u for u in cliente.get("/api/datos").json()["usuarios"] if u["id"] == "33")
+            assert nuevo["nombre"] == "Nuevo" and len(nuevo["huellas"]) == 1
+        finally:
+            alm.borrar_usuario("33")

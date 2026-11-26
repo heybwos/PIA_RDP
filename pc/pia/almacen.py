@@ -148,6 +148,10 @@ class Almacen:
     def usuarios(self) -> list[dict]:
         return [dict(r) for r in self._sql("SELECT id, nombre, nivel FROM usuarios WHERE activo = 1 ORDER BY id")]
 
+    def usuarios_con_fecha(self) -> list[dict]:
+        """Para la sección Datos de la app: sin PIN ni hash."""
+        return [dict(r) for r in self._sql("SELECT id, nombre, nivel, creado_en FROM usuarios WHERE activo = 1 ORDER BY id")]
+
     def verificar_pin(self, id_: str, pin: str) -> bool:
         r = self._sql("SELECT pin_hash, pin_sal, pin_iter FROM usuarios WHERE id = ? AND activo = 1", (id_,))
         return bool(r) and pin_.verificar(pin, r[0]["pin_hash"], r[0]["pin_sal"], r[0]["pin_iter"])
@@ -175,6 +179,19 @@ class Almacen:
         return [{"muestra_id": f["id"], "fuente": f["fuente"], "archivo": f["archivo"], "perfil": f["perfil"],
                  "minucias": blob_a_minucias(f["minucias"])}
                 for f in filas if fuentes is None or f["fuente"] in fuentes]
+
+    def muestras_huella(self, id_: str | None = None, muestra_id: int | None = None) -> list[dict]:
+        """Muestras con los datos de su plantilla (sin las minucias), para la sección Datos."""
+        filas = self._sql(
+            "SELECT m.id, m.usuario_id, m.fuente, m.archivo, m.ancho, m.alto, m.creada_en, p.perfil, "
+            "p.n_minucias, p.calidad FROM muestras_huella m JOIN plantillas_huella p ON p.muestra_id = m.id "
+            "WHERE (? IS NULL OR m.usuario_id = ?) AND (? IS NULL OR m.id = ?) ORDER BY m.id",
+            (id_, id_, muestra_id, muestra_id))
+        return [dict(f) for f in filas]
+
+    def minucias_de(self, muestra_id: int) -> list[Minucia]:
+        r = self._sql("SELECT minucias FROM plantillas_huella WHERE muestra_id = ?", (muestra_id,))
+        return blob_a_minucias(r[0]["minucias"]) if r else []
 
     # ------------------------------------------------------------------ rostro
     def agregar_rostro(self, id_: str, cuadro: np.ndarray, fuente: str, r: ResultadoRostro) -> int:
@@ -220,6 +237,10 @@ class Almacen:
             self._modelos[mid] = Modelo.cargar(self.ruta(r[0]["archivo"]))
         return mid, self._modelos[mid]
 
+    def modelos_activos(self) -> list[dict]:
+        return [dict(r) for r in self._sql("SELECT id, dominio, k, varianza, n_entrenamiento, creado_en "
+                                           "FROM modelos_rostro WHERE activo = 1 ORDER BY dominio")]
+
     def guardar_vectores(self, modelo_id: int, vectores: dict[int, np.ndarray]) -> None:
         with self._lock, self.db:
             self.db.executemany("INSERT OR REPLACE INTO vectores_rostro VALUES (?,?,?)",
@@ -246,6 +267,9 @@ class Almacen:
     def calibracion_activa(self, factor: str, dominio: str) -> dict | None:
         r = self._sql("SELECT * FROM calibraciones WHERE factor = ? AND dominio = ? AND activa = 1", (factor, dominio))
         return dict(r[0]) if r else None
+
+    def calibraciones_activas(self) -> list[dict]:
+        return [dict(r) for r in self._sql("SELECT * FROM calibraciones WHERE activa = 1 ORDER BY factor, dominio")]
 
     # ------------------------------------------------------------------ bitácora
     def agregar_bitacora(self, fila: dict[str, Any]) -> dict:

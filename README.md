@@ -40,6 +40,7 @@ Abre `http://127.0.0.1:8000` (Ctrl + F5 tras actualizar).
 - **ESP32:** botón ESP32 → Buscar ESP32 (una vez). En la caja: `ID#PIN#`, el dedo en el sensor y la
   cara dentro del óvalo de la cámara. Tras el resultado, "Intentar de nuevo" o `#` en la caja.
 - **Servos:** botón en la barra superior para mover los compartimentos a mano.
+- **Datos:** botón en la barra superior (abre otra pestaña). Muestra, solo para consulta, las huellas con sus minucias, las caras alineadas, el modelo de Eigenfaces (cara media, eigenfaces y reconstrucción), las calibraciones y el banco de huellas. Las imágenes empiezan difuminadas; se actualiza sola cuando alguien se registra.
 
 ### Cámara (IP Webcam en Android)
 

@@ -21,7 +21,7 @@ El estado de la maqueta anterior (13 de noviembre) está en el historial de git 
 |---|---|
 | Hardware | ESP32 (CH340, COM4), AS608, teclado 4×4, OLED SSD1306 (0x3C), 2 servos SG90. **LEDs sin conectar.** |
 | Firmware (`firmware/`) | `esp32dev` cargado y funcionando. Entornos de prueba por módulo aprobados en P4. |
-| Backend (`pc/pia/`) | Pipeline de huella y rostro, base SQLite, orquestador, FastAPI + WebSocket. 33 pruebas pasan. |
+| Backend (`pc/pia/`) | Pipeline de huella y rostro, base SQLite, orquestador, FastAPI + WebSocket. 37 pruebas pasan. Sección Datos (`app/datos.html`, `pc/pia/seccion_datos.py`): consulta de solo lectura de usuarios, modelo de rostro, calibración y banco. |
 | App (`app/`) | Modo Simular y modo ESP32 de punta a punta. Regresiones de Playwright OK. |
 | Compuertas | **G1** (imagen del AS608) y **G2** (verificación real con la caja, nivel 2 concedido) cumplidas. |
 | Calibración | Activa pero **provisional** (ver sección 3). |
