@@ -85,7 +85,7 @@ def correr(alm, cfg, datos, *falla: str):
 
 def test_buscar_encuentra_al_falso():
     with Falso() as f:
-        lista = buscar(extra=[f.url])
+        lista = buscar(extra=[f.url], solo_extra=True)  # sin tocar los COM reales: abrirlos reinicia la caja
     yo = next(p for p in lista if p["puerto"] == f.url)
     assert yo["responde"] and yo["version"] == "falso-1.0" and yo["sensor"] and yo["oled"]
 
