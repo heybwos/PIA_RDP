@@ -5,6 +5,8 @@ Resumen para retomar el trabajo en otra PC o en una sesión nueva de Claude Code
 **Última actualización: 25 de noviembre de 2026 (miércoles).** Entrega: **viernes 27 de noviembre de 2026** (se movió del martes 17).
 El estado de la maqueta anterior (13 de noviembre) está en el historial de git de este archivo.
 
+**En la laptop de la demo:** seguir `docs/PLAN_LAPTOP.md` (ponerla al día, registrar a los compañeros en el salón, recalibrar).
+
 **Orden de lectura para retomar:**
 1. Este archivo.
 2. `CLAUDE.md` (raíz): comandos, reglas y trampas conocidas.
