@@ -18,9 +18,12 @@ function pintar(cv,im,estirar=false){const d=dec(im);if(cv.width!==im.ancho||cv.
 /* ---------- conexión ---------- */
 let ws=null, cola=[], procesando=false, reintento=null;
 function enviar(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
+/* una pestaña oculta anima al instante: no debe marcarle el ritmo a la caja (ver listo) */
+function avisarVisible(){enviar({tipo:'visible',visible:!document.hidden})}
+document.addEventListener('visibilitychange',avisarVisible);
 function conectar(){
   ws=new WebSocket(`${location.protocol==='https:'?'wss':'ws'}://${location.host}/ws`);
-  ws.onopen=()=>{clearTimeout(reintento)};
+  ws.onopen=()=>{clearTimeout(reintento); avisarVisible()};
   ws.onmessage=e=>{const m=JSON.parse(e.data);
     if(m.tipo==='estado'){H.estado(m);return}       // el estado no espera turno
     /* la cámara en vivo tampoco: si la cola sigue animando la huella, se adelanta hasta alcanzarla */
@@ -239,7 +242,7 @@ H.huella_reintento=async(m,id)=>{
   await wait(1200,id);
 };
 /* avisa al backend que la app terminó de mostrar un punto (solo con el ESP32: sincroniza la caja) */
-function listo(punto){ if(S.mode==='esp32') enviar({tipo:'listo',punto}) }
+function listo(punto){ if(S.mode==='esp32'&&!document.hidden) enviar({tipo:'listo',punto}) }
 /* 3 decimales cerca del umbral: que no se vea "0.60" y luego salga negado */
 function fmt3(v,u){ return Math.abs(v-u)<0.01?v.toFixed(3):fmt(v) }
 

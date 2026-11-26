@@ -39,6 +39,8 @@ class Estado:
     def __init__(self, cfg: config.Config, alm: Almacen):
         self.cfg, self.alm = cfg, alm
         self.clientes: set[WebSocket] = set()
+        self.ocultos: set[WebSocket] = set()  # pestañas en segundo plano: animan al instante, no marcan el ritmo
+        self.esperando: str | None = None     # punto que la caja espera en este momento
         self.tarea: asyncio.Task | None = None
         self.modo = "simular"
         self.orq = Orquestador(alm, cfg, self.difundir)
@@ -50,16 +52,40 @@ class Estado:
 
     async def esperar_app(self, punto: str, limite_s: float) -> None:
         """En modo ESP32, la caja espera a que la app termine de animar `punto` (la app manda
-        {"tipo": "listo", "punto": …}). Sin app conectada, o al pasar el límite, sigue sola."""
-        if self.modo != "esp32" or not self.clientes:
+        {"tipo": "listo", "punto": …}). Solo cuenta una pestaña visible: una oculta anima al instante y
+        adelantaría a la caja. Sin ninguna visible, o al pasar el límite, sigue sola."""
+        if self.modo != "esp32" or not self.hay_visibles():
             return
         ev = self.listos.setdefault(punto, asyncio.Event())
+        self.esperando = punto
         try:
             await asyncio.wait_for(ev.wait(), limite_s)
         except asyncio.TimeoutError:
             pass
         finally:
             ev.clear()
+            self.esperando = None
+
+    def listo_de(self, sock: WebSocket, punto: str) -> None:
+        if sock not in self.ocultos:
+            self.app_lista(punto)
+
+    def hay_visibles(self) -> bool:
+        return any(ws not in self.ocultos for ws in self.clientes)
+
+    def visibilidad(self, sock: WebSocket, visible: bool) -> None:
+        (self.ocultos.discard if visible else self.ocultos.add)(sock)
+        self._soltar_si_nadie_ve()
+
+    def quitar_cliente(self, sock: WebSocket) -> None:
+        self.clientes.discard(sock)
+        self.ocultos.discard(sock)
+        self._soltar_si_nadie_ve()
+
+    def _soltar_si_nadie_ve(self) -> None:
+        """Si la última pestaña visible se oculta o se cierra, la caja no se queda esperando."""
+        if self.esperando and not self.hay_visibles():
+            self.app_lista(self.esperando)
 
     async def mover_servos(self, msg: dict) -> None:
         """Módulo Servos de la app: {n: 1|2|"ambos", angulo} o {n, accion: "abrir"|"cerrar"}."""
@@ -92,7 +118,7 @@ class Estado:
             try:
                 await ws.send_text(texto)
             except Exception:  # noqa: BLE001
-                self.clientes.discard(ws)
+                self.quitar_cliente(ws)
 
     def resumen(self) -> dict[str, Any]:
         escs = simular.cargar_escenarios(self.alm)
@@ -237,7 +263,9 @@ def crear_app(cfg: config.Config | None = None) -> FastAPI:
                         await est.desconectar()
                     await est.difundir("estado", est.resumen())
                 elif tipo == "listo":
-                    est.app_lista(str(msg.get("punto", "")))
+                    est.listo_de(sock, str(msg.get("punto", "")))
+                elif tipo == "visible":
+                    est.visibilidad(sock, bool(msg.get("visible", True)))
                 elif tipo == "otra":
                     est.otra.set()
                 elif tipo == "servo":
@@ -252,7 +280,7 @@ def crear_app(cfg: config.Config | None = None) -> FastAPI:
                     await sock.send_text(json.dumps({"tipo": "error", "mensaje": f"Mensaje no soportado: {tipo}",
                                                      "que_revisar": "docs/EVENTOS.md"}))
         except WebSocketDisconnect:
-            est.clientes.discard(sock)
+            est.quitar_cliente(sock)
 
     @app.get("/api/bitacora")
     async def bitacora(limite: int = 50):

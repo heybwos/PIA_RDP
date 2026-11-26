@@ -33,7 +33,7 @@ FIME UANL. Entrega el **viernes 27 de noviembre de 2026** (se movió del martes 
 
 ```powershell
 & .\pc\scripts\arrancar.ps1 [-CargarFirmware]           # backend en http://127.0.0.1:8000
-.\.venv\Scripts\python.exe -m pytest pc\tests -q        # 37 pruebas (las de ORL/FVC necesitan datos\datasets)
+.\.venv\Scripts\python.exe -m pytest pc\tests -q        # 38 pruebas (las de ORL/FVC necesitan datos\datasets)
 node app\pruebas\regresion.js; node app\pruebas\regresion_esp32.js   # requieren `npm i playwright` (usa Edge)
 .\.venv\Scripts\python.exe pc\scripts\verificar_consola.py --todos   # 5 escenarios de Simular
 & .\pc\scripts\prueba_modulo.ps1 -Entorno <entorno> -Puerto COM4 [-SinMonitor]

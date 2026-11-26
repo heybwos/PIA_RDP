@@ -53,7 +53,8 @@ En modo ESP32 el estado trae `conexion` = {puerto, version, sensor, oled}. Cada 
 | `tecla` | `c` |
 | `cancelar` | — |
 | `otra` | — | ESP32: "Intentar de nuevo": la caja cierra los servos uno a la vez y empieza otra verificación |
-| `listo` | `punto` (`huella`, `veredicto`) | Solo en modo ESP32: la app terminó de animar ese punto. El backend espera este aviso (máximo 30 s) antes de encender la cámara y antes de mandar `ACCESO` a la caja, para que lo físico vaya al ritmo de la pantalla |
+| `listo` | `punto` (`huella`, `veredicto`) | Solo en modo ESP32: la app terminó de animar ese punto. El backend espera este aviso (máximo 30 s) antes de encender la cámara y antes de mandar `ACCESO` a la caja, para que lo físico vaya al ritmo de la pantalla. Solo cuenta el de una pestaña visible |
+| `visible` | `visible` (bool) | Al conectar y en cada cambio de visibilidad. Una pestaña oculta anima al instante: su `listo` se ignora para que no adelante a la caja. Si ninguna pestaña está visible, el backend no espera |
 | `modo` | `modo` (`simular` o `esp32`) |
 | `buscar_puertos` | `puerto` (opcional, `socket://…` del ESP32 falso), `solo` (true: no prueba los COM reales) |
 | `conectar` | `puerto` |

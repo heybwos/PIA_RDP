@@ -315,3 +315,33 @@ def test_seccion_datos_solo_lectura_y_se_llena_sola(sembrado):
             assert nuevo["nombre"] == "Nuevo" and len(nuevo["huellas"]) == 1
         finally:
             alm.borrar_usuario("33")
+
+
+def test_pestana_oculta_no_adelanta_a_la_caja(tmp_path):
+    """Con dos pestañas abiertas, la oculta (anima al instante) no puede soltar los servos antes que la
+    visible. Si la última visible se oculta, la caja sigue sola; sin ninguna visible, no espera."""
+    from pia.servidor import Estado
+
+    est = Estado(config.cargar(datos__carpeta=str(tmp_path)), Almacen(tmp_path))
+    est.modo = "esp32"
+    visible, oculta = object(), object()
+    est.clientes |= {visible, oculta}
+    est.visibilidad(oculta, False)
+
+    async def caso():
+        t = asyncio.create_task(est.esperar_app("veredicto", 5))
+        await asyncio.sleep(0.05)
+        est.listo_de(oculta, "veredicto")
+        await asyncio.sleep(0.05)
+        assert not t.done()                       # el aviso de la oculta no cuenta
+        est.listo_de(visible, "veredicto")
+        await asyncio.wait_for(t, 1)              # el de la visible sí
+
+        t = asyncio.create_task(est.esperar_app("huella", 5))
+        await asyncio.sleep(0.05)
+        est.visibilidad(visible, False)           # se oculta la última visible
+        await asyncio.wait_for(t, 1)
+        await asyncio.wait_for(est.esperar_app("veredicto", 5), 1)   # nadie la ve: no espera
+
+    asyncio.run(caso())
+    est.alm.cerrar()
