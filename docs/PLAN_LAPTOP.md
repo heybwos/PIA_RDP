@@ -18,6 +18,7 @@ Los datos biométricos **no viajan por git** (`datos/` está en `.gitignore`). V
 - [ ] Crear el respaldo: `.\.venv\Scripts\python.exe pc\scripts\respaldo.py crear` → queda en `datos\respaldos\pia_<fecha>.zip`.
       Lleva el usuario 21 (Nestor), el banco de huellas del AS608 (6 dedos de Nestor), la segunda tanda de rostro
       y las calibraciones activas.
+- [x] Respaldo creado el 25 nov: `datos\respaldos\pia_20261125_230030.zip` (31 MB, verificado).
 - [ ] Copiar ese ZIP a la USB (y una segunda copia en otro lado).
 - [ ] Confirmar que GitHub tiene el último commit de la rama `claude/exciting-davinci-aqy6kg`.
 
@@ -36,6 +37,14 @@ Los datos biométricos **no viajan por git** (`datos/` está en `.gitignore`). V
       una verificación en Simular. Debe verse la píldora deslizante y, en modo ESP32, desaparecer escenario/rostro/velocidad.
 - [ ] Opcional: `npm i --no-save playwright` y las dos regresiones de `CLAUDE.md`.
 
+- [ ] **IP de la cámara.** La laptop y el celular van en el **hotspot del celular**. IP Webcam mostró
+      `http://10.28.183.166:8080` el 25 nov. Si la laptop ya tenía `config.toml`, ni el instalador ni el respaldo lo
+      reemplazan, así que hay que escribir la URL a mano: en VS Code, línea `url = ...` de `[camara]`, o desde la raíz del repo:
+      `$c = (Get-Content config.toml -Raw -Encoding UTF8) -replace '(?m)^url = .*', 'url = "http://10.28.183.166:8080/video"'; [IO.File]::WriteAllText("$PWD\config.toml", $c)`
+      (**no** usar `Set-Content -Encoding utf8`: en PowerShell 5.1 agrega BOM y el backend ya no puede leer el TOML),
+      y comprobar con `.\.venv\Scripts\python.exe pc\scripts\probar_camara.py`.
+      Antes de cada sesión, ver la IP en la pantalla de IP Webcam: Android puede cambiarla al apagar y prender el hotspot.
+
 El ESP32 de la caja ya tiene el firmware `esp32dev` con los pines nuevos del teclado: no hace falta cargarlo en casa.
 
 ## 2. En el salón, jueves 26 (registro y calibración)
@@ -45,8 +54,8 @@ El ESP32 de la caja ya tiene el firmware `esp32dev` con los pines nuevos del tec
 - [ ] Celular en su soporte, en vertical, a la altura de la cara, en el lugar exacto donde va a estar en la demo.
       Anotar dónde (foto del montaje) para repetirlo el viernes.
 - [ ] Luz: la del salón a la hora de la demo. Evitar ventana detrás de la persona.
-- [ ] Red: probar si la red de la escuela deja que la laptop vea al celular. Si no, **hotspot del celular** y la laptop
-      conectada a él. La IP cambia: ponerla en `config.toml` → `[camara] url = "http://<IP>:8080/video"`.
+- [ ] Red: **hotspot del celular** con la laptop conectada a él (decidido el 25 nov; no depende de la red de la escuela).
+      Revisar en IP Webcam que la IP siga siendo `10.28.183.166`; si cambió, actualizar `config.toml` (paso de la sección 1).
 - [ ] Probar la cámara: `.\.venv\Scripts\python.exe pc\scripts\probar_camara.py` (IP Webcam a 640 × 480, `rotacion = 90`).
 
 ### 2.2 Datos de cada compañero (llenar antes de empezar)

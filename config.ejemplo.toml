@@ -12,7 +12,7 @@ banco_simular = "fvc2002"  # "fvc2002" o "sintetico"
 
 [camara]
 fuente = "url"             # "url", "indice" o "dataset"
-url = "http://192.168.1.50:8080/video"   # IP Webcam (Android, 640x480, sin marca de agua). DroidCam: :4747/video
+url = "http://10.28.183.166:8080/video"   # IP Webcam en el hotspot del celular (demo, 25 nov). 640x480. DroidCam: :4747/video
 indice = 1
 rotacion = 90             # 0, 90, 180 o 270 (horario). Celular en vertical: 90. probar_camara.py la detecta
 rostro_simular = "dataset" # "dataset" o "camara"
