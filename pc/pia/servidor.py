@@ -123,7 +123,7 @@ class Estado:
             return
         disp, cam = simular.preparar(escs[escenario], velocidad, int(self.cfg.valor("actuadores.ms_entre_servos", 300)))
         if fuente_rostro == "camara":
-            cam = camara_.desde_config(self.cfg)
+            cam = await asyncio.to_thread(camara_.desde_config, self.cfg)  # prueba la IP sin frenar al servidor
 
         async def correr():
             try:
@@ -176,7 +176,7 @@ class Estado:
         while disp.conectado:
             for ev in self.listos.values():  # avisos viejos de la app no cuentan para este intento
                 ev.clear()
-            cam = camara_.desde_config(self.cfg)
+            cam = await asyncio.to_thread(camara_.desde_config, self.cfg)  # prueba la IP sin frenar al servidor
             try:
                 res = await self.orq.verificar(disp, cam, "esp32")
             finally:
