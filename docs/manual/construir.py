@@ -63,9 +63,12 @@ def paginas_de(titulos: list[tuple[str, str]]) -> dict[str, int]:
     textos = [" ".join(p.get_text().split()) for p in doc]
     inicio = next(i for i, t in enumerate(textos) if i > 1 and "capítulo 1" in t.lower())
     res = {}
-    for clave, tit in titulos:
+    # primero los capítulos; cada sección se busca desde la página de su capítulo, así un título
+    # corto ("Rostro") no se confunde con la misma palabra en un capítulo anterior
+    for clave, tit in sorted(titulos, key=lambda c: "-" in c[0]):
         buscado = " ".join(html.unescape(tit).split())
-        for i in range(inicio, len(textos)):
+        desde = res.get(clave.split("-")[0], inicio + 1) - 1 if "-" in clave else inicio
+        for i in range(desde, len(textos)):
             if buscado in textos[i]:
                 res[clave] = i + 1
                 break
