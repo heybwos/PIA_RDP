@@ -14,9 +14,9 @@ Cuando el usuario diga "ya estoy en la laptop", Claude Code sigue este documento
 - [x] Laptop al día (rama, `instalar.ps1` con el respaldo de la USB, pruebas en verde). Caja en COM3 y luego COM8.
 - [x] La WiFi **FIME aísla a los clientes**: la laptop no ve al celular. Cámara por el **hotspot** (`url_respaldo`,
       `10.28.183.166`); `[camara] url` se deja vacía. Con la laptop en el hotspot no hay internet (ni Claude).
-- [x] Registrados en el salón: **Nestor (21)** otra vez (cara nueva, mismas huellas), **Orlando (33)**, **Sandra (14)**, **Luis (15)** y **Santiago (99)**,
+- [x] Registrados en el salón: **Nestor (21)** otra vez (cara nueva, mismas huellas), **Orlando (33)**, **Sandra (14)**, **Luis (15)**, **Santiago (99)** e **Ivan (88)**,
       pulgar y cara, con segunda tanda. Altas con `pc\scripts\alta_companero.py` (hace todo, con pausa para el hotspot).
-- [x] Rostro recalibrado con criterio **EER**: umbral 10.18 (FAR = FRR = 8 % con 5 usuarios; 10 % con 4 y 6.7 % con 3). Con FAR 0 el FRR era 45 %.
+- [x] Rostro recalibrado con criterio **EER**: umbral 10.24 (EER 8.0 % con 6 usuarios; 8 % con 5, 10 % con 4 y 6.7 % con 3). Con FAR 0 el FRR era 45 %.
 - [ ] Prueba de aceptación (10 genuinos y 10 impostores por persona) y anotar los números.
 - [ ] Copiar el respaldo más reciente (`datos\respaldos\pia_20261126_*.zip`) a la USB.
 - La huella **no** se recalibró: el banco sigue siendo de los 6 dedos de Nestor (paso 2.3.2 omitido por tiempo).

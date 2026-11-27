@@ -207,7 +207,7 @@ const contenido = [
   ]),
 
   h1("5. Reconocimiento de rostro"),
-  p("Las fases están en la Tabla 3. El modelo de Eigenfaces se reentrena con cada alta: hoy usa 195 caras (las 75 de los cinco usuarios y 120 de fondo del banco ORL) y k = 88 componentes, que explican el 95 % de la varianza."),
+  p("Las fases están en la Tabla 3. El modelo de Eigenfaces se reentrena con cada alta: hoy usa 210 caras (las 90 de los seis usuarios y 120 de fondo del banco ORL) y k = 96 componentes, que explican el 95 % de la varianza."),
   tituloTabla("Fases del reconocimiento de rostro."),
   tabla([2000, 3000, 4360], [
     ["Fase", "Método", "Detalle"],
@@ -226,14 +226,14 @@ const contenido = [
 
   h1("7. Calibración y resultados"),
   h2("7.1 Calibración"),
-  p("Los umbrales se eligieron con puntajes de comparaciones genuinas (la misma persona) e impostoras (personas distintas). La huella se calibró con un banco de 6 dedos de una persona, 8 capturas cada uno; cada dedo cuenta como una identidad. El rostro se calibró el 26 de noviembre en el salón de la demostración: 10 cuadros de una segunda tanda de cada usuario (14, 15, 21, 33 y 99) contra sus registros, y como impostores los otros usuarios y 160 caras del banco ORL. La Tabla 4 resume los resultados."),
+  p("Los umbrales se eligieron con puntajes de comparaciones genuinas (la misma persona) e impostoras (personas distintas). La huella se calibró con un banco de 6 dedos de una persona, 8 capturas cada uno; cada dedo cuenta como una identidad. El rostro se calibró el 26 de noviembre en el salón de la demostración: 10 cuadros de una segunda tanda de cada usuario (14, 15, 21, 33, 88 y 99) contra sus registros, y como impostores los otros usuarios y 160 caras del banco ORL. La Tabla 4 resume los resultados."),
   tituloTabla("Calibración activa."),
   tabla([1500, 1500, 1100, 1100, 1100, 1100, 1960], [
     ["Factor", "Criterio", "Umbral", "FAR", "FRR", "EER", "Comparaciones"],
     ["Huella (AS608)", "FAR = 0", "0.180", "0 %", "33 %", "16.7 %", "18 genuinas, 90 impostoras"],
-    ["Rostro (cámara)", "EER", "10.18", "8 %", "8 %", "8 %", "50 genuinas, 1000 impostoras"],
+    ["Rostro (cámara)", "EER", "10.24", "7.7 %", "8.3 %", "8.0 %", "60 genuinas, 1260 impostoras"],
   ]),
-  p("Para el rostro se probó primero el criterio FAR = 0: con tres usuarios el umbral quedaba en 9.25 y rechazaba al 45 % de los usuarios legítimos, porque las distancias de genuinos e impostores se enciman. Por eso se usó el EER, que fue de 6.7 %, 10 % y 8 % con tres, cuatro y cinco usuarios. El 8 % de impostores que el rostro acepta todavía tiene que pasar la huella y la fusión. Las Figuras 3 y 4 muestran las distribuciones y las curvas FAR y FRR."),
+  p("Para el rostro se probó primero el criterio FAR = 0: con tres usuarios el umbral quedaba en 9.25 y rechazaba al 45 % de los usuarios legítimos, porque las distancias de genuinos e impostores se enciman. Por eso se usó el EER, que fue de 6.7 %, 10 %, 8 % y 8.0 % con tres, cuatro, cinco y seis usuarios. El 7.7 % de impostores que el rostro acepta todavía tiene que pasar la huella y la fusión. Las Figuras 3 y 4 muestran las distribuciones y las curvas FAR y FRR."),
   ...figura("calibracion_huella.png", 520, "Calibración de la huella: distribuciones de puntajes y curvas FAR (rojo) y FRR (verde)."),
   ...figura("calibracion_rostro.png", 520, "Calibración del rostro: distribuciones de distancias y curvas FAR y FRR."),
   p("Para el modo de simulación (sin hardware) se usan los bancos públicos FVC2002 DB1_B para huella y ORL para rostro (Maio et al., 2002; Samaria y Harter, 1994), con un EER de 0.2 % y 8.2 % respectivamente."),
@@ -258,6 +258,7 @@ const contenido = [
     ["15", "___ / 10", "___ / 10", ""],
     ["21", "___ / 10", "___ / 10", ""],
     ["33", "___ / 10", "___ / 10", ""],
+    ["88", "___ / 10", "___ / 10", ""],
     ["99", "___ / 10", "___ / 10", ""],
     ["Sistema", "FRR = ___ %", "FAR = ___ %", ""],
   ]),
@@ -265,14 +266,14 @@ const contenido = [
   h1("8. Limitaciones"),
   ...lista([
     "El AS608 entrega imágenes de 4 bits y de área pequeña; el banco para calibrar la huella es de una sola persona, así que su umbral es provisional.",
-    "Con cinco usuarios reales, la FAR del rostro se estima con pocas comparaciones entre personas del equipo.",
+    "Con seis usuarios reales, la FAR del rostro se estima con pocas comparaciones entre personas del equipo.",
     "Eigenfaces es sensible a la iluminación: hay que registrar y verificar con la misma luz y la cámara en la misma posición.",
     "La red WiFi de la facultad aísla a los equipos entre sí; la cámara se conecta por el hotspot del celular.",
   ]),
 
   h1("9. Conclusiones"),
   p("El sistema cumplió con lo que pedía el PIA. La caja abre el compartimento que corresponde al nivel del usuario solo cuando el PIN, la huella y el rostro coinciden, y la aplicación muestra cada fase del reconocimiento con datos reales."),
-  p("En la prueba con impostor del 26 de noviembre, el rostro de una compañera pasó por poco el umbral de otro usuario, pero su huella no, y el sistema negó el acceso. Con los datos disponibles, el rostro alcanzó un EER de 8 % y la huella uno de 16.7 %, así que ninguno de los dos factores sería confiable por sí solo; fue la combinación la que evitó el acceso indebido."),
+  p("En la prueba con impostor del 26 de noviembre, el rostro de una compañera pasó por poco el umbral de otro usuario, pero su huella no, y el sistema negó el acceso. Con los datos disponibles, el rostro alcanzó un EER de 8.0 % y la huella uno de 16.7 %, así que ninguno de los dos factores sería confiable por sí solo; fue la combinación la que evitó el acceso indebido."),
   p("Lo que más pesó en los resultados fueron las limitaciones de la sección 8, en particular el banco de huellas de una sola persona y la iluminación: las caras registradas en casa fallaron en el salón hasta que se volvieron a registrar ahí. Con más usuarios y un banco de huellas de varias personas se podrían estimar los umbrales con más confianza."),
 
   new Paragraph({ children: [new PageBreak()] }),
