@@ -56,6 +56,7 @@ que la laptop. Para probar y guardar la URL:
 
 | Qué | Comando (desde la raíz) |
 |---|---|
+| Alta completa (firmware de captura, registro, segunda tanda, recalibrar rostro, firmware principal) | `.\.venv\Scripts\python.exe pc\scripts\alta_companero.py --id 14 --nombre "X" --nivel 1` (app apagada; mantener BOOT dos veces) |
 | Registrar a alguien (AS608 + cámara) | `.\.venv\Scripts\python.exe pc\scripts\registrar.py --id 03 --nombre "X" --nivel 2 --puerto COM4 --fuente-rostro camara` (firmware `test_huella_imagen`) |
 | Segunda tanda de cara | `.\.venv\Scripts\python.exe pc\scripts\capturar_rostros.py --id 03` |
 | Banco de huellas para calibrar | `.\.venv\Scripts\python.exe pc\scripts\capturar_banco.py --puerto COM4` (firmware `test_huella_imagen`) |
