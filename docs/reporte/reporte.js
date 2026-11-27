@@ -250,18 +250,19 @@ const contenido = [
   ]),
 
   h2("7.3 Prueba de aceptación"),
-  p("Por persona se hacen 10 intentos genuinos y 10 de impostor (otra persona teclea su ID y PIN y pone su propio dedo y rostro). La Tabla 6 se completa con esa prueba."),
-  tituloTabla("Prueba de aceptación (por completar)."),
-  tabla([2400, 2300, 2300, 2360], [
+  p("La prueba planeada era de 10 intentos genuinos y 10 de impostor por persona; en el impostor, otra persona teclea el ID y el PIN del usuario y pone su propio dedo y su rostro. El 26 de noviembre, después del registro en el salón, se alcanzaron a hacer los intentos de la Tabla 6. Los 5 genuinos entraron con su nivel y los 3 de impostor se negaron: en dos de ellos el rostro del impostor sí pasó su umbral y fue la huella la que lo detuvo."),
+  tituloTabla("Intentos con la caja después del registro en el salón (26 de noviembre)."),
+  tabla([2000, 2400, 2400, 2560], [
     ["Usuario", "Genuinos aceptados", "Impostores rechazados", "Observaciones"],
-    ["14", "___ / 10", "___ / 10", ""],
-    ["15", "___ / 10", "___ / 10", ""],
-    ["21", "___ / 10", "___ / 10", ""],
-    ["33", "___ / 10", "___ / 10", ""],
-    ["88", "___ / 10", "___ / 10", ""],
-    ["99", "___ / 10", "___ / 10", ""],
-    ["Sistema", "FRR = ___ %", "FAR = ___ %", ""],
+    ["14 (Sandra)", "1 / 1", "—", ""],
+    ["15 (Luis)", "1 / 1", "—", ""],
+    ["21 (Nestor)", "2 / 2", "2 / 2", "Un impostor pasó el rostro (0.541); lo detuvo la huella."],
+    ["33 (Orlando)", "—", "—", "Sin intentos registrados."],
+    ["88 (Ivan)", "1 / 1", "1 / 1", "El impostor pasó el rostro (0.520); lo detuvo la huella."],
+    ["99 (Santiago)", "—", "—", "3 intentos con PIN incorrecto, negados antes de la biometría."],
+    ["Sistema", "5 / 5 (FRR = 0 %)", "3 / 3 (FAR = 0 %)", "Muestra pequeña: 8 intentos."],
   ]),
+  p("Con 8 intentos, un FAR y un FRR de 0 % solo indican que no hubo errores en esta muestra; no son una estimación precisa de las tasas del sistema. Las tasas de cada factor de la Tabla 4 se calcularon con muchas más comparaciones."),
 
   h1("8. Limitaciones"),
   ...lista([

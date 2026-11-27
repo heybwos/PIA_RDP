@@ -89,7 +89,7 @@ Respaldo más reciente: `datos\respaldos\pia_20261126_*.zip` (copiarlo a la USB)
 
 **Calendario:** jueves 26 = registrar a los compañeros y recalibrar; viernes 27 = entrega y demo.
 
-1. **Prueba de aceptación:** por persona (14, 15, 21, 33, 88, 99), 10 intentos genuinos y 10 de impostor (otro teclea su ID y PIN y pone su dedo y su cara). Anotar aceptados y rechazados por factor y del sistema: van al reporte (sección de resultados en `docs/reporte/`).
+1. **Prueba de aceptación** (parcial el 26 nov: 5 genuinos aceptados y 3 impostores rechazados, en la Tabla 6 del reporte). Completar por persona (14, 15, 21, 33, 88, 99) hasta 10 intentos genuinos y 10 de impostor (otro teclea su ID y PIN y pone su dedo y su cara). Anotar aceptados y rechazados por factor y del sistema: van al reporte (sección de resultados en `docs/reporte/`).
 2. **Más compañeros**, si llegan: `pc\scripts\alta_companero.py --id <ID> --nombre "<nombre>" --nivel <1|2>` con la app apagada.
 3. **Reporte:** completar `docs/reporte/` con los números de la prueba de aceptación.
 4. **N8:** `docs/DEMO.md` (guion de 5 minutos, lista previa, solución de problemas).
