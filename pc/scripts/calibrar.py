@@ -113,8 +113,10 @@ def grafica(gen, imp, umbral: float, mayor_es_mejor: bool, titulo: str, destino:
     t = lambda s, x, y, c=(0, 0, 0): cv2.putText(img, s, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, c, 1, cv2.LINE_AA)  # noqa: E731
     t(titulo, m, 30)
     t(f"umbral {umbral:.3f}", X(umbral) + 6, m + 14)
-    t("genuinos / FRR", W - 330, 30, (40, 140, 40))
-    t("impostores / FAR", W - 180, 30, (40, 40, 200))
+    ancho = lambda s: cv2.getTextSize(s, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0][0]  # noqa: E731
+    x_imp = W - m - ancho("impostores / FAR")  # alineadas a la derecha: no se enciman en imágenes angostas
+    t("impostores / FAR", x_imp, 30, (40, 40, 200))
+    t("genuinos / FRR", x_imp - 24 - ancho("genuinos / FRR"), 30, (40, 140, 40))
     t(f"{lo:.2f}", m - 10, base + 20)
     t(f"{hi:.2f}", W - m - 20, base + 20)
     destino.parent.mkdir(parents=True, exist_ok=True)
