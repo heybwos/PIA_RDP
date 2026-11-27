@@ -17,7 +17,11 @@ Cuando el usuario diga "ya estoy en la laptop", Claude Code sigue este documento
 - [x] Registrados en el salón: **Nestor (21)** otra vez (cara nueva, mismas huellas), **Orlando (33)**, **Sandra (14)**, **Luis (15)**, **Santiago (99)** e **Ivan (88)**,
       pulgar y cara, con segunda tanda. Altas con `pc\scripts\alta_companero.py` (hace todo, con pausa para el hotspot).
 - [x] Rostro recalibrado con criterio **EER**: umbral 10.24 (EER 8.0 % con 6 usuarios; 8 % con 5, 10 % con 4 y 6.7 % con 3). Con FAR 0 el FRR era 45 %.
-- [ ] Prueba de aceptación (10 genuinos y 10 impostores por persona) y anotar los números.
+- [x] Usuarios finales: 14 Sandra, 15 Luis, 21 Nestor, 33 Orlando, 88 Ivan y 99 Santiago (nivel 2: 21 y 99).
+      Rostro con 6 usuarios: umbral 10.24, EER 8.0 %.
+- [ ] Prueba de aceptación: parcial (5 genuinos aceptados, 3 impostores rechazados; Tabla 6 del reporte).
+      Completar a 10 y 10 por persona si da tiempo y actualizar la tabla con la bitácora.
+- [x] Reporte en Word: `docs/reporte/Reporte_PIA_RDP.docx`. Faltan 2 capturas e integrantes en la portada.
 - [ ] Copiar el respaldo más reciente (`datos\respaldos\pia_20261126_*.zip`) a la USB.
 - La huella **no** se recalibró: el banco sigue siendo de los 6 dedos de Nestor (paso 2.3.2 omitido por tiempo).
 

@@ -18,7 +18,8 @@ FIME UANL. Entrega el **viernes 27 de noviembre de 2026** (se movió del martes 
 ## Entorno (Windows)
 
 - Python en `.venv` (`.\.venv\Scripts\python.exe`). Instalar todo: `& .\pc\scripts\instalar.ps1`.
-- PlatformIO: `%USERPROFILE%\.platformio\penv\Scripts\pio.exe`. El ESP32 es CH340 (COM4 en la PC original).
+- PlatformIO: `%USERPROFILE%\.platformio\penv\Scripts\pio.exe`. El ESP32 es CH340 (COM4 en la PC original;
+  en la laptop cambia al reconectar, COM3 o COM8: buscarlo con `Get-PnpDevice` o dejar que `alta_companero.py` lo detecte).
 - **El sandbox de los comandos no puede abrir puertos COM**: carga de firmware, monitores serie y scripts
   que usan el ESP32 se corren en una pestaña de la terminal del usuario (no en Bash).
 - **Cargar firmware**: el usuario tiene que **mantener BOOT** al ver `Connecting....` (si no:
@@ -29,11 +30,24 @@ FIME UANL. Entrega el **viernes 27 de noviembre de 2026** (se movió del martes 
 - La cámara es IP Webcam (`http://<IP>:8080/video`, `rotacion = 90`). DroidCam solo acepta un cliente.
 - Tras cambiar `app/`, el usuario debe recargar con Ctrl + F5.
 
+### En la laptop de la demo (26 nov)
+
+- **Los `.ps1` están bloqueados** por la política de ejecución. No cambiarla: correr
+  `powershell -NoProfile -ExecutionPolicy Bypass -File <script.ps1>` o llamar a Python directo
+  (`arrancar.ps1` = `..\.venv\Scripts\python.exe -m pia` desde `pc\`).
+- **El puerto 8000 lo ocupa otro programa**: arrancar con `python -m pia --puerto 8001`.
+- **La WiFi FIME aísla a los equipos**: la cámara va por el hotspot del celular (`[camara] url_respaldo`).
+  Con la laptop en el hotspot no hay internet y **Claude no responde**: dejar en la terminal del usuario
+  programas que corran solos y pausen para cambiar de red (`alta_companero.py`, `registrar.py`).
+- Altas de compañeros: `pc\scripts\alta_companero.py` con la app apagada (usa el puerto de la caja).
+
 ## Comandos
 
 ```powershell
 & .\pc\scripts\arrancar.ps1 [-CargarFirmware]           # backend en http://127.0.0.1:8000
 .\.venv\Scripts\python.exe -m pytest pc\tests -q        # 38 pruebas (las de ORL/FVC necesitan datos\datasets)
+.\.venv\Scripts\python.exe pc\scripts\alta_companero.py --id <ID> --nombre "<nombre>" --nivel <1|2>   # alta completa
+node docs\reporte\reporte.js; powershell -ExecutionPolicy Bypass -File docs\reporte\actualizar_word.ps1   # reporte (npm docx)
 node app\pruebas\regresion.js; node app\pruebas\regresion_esp32.js   # requieren `npm i playwright` (usa Edge)
 .\.venv\Scripts\python.exe pc\scripts\verificar_consola.py --todos   # 5 escenarios de Simular
 & .\pc\scripts\prueba_modulo.ps1 -Entorno <entorno> -Puerto COM4 [-SinMonitor]

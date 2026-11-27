@@ -36,6 +36,10 @@ Actualizar después: `git pull` y, si cambió `pc/requirements.txt`, volver a co
 
 Abre `http://127.0.0.1:8000` (Ctrl + F5 tras actualizar).
 
+Si Windows no deja correr scripts (`la ejecución de scripts está deshabilitada`), sin cambiar la política:
+`powershell -ExecutionPolicy Bypass -File .\pc\scripts\arrancar.ps1`, o desde `pc\`:
+`..\.venv\Scripts\python.exe -m pia`. Si el puerto 8000 está ocupado: `..\.venv\Scripts\python.exe -m pia --puerto 8001`.
+
 - **Simular:** elige un escenario y pulsa Iniciar verificación.
 - **ESP32:** botón ESP32 → Buscar ESP32 (una vez). En la caja: `ID#PIN#`, el dedo en el sensor y la
   cara dentro del óvalo de la cámara. Tras el resultado, "Intentar de nuevo" o `#` en la caja.
