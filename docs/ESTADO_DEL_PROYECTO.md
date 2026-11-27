@@ -6,7 +6,7 @@ Resumen para retomar el trabajo en otra PC o en una sesión nueva de Claude Code
 El estado de la maqueta anterior (13 de noviembre) está en el historial de git de este archivo.
 
 **En la laptop de la demo:** seguir `docs/PLAN_LAPTOP.md`. El 26 nov se registraron en el salón Nestor (de nuevo),
-Orlando y Sandra, y se recalibró el rostro (secciones 3 y 4). Altas nuevas: `pc\scripts\alta_companero.py`.
+Orlando, Sandra y Luis, y se recalibró el rostro (secciones 3 y 4). Altas nuevas: `pc\scripts\alta_companero.py`.
 Reporte: `docs/reporte/` (borrador).
 
 **Orden de lectura para retomar:**
@@ -43,7 +43,7 @@ Reporte: `docs/reporte/` (borrador).
 | Factor | Dominio | Umbral | FAR | FRR | Datos |
 |---|---|---|---|---|---|
 | Huella | `as608` | 0.180 | 0 % | 33 % | Banco de 6 dedos de **una sola persona** × 8 capturas (18 genuinos, 90 impostores). EER 16.7 %. |
-| Rostro | `camara` | **10.17** | 6.7 % | 6.7 % | 26 nov, en el salón. Criterio **EER**. Segunda tanda de 14, 21 y 33 (30 genuinos) contra los demás usuarios y 160 caras de ORL (540 impostores). Modelo de Eigenfaces con 150 caras. |
+| Rostro | `camara` | **10.17** | 10 % | 10 % | 26 nov, en el salón. Criterio **EER**. Segunda tanda de 14, 15, 21 y 33 (40 genuinos) contra los demás usuarios y 160 caras de ORL (760 impostores). Modelo de Eigenfaces con 180 caras, k = 84. Con 3 usuarios el EER era 6.7 %. |
 
 Rostro: con criterio FAR 0 el umbral quedaba en 9.25 y rechazaba al 45 % de los genuinos (las distancias de genuinos
 e impostores se enciman entre 8.2 y 10.9), por eso se eligió el EER. Un impostor de cara aún tiene que pasar la huella,
@@ -62,6 +62,7 @@ Perfil `as608` ajustado en N7: CLAHE, umbral de varianza 0.004, distancia mínim
 | 21 | Nestor | 2 | 5 capturas del AS608 (las del 14 nov) | 15 cuadros de cámara (salón, 26 nov) + segunda tanda |
 | 33 | Orlando | 1 | 5 capturas del pulgar (26 nov) | 15 cuadros (salón) + segunda tanda |
 | 14 | Sandra | 1 | 5 capturas del pulgar (26 nov) | 15 cuadros (salón) + segunda tanda |
+| 15 | Luis | 1 | 5 capturas del pulgar (26 nov) | 15 cuadros (salón) + segunda tanda |
 | 07, 12 | Ana T., Luis G. | 1, 2 | FVC2002 | ORL |
 
 07 y 12 son los usuarios de prueba del modo Simular (PIN 4821 y 1593). Los PIN reales no están en ningún archivo (solo su hash).
@@ -86,7 +87,7 @@ Respaldo más reciente: `datos\respaldos\pia_20261126_*.zip` (copiarlo a la USB)
 
 **Calendario:** jueves 26 = registrar a los compañeros y recalibrar; viernes 27 = entrega y demo.
 
-1. **Prueba de aceptación:** por persona (14, 21, 33), 10 intentos genuinos y 10 de impostor (otro teclea su ID y PIN y pone su dedo y su cara). Anotar aceptados y rechazados por factor y del sistema: van al reporte (sección de resultados en `docs/reporte/`).
+1. **Prueba de aceptación:** por persona (14, 15, 21, 33), 10 intentos genuinos y 10 de impostor (otro teclea su ID y PIN y pone su dedo y su cara). Anotar aceptados y rechazados por factor y del sistema: van al reporte (sección de resultados en `docs/reporte/`).
 2. **Más compañeros**, si llegan: `pc\scripts\alta_companero.py --id <ID> --nombre "<nombre>" --nivel <1|2>` con la app apagada.
 3. **Reporte:** completar `docs/reporte/` con los números de la prueba de aceptación.
 4. **N8:** `docs/DEMO.md` (guion de 5 minutos, lista previa, solución de problemas).
