@@ -1,0 +1,65 @@
+<section class="capitulo">
+<div class="eyebrow">Capítulo 9</div>
+<h1 id="c9">9. Funcionamiento completo, paso a paso</h1>
+<p class="lead">Desde que se conecta el cable hasta que los compartimentos se vuelven a cerrar. Con este capítulo cualquier integrante debería poder narrar la demo completa sin apoyo.</p>
+
+<figure>
+<svg viewBox="0 0 700 560" xmlns="http://www.w3.org/2000/svg" font-family="Inter, Segoe UI" font-size="11">
+<defs><marker id="f9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#3A4048"/></marker></defs>
+<g text-anchor="middle">
+<rect x="250" y="5" width="200" height="34" rx="17" fill="#E7F3EC" stroke="#1F7A4D"/><text x="350" y="27" font-weight="600">Teclear ID # PIN #</text>
+<polygon points="350,60 440,90 350,120 260,90" fill="#FBF2DF" stroke="#C98B12"/><text x="350" y="88">¿Existe el ID y</text><text x="350" y="101">el PIN coincide?</text>
+<rect x="250" y="140" width="200" height="40" rx="6" fill="#E8EFF8" stroke="#1D4E89"/><text x="350" y="157">Captura de huella (AS608)</text><text x="350" y="172" fill="#5B6168">imagen 256×288 → PC</text>
+<rect x="250" y="200" width="200" height="40" rx="6" fill="#E8EFF8" stroke="#1D4E89"/><text x="350" y="217">Gabor → minucias → grafos</text><text x="350" y="232" fill="#5B6168">vs 5 plantillas, mejor puntaje</text>
+<polygon points="350,258 440,286 350,314 260,286" fill="#FBF2DF" stroke="#C98B12"/><text x="350" y="284">¿Huella floja y</text><text x="350" y="297">quedan intentos?</text>
+<rect x="250" y="334" width="200" height="40" rx="6" fill="#E8EFF8" stroke="#1D4E89"/><text x="350" y="351">Cara en vivo dentro del óvalo</text><text x="350" y="366" fill="#5B6168">1.5 s estable (máx. 30 s)</text>
+<rect x="250" y="394" width="200" height="40" rx="6" fill="#E8EFF8" stroke="#1D4E89"/><text x="350" y="411">Viola-Jones → alinear → CLAHE</text><text x="350" y="426" fill="#5B6168">Eigenfaces → distancia</text>
+<polygon points="350,452 450,482 350,512 250,482" fill="#FBF2DF" stroke="#C98B12"/><text x="350" y="476">s_h ≥ 0.5, s_r ≥ 0.5</text><text x="350" y="490">y fusión ≥ 0.60?</text>
+<rect x="520" y="462" width="160" height="40" rx="6" fill="#1F7A4D"/><text x="600" y="479" fill="#fff" font-weight="600">ACCESO:1 o 2</text><text x="600" y="494" fill="#D9F0E3">servos liberan tapas</text>
+<rect x="20" y="462" width="160" height="40" rx="6" fill="#A3262A"/><text x="100" y="479" fill="#fff" font-weight="600">ACCESO:0</text><text x="100" y="494" fill="#F6D5D6">negado con motivo</text>
+<rect x="250" y="525" width="200" height="30" rx="15" fill="#F3F4F6" stroke="#8A9099"/><text x="350" y="544">Bitácora · espera # o "Intentar de nuevo"</text></g>
+<g stroke="#3A4048" stroke-width="1.3" fill="none">
+<path d="M350 39 V60" marker-end="url(#f9)"/><path d="M350 120 V140" marker-end="url(#f9)"/><path d="M350 180 V200" marker-end="url(#f9)"/><path d="M350 240 V258" marker-end="url(#f9)"/>
+<path d="M350 314 V334" marker-end="url(#f9)"/><path d="M350 374 V394" marker-end="url(#f9)"/><path d="M350 434 V452" marker-end="url(#f9)"/>
+<path d="M450 482 H520" marker-end="url(#f9)"/><path d="M250 482 H180" marker-end="url(#f9)"/>
+<path d="M260 90 H100 V462" marker-end="url(#f9)"/><path d="M440 286 H500 V160 H450" marker-end="url(#f9)"/>
+<path d="M600 502 V540 H450" marker-end="url(#f9)"/><path d="M100 502 V540 H250" marker-end="url(#f9)"/></g>
+<g font-size="10" fill="#3A4048"><text x="205" y="84">no</text><text x="356" y="134">sí</text><text x="470" y="280">sí: otra captura</text><text x="356" y="328">no</text><text x="470" y="476">sí</text><text x="200" y="476">no</text></g>
+</svg>
+<figcaption><span class="tipo diag">Diagrama explicativo</span><b>Figura 9.1.</b> Flujo de una verificación (<code>pc/pia/orquestador.py</code>). Un error de cámara o de sensor también termina en "negado" con su mensaje.</figcaption>
+</figure>
+
+<h2 id="c9-1">Antes de la primera verificación</h2>
+<table class="t-compacta">
+<thead><tr><th style="width:4%">#</th><th style="width:30%">Qué sucede</th><th>Componentes, señales y decisiones</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><strong>Se conecta la caja por USB.</strong></td><td>El ESP32 arranca: <code>setup()</code> pone los dos servos en 0° (uno, espera 300 ms, el otro), inicia el puerto USB a 921 600 bps, la OLED por I²C, el teclado y el sensor (manda <code>VfyPwd</code> y espera respuesta 0x00). Manda <code>HOLA:1.0:OK:OK</code> y entra en SIN_PC: OLED "Sin conexion con la PC".</td></tr>
+<tr><td>2</td><td><strong>Se arranca el backend</strong> (<code>python -m pia</code>; en la laptop, puerto 8001) y se abre la app.</td><td>FastAPI sirve la app y abre el WebSocket; el backend carga usuarios, escenarios y calibraciones y manda el evento <code>estado</code>.</td></tr>
+<tr><td>3</td><td><strong>ESP32 → Buscar ESP32</strong> en la app.</td><td>El backend prueba cada puerto COM: lo abre, espera <code>HOLA</code> (o lo pide con <code>RESET</code>) y se conecta al primero que contesta con el firmware principal. Manda <code>CONFIG</code> y empieza el <code>PING</code> cada segundo. El ESP32, al recibir el primer <code>PING</code>, pasa a REPOSO: "Listo · Teclea tu ID". El botón se pone verde: "Conectado".</td></tr>
+</tbody></table>
+
+<h2 id="c9-2">Una verificación</h2>
+<table class="t-compacta">
+<thead><tr><th style="width:4%">#</th><th style="width:30%">Qué sucede</th><th>Componentes, señales y decisiones</th></tr></thead>
+<tbody>
+<tr><td>4</td><td><strong>La persona teclea su ID y su PIN.</strong></td><td>El ESP32 barre el teclado, manda <code>TECLA:c</code> por cada tecla (la app ilumina la tecla y llena las casillas) y, con el <code>#</code> final, <code>PIN:id:pin</code>. OLED: "Verificando PIN...".</td></tr>
+<tr><td>5</td><td><strong>El backend comprueba el PIN.</strong></td><td>Busca el usuario en SQLite y calcula PBKDF2 con su sal (200 000 iteraciones). <strong>Decisión:</strong> si el ID no existe o el PIN no coincide, se niega ya (etapas 2 y 3 "no se pidió") y se salta al paso 12.</td></tr>
+<tr><td>6</td><td><strong>Captura de huella.</strong></td><td>Backend → <code>PEDIR_HUELLA</code>. OLED: "Coloca el dedo en el sensor". El ESP32 manda <code>GenImg</code> cada 100 ms; con dedo, <code>UpImage</code>, y reenvía la imagen a la PC durante ~8 s (barra en la OLED; la app dibuja la huella bajando). La PC verifica el CRC.</td></tr>
+<tr><td>7</td><td><strong>Procesamiento de huella.</strong></td><td>En un hilo aparte: CLAHE, normalización, segmentación, orientación, Gabor, binarización, esqueleto, minucias. Comparación contra las 5 plantillas; se queda el mejor puntaje. La app recibe y muestra cada etapa. <strong>Decisión:</strong> si s<sub>h</sub> &lt; 0.6 y quedan intentos (máx. 3), OLED "Huella debil · Intento 2 de 3" y se repite el paso 6.</td></tr>
+<tr><td>8</td><td><strong>La caja espera a la app.</strong></td><td>El backend no pasa a la cámara hasta que la app avisa <code>listo</code> (máx. 30 s): así lo que se ve y lo que pasa en la caja van juntos.</td></tr>
+<tr><td>9</td><td><strong>Rostro en vivo.</strong></td><td>OLED: "Mira a la camara". El backend lee IP Webcam (URL principal o de respaldo), detecta la cara en cada cuadro y manda a la app la vista previa con el óvalo y la indicación. Tras 3 s de cuenta regresiva toma la foto cuando la cara lleva 1.5 s dentro de la guía con los dos ojos.</td></tr>
+<tr><td>10</td><td><strong>Procesamiento de rostro.</strong></td><td>Viola-Jones (rostro y ojos), alineación a 64 × 64, CLAHE y máscara, proyección en Eigenfaces (k = 96), distancia mínima contra los vectores del usuario. La app muestra cada paso, la cara media, las eigenfaces, los pesos, la reconstrucción y la distancia contra la distribución de la calibración.</td></tr>
+<tr><td>11</td><td><strong>Fusión y decisión.</strong></td><td>s<sub>h</sub> y s<sub>r</sub> en 0–1 (0.50 = umbral). Concedido si los dos ≥ 0.50 y 0.5 s<sub>h</sub> + 0.5 s<sub>r</sub> ≥ 0.60. Se guarda la fila en la bitácora (con imágenes del intento) y la app la agrega a la tabla.</td></tr>
+<tr><td>12</td><td><strong>Actuación.</strong></td><td>Cuando la app termina de mostrar el veredicto, el backend manda <code>ACCESO:n</code>. Nivel 1: servo 1 a 90°. Nivel 2: servo 1, 300 ms después servo 2. Nivel 0: nada se abre (LED rojo cuando se conecte). OLED con el resultado. El ESP32 queda en RESULTADO.</td></tr>
+<tr><td>13</td><td><strong>La persona abre el compartimento.</strong></td><td>El brazo del servo ya no está bajo el gancho: la tapa se levanta con la mano.</td></tr>
+<tr><td>14</td><td><strong>Cierre y siguiente persona.</strong></td><td>Con <code>#</code> en la caja (manda <code>OTRA</code>) o "Intentar de nuevo" en la app, el backend manda <code>CERRAR</code>: servos a 0° uno a la vez; el botón dice "Cerrando…" hasta que la OLED vuelve a "Listo". El ESP32 responde <code>CERRADO</code> y vuelve a REPOSO.</td></tr>
+</tbody></table>
+
+<h2 id="c9-3">Si algo sale mal a la mitad</h2>
+<ul>
+<li><strong>Tecla D</strong> en cualquier momento: cancela, se registra como cancelado y la caja vuelve a "Listo".</li>
+<li><strong>30 s sin terminar de teclear</strong>: el ESP32 cancela solo ("Tiempo agotado").</li>
+<li><strong>La PC deja de mandar PING 5 s</strong> (backend cerrado, cable suelto): servos cerrados, "Sin conexion con la PC".</li>
+<li><strong>La cámara no contesta</strong>: "La cámara no responde en …" y qué revisar; la verificación termina negada.</li>
+</ul>
+</section>

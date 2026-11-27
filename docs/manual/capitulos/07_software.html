@@ -1,0 +1,167 @@
+<section class="capitulo">
+<div class="eyebrow">Capítulo 7</div>
+<h1 id="c7">7. Desarrollo del software y explicación del código</h1>
+<p class="lead">Hay tres programas: el firmware del ESP32 (C++), el backend (Python) y la app (JavaScript). Este capítulo recorre los bloques que deciden el comportamiento real. Todos los fragmentos se copian automáticamente del repositorio: la ruta y los números de línea permiten abrir el archivo y encontrarlos.</p>
+
+<h2 id="c7-1">Lenguajes, entorno y organización</h2>
+<table class="t-compacta">
+<thead><tr><th style="width:15%">Programa</th><th style="width:22%">Lenguaje y entorno</th><th>Organización</th></tr></thead>
+<tbody>
+<tr><td>Firmware</td><td>C++ con el framework Arduino para ESP32, compilado con PlatformIO en VS Code.</td><td>Un módulo por periférico (<code>huella</code>, <code>teclado</code>, <code>pantalla</code>, <code>actuadores</code>, <code>protocolo</code>) con su <code>.h</code> (qué ofrece) y su <code>.cpp</code> (cómo lo hace). <code>main.cpp</code> los coordina. <code>platformio.ini</code> define varios "entornos": el principal <code>esp32dev</code> y uno de prueba por módulo.</td></tr>
+<tr><td>Backend</td><td>Python 3.14 en un entorno virtual <code>.venv</code>.</td><td>Paquete <code>pia</code>: algoritmos (<code>huella/</code>, <code>rostro/</code>, <code>fusion</code>, <code>calibracion</code>), datos (<code>almacen</code>, <code>registro</code>), hardware (<code>camara</code>, <code>dispositivos/</code>) y servicio (<code>orquestador</code>, <code>servidor</code>). Scripts de consola en <code>pc/scripts/</code>, pruebas en <code>pc/tests/</code>.</td></tr>
+<tr><td>App</td><td>HTML, CSS y JavaScript sin frameworks.</td><td><code>principal.js</code> atiende los eventos del WebSocket; <code>dibujo.js</code> pinta lienzos (huella, cámara, OLED); <code>movimiento.js</code> anima los botones.</td></tr>
+</tbody></table>
+<div class="clave"><span class="et">Concepto clave: el patrón "dispositivo"</span>
+<p>El orquestador no sabe si habla con la caja real, con un ESP32 falso por red o con el modo Simular: todos cumplen la misma interfaz <code>Dispositivo</code> (<code>leer_pin()</code>, <code>capturar_huella()</code>, <code>mostrar()</code>, <code>actuar()</code>). Gracias a eso, las 38 pruebas automáticas y las regresiones de la app recorren el mismo código que la demo, sin hardware.</p></div>
+
+<h2 id="c7-2">Firmware: la máquina de estados</h2>
+<p>Un microcontrolador repite <code>loop()</code> miles de veces por segundo. Si el programa se detuviera con <code>delay()</code> esperando un dedo, dejaría de leer el teclado y el puerto serie. Por eso el firmware es una <strong>máquina de estados</strong>: en cada vuelta revisa en qué estado está, hace un poco de trabajo y sigue.</p>
+<!--CODIGO firmware/src/main.cpp 26-33-->
+<dl class="explica">
+<dt>Qué define</dt><dd>Los 7 estados posibles y las variables globales: tiempos (<code>tUltimoPing</code>, <code>tFase</code>, <code>tGenImg</code>), el ID y el PIN que se están tecleando, y si ya se pasó al PIN (<code>enPin</code>).</dd>
+<dt>Por qué <code>static</code></dt><dd>Hace que esas variables solo existan dentro de este archivo: ningún otro módulo las puede cambiar por error.</dd>
+</dl>
+
+<figure>
+<svg viewBox="0 0 700 250" xmlns="http://www.w3.org/2000/svg" font-family="Inter, Segoe UI" font-size="11">
+<defs><marker id="m7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#3A4048"/></marker></defs>
+<g font-weight="600" text-anchor="middle">
+<rect x="20" y="20" width="95" height="36" rx="18" fill="#FBE9E9" stroke="#A3262A"/><text x="67" y="43">SIN_PC</text>
+<rect x="160" y="20" width="95" height="36" rx="18" fill="#E7F3EC" stroke="#1F7A4D"/><text x="207" y="43">REPOSO</text>
+<rect x="300" y="20" width="110" height="36" rx="18" fill="#E7F3EC" stroke="#1F7A4D"/><text x="355" y="43">TECLEANDO</text>
+<rect x="460" y="20" width="110" height="36" rx="18" fill="#E8EFF8" stroke="#1D4E89"/><text x="515" y="43">ESPERA_PC</text>
+<rect x="460" y="130" width="110" height="36" rx="18" fill="#E8EFF8" stroke="#1D4E89"/><text x="515" y="153">HUELLA</text>
+<rect x="300" y="130" width="110" height="36" rx="18" fill="#FBF2DF" stroke="#C98B12"/><text x="355" y="153">RESULTADO</text>
+<rect x="160" y="130" width="95" height="36" rx="18" fill="#FBF2DF" stroke="#C98B12"/><text x="207" y="153">CERRANDO</text></g>
+<g stroke="#3A4048" fill="none" stroke-width="1.3">
+<path d="M115 38 L160 38" marker-end="url(#m7)"/><path d="M255 38 L300 38" marker-end="url(#m7)"/><path d="M410 38 L460 38" marker-end="url(#m7)"/>
+<path d="M500 56 L500 130" marker-end="url(#m7)"/><path d="M530 130 L530 56" marker-end="url(#m7)"/>
+<path d="M480 56 C430 100 400 110 380 130" marker-end="url(#m7)"/><path d="M300 148 L255 148" marker-end="url(#m7)"/><path d="M207 130 L207 56" marker-end="url(#m7)"/>
+<path d="M600 38 C650 38 650 230 67 230 L67 56" stroke-dasharray="4 3" marker-end="url(#m7)"/></g>
+<g fill="#3A4048" font-size="10">
+<text x="118" y="32">PING</text><text x="258" y="32">1.ª tecla</text><text x="414" y="32">PIN:id:pin</text>
+<text x="420" y="95">PEDIR_HUELLA</text><text x="538" y="95">imagen enviada</text><text x="390" y="112">ACCESO:n</text>
+<text x="258" y="142">CERRAR</text><text x="212" y="100">CERRADO</text>
+<text x="330" y="222">desde cualquier estado: 5 s sin PING → SIN_PC (servos cerrados)</text></g>
+</svg>
+<figcaption><span class="tipo diag">Diagrama explicativo</span><b>Figura 7.1.</b> Estados del firmware y los mensajes que los cambian. La tecla <code>D</code> cancela y vuelve a REPOSO; en RESULTADO, <code>#</code> manda <code>OTRA</code> para pedir el cierre.</figcaption>
+</figure>
+
+<h3>Captura del ID y el PIN</h3>
+<!--CODIGO firmware/src/main.cpp 61-96-->
+<dl class="explica">
+<dt>Recibe</dt><dd>Un carácter <code>k</code> del teclado.</dd>
+<dt>Procesa</dt><dd>Siempre reporta la tecla a la PC (<code>TECLA:k</code>). <code>D</code> cancela. Usa una referencia (<code>String &amp;campo</code>) que apunta al ID o al PIN según la fase, así la misma lógica sirve para los dos. <code>*</code> borra el último dígito; los dígitos se agregan hasta 2 (ID) o 4 (PIN); <code>#</code> confirma solo si el campo está completo.</dd>
+<dt>Produce</dt><dd>Al confirmar el PIN, envía <code>PIN:id:pin</code>, muestra "Verificando PIN..." y pasa a ESPERA_PC. En la OLED el PIN se ve como asteriscos.</dd>
+<dt>Si fallara</dt><dd>Sin la condición <code>pin.length() == 4</code>, un <code>#</code> prematuro mandaría un PIN incompleto; la PC lo rechazaría como PIN incorrecto.</dd>
+</dl>
+
+<h3>El ciclo principal</h3>
+<!--CODIGO firmware/src/main.cpp 184-236-->
+<dl class="explica">
+<dt>Primero, los comandos</dt><dd><code>while (protocoloLinea(l)) comandoPc(l);</code> atiende todo lo que mandó la PC antes de hacer otra cosa.</dd>
+<dt>Un error real corregido (líneas 187–190)</dt><dd><code>ahora</code> se toma <em>después</em> de leer los comandos. Antes se tomaba al principio: si en esa vuelta llegaba un <code>PING</code>, <code>tUltimoPing</code> quedaba mayor que <code>ahora</code>, la resta sin signo daba un número enorme y el ESP32 creía que llevaba mucho sin PING: caía a SIN_PC cada segundo y borraba el PIN a medio teclear. Se encontró probando con la placa real.</dd>
+<dt>Vida (línea 193)</dt><dd>Si pasan más de 5 s sin <code>PING</code>, estado seguro. El cast a <code>int32_t</code> hace que la resta funcione bien aunque <code>millis()</code> dé la vuelta (cada 49.7 días).</dd>
+<dt>Huella (líneas 215–236)</dt><dd>Pide <code>GenImg</code> cada 100 ms sin bloquear. Con dedo (código 0x00) manda la imagen; esa transferencia sí bloquea unos 7 s, por eso al terminar se renueva <code>tUltimoPing</code>, para que el tiempo de transferencia no cuente como silencio de la PC. Sin dedo en 15 s, <code>HUELLA:ERR:TIEMPO</code>.</dd>
+</dl>
+
+<h3>Driver del sensor: paquetes y reenvío de la imagen</h3>
+<!--CODIGO firmware/src/huella.cpp 12-25-->
+<dl class="explica">
+<dt>Qué hace</dt><dd>Arma un paquete del protocolo del AS608: cabecera <code>EF 01</code>, dirección de 4 bytes (<code>FF FF FF FF</code>), tipo de paquete (<code>pid</code>), longitud (contenido + 2), el contenido y una suma de 16 bits de tipo + longitud + contenido. El sensor descarta cualquier paquete cuya suma no cuadre.</dd>
+</dl>
+<!--CODIGO firmware/src/huella.cpp 106-157-->
+<dl class="explica">
+<dt>Recibe</dt><dd>Una función <code>progreso</code> para dibujar la barra en la OLED.</dd>
+<dt>Procesa</dt><dd>Manda <code>UpImage</code> (0x0A), anuncia <code>IMG:36864</code> a la PC y, paquete por paquete, <strong>reenvía los bytes en cuanto llegan</strong> (<code>Serial.write</code>) mientras calcula el CRC-32. El paquete de tipo 0x08 marca el final.</dd>
+<dt>Un error real corregido (líneas 135–138)</dt><dd>Redibujar la OLED en cada paquete tardaba más de lo que el sensor espera; el búfer de 4 KB de la UART2 se llenaba, se perdían bytes y el CRC salía mal. Ahora la barra se actualiza cada 32 paquetes.</dd>
+<dt>Si la imagen llega incompleta</dt><dd>Rellena con ceros hasta 36 864 bytes y manda el CRC <strong>invertido</strong>. Así la PC no pierde la sincronía (sabe exactamente cuántos bytes leer) y aun así descarta la imagen porque el CRC no coincide.</dd>
+</dl>
+
+<h3>Actuadores: cola de movimientos</h3>
+<!--CODIGO firmware/src/actuadores.cpp 51-88-->
+<dl class="explica">
+<dt>Idea</dt><dd>Nunca se mueven dos servos a la vez. <code>actuadoresAcceso(nivel)</code> no mueve nada: <strong>encola</strong> los movimientos (servo 1, y servo 2 si el nivel es 2). <code>actuadoresTick()</code>, llamado en cada vuelta de <code>loop()</code>, ejecuta el siguiente paso cuando ya pasaron <code>msEntre</code> (300 ms) desde el anterior.</dd>
+<dt>Por qué</dt><dd>Dos servos arrancando juntos suman sus picos de corriente y pueden reiniciar el ESP32 (brownout). Con la cola, además, el programa sigue atendiendo el teclado y la PC mientras los servos se mueven.</dd>
+<dt>Cierre automático</dt><dd>Existe (<code>msAbierto</code>), pero la PC lo desactiva al conectar (<code>CONFIG:ms_abierto:0</code>): en la demo los compartimentos quedan abiertos hasta "Intentar de nuevo" o <code>#</code>.</dd>
+</dl>
+
+<h2 id="c7-3">Backend: algoritmos de huella</h2>
+<!--CODIGO pc/pia/huella/preproceso.py 75-114-->
+<dl class="explica">
+<dt>Segmentación (75–84)</dt><dd><code>f.reshape(bh, B, bw, B)</code> reacomoda la imagen en bloques de B × B sin copiarla; <code>.var(axis=(1, 3))</code> da la varianza de cada bloque de un golpe. Dos pasadas de mayoría limpian la máscara; <code>interior</code> es la máscara "erosionada" (bloque con sus 4 vecinos también en huella). <code>np.kron</code> expande la máscara de bloques a píxeles.</dd>
+<dt>Gradientes (86–90)</dt><dd><code>cv2.Sobel</code> con <code>ksize=3</code> en x y en y; se ponen en cero los bordes para no inventar gradientes fuera de la imagen.</dd>
+<dt>Orientación (92–114)</dt><dd>Las <strong>imágenes integrales</strong> (<code>cv2.integral</code>) permiten sumar G<sub>x</sub>² − G<sub>y</sub>², 2G<sub>x</sub>G<sub>y</sub> y G<sub>x</sub>² + G<sub>y</sub>² en la ventana de cada bloque con 4 lecturas (la función <code>s</code>). El resultado son V<sub>x</sub> y V<sub>y</sub> del capítulo 6, que luego se suavizan con el núcleo [1 2 1] ⊗ [1 2 1]; la coherencia es la longitud de ese vector y el ángulo es la mitad de su <code>atan2</code>.</dd>
+</dl>
+<!--CODIGO pc/pia/huella/preproceso.py 135-151-->
+<dl class="explica">
+<dt>Gabor</dt><dd>Cada píxel tiene su orientación; se redondea al filtro más cercano de los 24 (<code>idx</code>). Se filtra la imagen completa con cada filtro (<code>cv2.filter2D</code>) y cada píxel copia el resultado del suyo (<code>gabor[sel] = …[sel]</code>). Fuera de la máscara y en el borde (donde el filtro no cabe) se pone cero.</dd>
+<dt>Binaria y esqueleto</dt><dd>Cresta = dentro de la máscara y respuesta negativa. <code>skeletonize</code> la adelgaza a 1 píxel.</dd>
+<dt>Si se quitara Gabor</dt><dd>La binarización saldría con crestas cortadas y manchas, y el esqueleto tendría cientos de "minucias" falsas en cada corte.</dd>
+</dl>
+<!--CODIGO pc/pia/huella/minucias.py 24-54-->
+<dl class="explica">
+<dt>Número de cruce vectorizado</dt><dd>En lugar de recorrer píxel por píxel, crea 8 copias desplazadas del esqueleto (una por vecino, en orden circular N, NE, E, SE, S, SO, O, NO) y calcula CN para toda la imagen a la vez: ½ Σ |vecino<sub>k</sub> − vecino<sub>k+1</sub>|.</dd>
+<dt>Filtro</dt><dd>Se conservan los píxeles de esqueleto con CN = 1 (T) o CN = 3 (B), lejos del borde y en bloques interiores. La dirección es la orientación + 90°.</dd>
+<dt>Limpieza</dt><dd>Se calcula la matriz de distancias entre todas las minucias y se eliminan las que tienen otra a menos de <code>distancia_min_minucias</code> (6 px en <code>as608</code>).</dd>
+<dt>Devuelve</dt><dd>Una lista de <code>Minucia(x, y, t, tipo)</code>: la plantilla que se guarda en la base.</dd>
+</dl>
+<!--CODIGO pc/pia/huella/matching.py 73-112-->
+<dl class="explica">
+<dt>Costo local (82–89)</dt><dd>Una matriz de n<sub>A</sub> × n<sub>B</sub> con el costo de emparejar cada minucia de A con cada una de B según sus 4 vecinas; las de distinto tipo valen infinito. Se toman los 40 pares más baratos.</dd>
+<dt>Consolidación (92–110)</dt><dd>Para cada candidata y cada giro (0 y π): rota y traslada todas las minucias de A, calcula la distancia a todas las de B, anula las de dirección incompatible y empareja de forma codiciosa (cada minucia de B se usa una sola vez) las que quedan a menos de 10 px.</dd>
+<dt>Devuelve</dt><dd><code>ResultadoMatching</code> con el puntaje m² / (n<sub>A</sub>·n<sub>B</sub>), los pares y las aristas para dibujar.</dd>
+</dl>
+
+<h2 id="c7-4">Backend: Eigenfaces, fusión y PIN</h2>
+<!--CODIGO pc/pia/rostro/eigenfaces.py 60-89-->
+<dl class="explica">
+<dt>Entrenar</dt><dd><code>L = A @ A.T / (n − 1)</code> es la matriz pequeña n × n. <code>np.linalg.eigh</code> (para matrices simétricas) da eigenvalores y eigenvectores en orden ascendente; se invierten. Se descartan los eigenvalores ≈ 0 (el centrado siempre deja uno). <code>U = (A.T @ vecs).T</code> es el truco: convierte cada eigenvector pequeño en una eigenface de 4096 valores, que luego se normaliza. <code>np.searchsorted</code> encuentra el primer k cuya varianza acumulada llega al 95 %.</dd>
+<dt>Distancia</dt><dd><code>distancia_minima</code> resta los pesos de la captura a cada vector del usuario y toma la norma más pequeña.</dd>
+<dt>Si no se usara el truco</dt><dd>Habría que descomponer una matriz de 4096 × 4096 en cada alta: mucho más lento y con mucha más memoria, para el mismo resultado.</dd>
+</dl>
+<!--CODIGO pc/pia/fusion.py 38-52-->
+<dl class="explica">
+<dt>Recibe</dt><dd>El nivel del usuario y los dos puntajes normalizados (0–1).</dd>
+<dt>Devuelve</dt><dd>Una <code>Decision</code> con concedido, nivel, los tres valores y el <strong>motivo</strong> del rechazo, que se guarda en la bitácora y se muestra en la app.</dd>
+</dl>
+<!--CODIGO pc/pia/pin.py 16-27-->
+<dl class="explica">
+<dt>PBKDF2-HMAC-SHA256</dt><dd>Aplica SHA-256 200 000 veces con una <strong>sal</strong> aleatoria de 16 bytes por usuario. La sal hace que dos usuarios con el mismo PIN tengan hashes distintos; las iteraciones hacen lento probar PIN por PIN. <code>hmac.compare_digest</code> compara en tiempo constante, para no dar pistas por el tiempo de respuesta.</dd>
+<dt>Límite honesto</dt><dd>Con solo 10 000 PIN posibles, quien robe la base podría probarlos todos en un rato. El hash evita guardarlo en claro; no lo vuelve fuerte. Así lo dice el propio código.</dd>
+</dl>
+
+<h2 id="c7-5">Backend: orquestador y lectura de la imagen</h2>
+<!--CODIGO pc/pia/orquestador.py 211-225-->
+<dl class="explica">
+<dt>Qué hace</dt><dd>Es el final de <code>_verificar_flujo</code>: normaliza los dos puntajes con las calibraciones activas, llama a <code>decidir</code> con los pesos y umbrales de <code>config.toml</code>, emite el evento <code>fusion</code> para la app, guarda las imágenes del intento y cierra (manda <code>ACCESO:n</code> a la caja y escribe la bitácora).</dd>
+<dt>Asincronía</dt><dd><code>async</code>/<code>await</code> permite que mientras se espera al ESP32 o a la cámara el servidor siga atendiendo el WebSocket. Los cálculos pesados se mandan a otro hilo con <code>asyncio.to_thread</code> para no congelar la app.</dd>
+</dl>
+<!--CODIGO pc/pia/dispositivos/esp32.py 187-230-->
+<dl class="explica">
+<dt>Modo línea y modo binario</dt><dd>Un hilo lee el puerto. Normalmente separa por <code>\n</code>; al ver <code>IMG:&lt;n&gt;</code> lee <strong>exactamente</strong> n bytes (en bloques de 16 filas que se mandan a la app para el efecto de "barrido") y vuelve a leer líneas. Verifica el CRC-32 con <code>zlib.crc32</code>.</dd>
+<dt>Si se corta</dt><dd>Tras 3 s sin datos marca <code>img_corte</code> y la verificación reporta el error en lugar de quedarse esperando.</dd>
+</dl>
+
+<h2 id="c7-6">La app: solo dibuja</h2>
+<figure><img src="figuras/app_etapa_2.png"><figcaption><span class="tipo real">Real</span><b>Figura 7.2.</b> Etapa de huella en modo Simular (FVC2002): captura y plantilla con sus minucias, pares del matching, miniaturas de cada etapa y puntaje 0.33 contra umbral 0.15. Captura tomada por la regresión automática de Playwright.</figcaption></figure>
+<!--CODIGO app/js/principal.js 220-238-->
+<dl class="explica">
+<dt>Qué muestra este bloque</dt><dd>Al llegar el evento <code>huella_matching</code>, la app reconstruye la plantilla y la captura con los datos <strong>que mandó Python</strong> (esqueleto, minucias, pares, puntaje y umbral) y anima la barra y el conteo de pares. No vuelve a calcular el matching: solo interpola lo que recibió para que se vea en movimiento.</dd>
+<dt>Sincronía con la caja</dt><dd><code>listo('huella')</code> le avisa al backend que ya terminó de mostrar la huella; la caja espera ese aviso (hasta 30 s) antes de pasar a la cámara, para que lo físico y la pantalla vayan juntos.</dd>
+</dl>
+
+<h2 id="c7-7">Manejo de errores</h2>
+<table class="t-compacta">
+<thead><tr><th style="width:30%">Situación</th><th>Respuesta del sistema</th></tr></thead>
+<tbody>
+<tr><td>ID no registrado o PIN incorrecto</td><td>Se niega sin pedir huella ni rostro; etapas 2 y 3 marcadas "no se pidió".</td></tr>
+<tr><td>Huella floja</td><td>Hasta 3 capturas; se queda la mejor.</td></tr>
+<tr><td>CRC incorrecto o imagen cortada</td><td>Se descarta la imagen y se reporta; nunca se procesa una imagen dañada.</td></tr>
+<tr><td>Sin cara en 30 s o cámara caída</td><td>Error con "qué revisar"; la cámara prueba primero la URL principal y luego la de respaldo.</td></tr>
+<tr><td>Sin calibración o sin modelo para la fuente</td><td>Error explícito con el script que hay que correr.</td></tr>
+<tr><td>Cable USB desconectado</td><td>"Se perdió la conexión con el ESP32"; el ESP32, sin PING, cierra los servos.</td></tr>
+<tr><td>Tecla D</td><td>Cancelación limpia: se registra como intento cancelado.</td></tr>
+</tbody></table>
+<p>Cada error lleva un mensaje y un campo <code>que_revisar</code>; la app los muestra en el pie de pantalla. Ningún error inventa un resultado: si falta un dato, se niega o se detiene.</p>
+</section>

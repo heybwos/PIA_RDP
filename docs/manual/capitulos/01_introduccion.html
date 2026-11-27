@@ -1,0 +1,96 @@
+<section class="capitulo">
+<div class="eyebrow">Capítulo 1</div>
+<h1 id="c1">1. Introducción y visión general</h1>
+<p class="lead">Una caja con dos compartimentos que solo se abren si la persona demuestra quién es de tres maneras distintas: algo que sabe (un PIN), algo que es por su dedo (la huella) y algo que es por su cara (el rostro). Según quién sea, se abre un compartimento o los dos.</p>
+
+<h2 id="c1-1">Qué es el proyecto</h2>
+<p>Es un <strong>sistema de control de acceso biométrico multimodal por niveles</strong>. Cada palabra cuenta:</p>
+<ul>
+  <li><strong>Control de acceso:</strong> decide si alguien puede entrar a algo (aquí, abrir un compartimento con documentos).</li>
+  <li><strong>Biométrico:</strong> usa rasgos del cuerpo para identificar a la persona, no solo una contraseña.</li>
+  <li><strong>Multimodal:</strong> combina más de un rasgo (huella y rostro), además del PIN.</li>
+  <li><strong>Por niveles:</strong> no todos tienen los mismos permisos. Nivel 1 (<em>Lector</em>) abre el compartimento 1; nivel 2 (<em>Editor</em>) abre el 1 y el 2, donde va la información sensible (la carpeta de "Compras").</li>
+</ul>
+<p>El título oficial del PIA es <em>"Diseño e implementación de un sistema de reconocimiento biométrico multimodal para control y acceso de información confidencial (según jerarquía)"</em>. El profesor pidió explícitamente que algo físico se moviera en la demostración, no solo un mensaje en pantalla: por eso hay servomotores que liberan cerrojos.</p>
+
+<h2 id="c1-2">Qué problema atiende</h2>
+<p>Una contraseña o un PIN se pueden prestar, ver por encima del hombro o adivinar (un PIN de 4 dígitos solo tiene 10 000 combinaciones). Un rasgo biométrico no se presta tan fácil, pero ningún reconocedor biométrico es perfecto: a veces rechaza a la persona correcta y a veces acepta a otra. La idea del proyecto es <strong>combinar factores para que el error de uno lo corrija otro</strong>, y medir con números qué tan bien funciona.</p>
+<div class="hecho"><span class="et">Verificado en el proyecto</span>
+<p>El 26 de noviembre, en el salón, una compañera tecleó el ID y el PIN de otro usuario y puso su propio dedo y su cara. Su rostro pasó por poco el umbral de ese usuario (0.541 normalizado, el mínimo es 0.50), pero su huella no (0.356) y la fusión dio 0.448, por debajo de 0.60: <strong>acceso negado</strong>. Es el ejemplo perfecto de por qué se combinan factores (<code>docs/ESTADO_DEL_PROYECTO.md</code>, sección 3).</p></div>
+
+<h2 id="c1-3">Objetivo</h2>
+<p>Diseñar y construir un sistema que verifique la identidad con tres factores usando <strong>solo los métodos clásicos de reconocimiento de patrones que fija la especificación del PIA</strong>, y medir su desempeño con las tasas de falsa aceptación (FAR), falso rechazo (FRR) y error igual (EER). Los métodos obligatorios son:</p>
+<table class="t-compacta">
+<thead><tr><th>Fase</th><th>Huella</th><th>Rostro</th></tr></thead>
+<tbody>
+<tr><td>1. Percepción y captura</td><td>Sensor óptico AS608 (solo la imagen cruda)</td><td>Cámara del celular (app IP Webcam)</td></tr>
+<tr><td>2. Preprocesamiento</td><td>Campo de orientación, realce con filtros de Gabor, binarización, adelgazamiento</td><td>Detección con Viola-Jones, alineación geométrica, normalización fotométrica (CLAHE)</td></tr>
+<tr><td>3. Extracción de características</td><td>Minucias (terminaciones y bifurcaciones) con posición y orientación</td><td>PCA: proyección en el subespacio de Eigenfaces (vector de pesos)</td></tr>
+<tr><td>4. Matching y clasificación</td><td>Algoritmo basado en grafos sobre las minucias</td><td>Distancia euclidiana entre vectores de pesos, con umbral</td></tr>
+<tr><td>5. Actuación</td><td colspan="2">Fusión de puntajes, decisión por nivel, servos y pantalla</td></tr>
+</tbody></table>
+<div class="ojo"><span class="et">Cuidado en la exposición</span>
+<p>El sensor AS608 trae su propio algoritmo de comparación interno. <strong>No se usa.</strong> El sensor solo toma la foto de la huella; las fases 2 a 4 las calcula el programa en Python. Tampoco hay redes neuronales, ni <code>dlib</code>, ni <code>face_recognition</code>, ni scikit-learn para el PCA. Si alguien dice "el sensor reconoce la huella", es incorrecto y el profesor lo va a notar.</p></div>
+
+<h2 id="c1-4">Cómo funciona, en una explicación sencilla</h2>
+<ol>
+  <li>La persona teclea en la caja su <strong>ID</strong> de 2 dígitos, <code>#</code>, su <strong>PIN</strong> de 4 dígitos y <code>#</code>.</li>
+  <li>La caja manda el ID y el PIN a la computadora por el cable USB. La computadora busca al usuario y comprueba el PIN contra un <em>hash</em> guardado (nunca guarda el PIN tal cual).</li>
+  <li>La pantalla de la caja pide el dedo. El sensor toma una foto de la huella de 256 × 288 píxeles y la caja la reenvía a la computadora (tarda unos 8 segundos).</li>
+  <li>La computadora limpia la imagen, encuentra los puntos donde las crestas terminan o se dividen (<em>minucias</em>) y los compara con las 5 huellas que esa persona dejó al registrarse.</li>
+  <li>El celular, montado frente a la persona, transmite video por WiFi. La computadora detecta la cara, la endereza, la normaliza y la convierte en un vector de números (<em>pesos de Eigenfaces</em>) que compara con los de la persona registrada.</li>
+  <li>Cada factor se convierte en una calificación de 0 a 1. Si los dos pasan su mínimo (0.50) y el promedio llega a 0.60, se concede el acceso con el nivel del usuario.</li>
+  <li>La computadora le dice a la caja <code>ACCESO:1</code> o <code>ACCESO:2</code>; la caja gira uno o dos servos para liberar las tapas. Con <code>ACCESO:0</code> no se abre nada.</li>
+  <li>Una aplicación web en la laptop muestra cada paso en vivo: la huella llegando por partes, las minucias, la cara detectada, los puntajes y la decisión.</li>
+</ol>
+
+<h2 id="c1-5">Tecnologías y disciplinas que integra</h2>
+<div class="dos">
+<div>
+<h4>Tecnologías</h4>
+<ul>
+  <li>Microcontrolador <strong>ESP32</strong> programado en C++ (Arduino, PlatformIO).</li>
+  <li>Sensor óptico de huella <strong>AS608</strong> por UART.</li>
+  <li>Teclado matricial 4 × 4, pantalla <strong>OLED SSD1306</strong> por I²C, 2 servos <strong>SG90</strong> por PWM.</li>
+  <li><strong>Python</strong> en la PC: NumPy, OpenCV, scikit-image, pyserial.</li>
+  <li>Servidor <strong>FastAPI</strong> con WebSocket y base de datos <strong>SQLite</strong>.</li>
+  <li>App web en HTML, CSS y JavaScript que solo dibuja.</li>
+  <li>Celular Android con <strong>IP Webcam</strong> como cámara por WiFi.</li>
+  <li>Caja diseñada en <strong>SolidWorks</strong> e impresa en 3D en PLA.</li>
+</ul></div>
+<div>
+<h4>Disciplinas</h4>
+<ul>
+  <li><strong>Reconocimiento de patrones y visión por computadora:</strong> el corazón del PIA.</li>
+  <li><strong>Electrónica y sistemas embebidos:</strong> conexiones, niveles de voltaje, alimentación, firmware.</li>
+  <li><strong>Comunicaciones:</strong> protocolo serie propio, paquetes del sensor, WebSocket, video por HTTP.</li>
+  <li><strong>Ingeniería de software:</strong> arquitectura en capas, pruebas automáticas, base de datos.</li>
+  <li><strong>Diseño mecánico y manufactura:</strong> CAD, cerrojos, bisagras, impresión 3D.</li>
+  <li><strong>Estadística aplicada:</strong> calibración de umbrales con FAR, FRR y EER.</li>
+  <li><strong>Seguridad de la información:</strong> hash del PIN, datos biométricos fuera de git.</li>
+</ul></div>
+</div>
+
+<h2 id="c1-6">Qué hace y qué no hace el prototipo</h2>
+<table>
+<thead><tr><th style="width:50%">Sí hace</th><th>No hace (o todavía no)</th></tr></thead>
+<tbody>
+<tr><td>Verifica <strong>1 a 1</strong>: compara a la persona solo contra el usuario cuyo ID tecleó.</td><td>No identifica "1 a N" (no adivina quién eres sin que des tu ID).</td></tr>
+<tr><td>Procesa la huella con los métodos del PIA a partir de la imagen cruda del sensor.</td><td>No usa el algoritmo interno del AS608.</td></tr>
+<tr><td>Toma la cara en vivo con guía en pantalla (óvalo, "acércate", "no te muevas").</td><td>No detecta si la cara es una foto o una pantalla (no hay prueba de vida).</td></tr>
+<tr><td>Abre uno o dos compartimentos según el nivel y los cierra con "Intentar de nuevo" o la tecla <code>#</code>.</td><td>Las tapas no se abren solas: el servo libera el cerrojo y la tapa se levanta con la mano.</td></tr>
+<tr><td>Guarda cada intento en una bitácora con puntajes y motivo.</td><td>Los LEDs verde y rojo están en el firmware pero <strong>no están conectados</strong> en la caja.</td></tr>
+<tr><td>Funciona también sin hardware (modo Simular) con bancos públicos FVC2002 y ORL.</td><td>No funciona sin la computadora: el ESP32 no tiene capacidad para el procesamiento de imagen.</td></tr>
+</tbody></table>
+
+<h2 id="c1-7">Limitaciones actuales</h2>
+<ul>
+  <li><strong>La huella se calibró con los dedos de una sola persona</strong> (6 dedos × 8 capturas). El umbral (0.180) da FAR 0 % y FRR 33 % en ese banco: uno de cada tres intentos genuinos de huella sale bajo y el sistema pide hasta 3 capturas para compensarlo.</li>
+  <li><strong>El rostro tiene un EER de 8.0 %</strong> con seis personas reales (umbral 10.24, FAR 7.7 %, FRR 8.3 %). Por sí solo no sería confiable; con la huella y la fusión sí detuvo a los impostores probados.</li>
+  <li><strong>Eigenfaces es sensible a la luz y a la pose.</strong> Por eso las caras se registraron en el mismo salón de la demo.</li>
+  <li><strong>La prueba de aceptación quedó corta:</strong> 8 intentos (5 genuinos aceptados, 3 impostores rechazados). Un 0 % con 8 intentos no estima la tasa real.</li>
+  <li><strong>El PIN viaja sin cifrar por el cable USB</strong> (línea <code>PIN:&lt;id&gt;:&lt;pin&gt;</code>); en la base se guarda con hash.</li>
+  <li><strong>El sensor AS608 entrega 4 bits por píxel</strong> (16 tonos de gris) en un área pequeña, lo que limita la calidad de las minucias.</li>
+  <li><strong>Depende de la red:</strong> la WiFi de la FIME aísla a los equipos entre sí, así que la cámara va por el hotspot del celular.</li>
+</ul>
+</section>

@@ -1,0 +1,185 @@
+<section class="capitulo">
+<div class="eyebrow">Capítulo 6</div>
+<h1 id="c6">6. Reconocimiento biométrico: huella y rostro</h1>
+<p class="lead">Este es el capítulo que el PIA evalúa. Cada etapa se explica con la idea, la fórmula y la imagen real que produce el código del proyecto. Las figuras usan bancos públicos (FVC2002 para huella, ORL para rostro): ninguna huella ni cara del equipo aparece en este manual.</p>
+
+<h2 id="c6-1">Conceptos de base</h2>
+<p><strong>Imagen digital.</strong> Una imagen en escala de grises es una matriz de números: cada celda es un <strong>píxel</strong> con un valor de brillo, de 0 (negro) a 255 (blanco). La huella del AS608 es una matriz de 288 filas × 256 columnas; una cara alineada del proyecto, de 64 × 64. Procesar una imagen es hacer cuentas con esa matriz.</p>
+<p><strong>Verificar no es identificar.</strong> El sistema hace <strong>verificación 1 a 1</strong>: la persona dice quién es (su ID) y el sistema solo compara contra ese usuario. Identificar (1 a N) sería buscar entre todos sin que diga quién es; es más difícil y no es lo que hace el proyecto.</p>
+<p><strong>Plantilla.</strong> Lo que se guarda de cada persona no es "la foto" para comparar píxel por píxel, sino una representación compacta: la lista de minucias (huella) o el vector de pesos de Eigenfaces (rostro). Comparar es medir qué tan parecidas son dos plantillas y obtener un <strong>puntaje</strong>.</p>
+<p><strong>Umbral.</strong> El puntaje se compara con un umbral: de un lado se acepta y del otro se rechaza. Ningún umbral es perfecto, y elegirlo es un compromiso entre dos errores (sección 6.4).</p>
+
+<h2 id="c6-2">Huella dactilar</h2>
+<h3>Captura</h3>
+<p>El AS608 forma la imagen por reflexión interna total en un prisma (capítulo 3). El firmware espera el dedo mandando <code>GenImg</code> cada 100 ms; cuando el sensor responde 0x00 (dedo detectado), pide la imagen con <code>UpImage</code> y la reenvía. Cada byte trae <strong>dos píxeles de 4 bits</strong> (16 niveles de gris); Python los separa y los multiplica por 17 para llevar 0–15 a 0–255. El orden "nibble alto primero" se verificó midiendo la suavidad entre píxeles vecinos (0.24 contra 0.65 con el orden contrario).</p>
+
+<div class="rejilla c4">
+<figure><img src="figuras/h1_original.png"><figcaption>1. Original</figcaption></figure>
+<figure><img src="figuras/h2_normalizada.png"><figcaption>2. Normalizada</figcaption></figure>
+<figure><img src="figuras/h3_segmentacion.png"><figcaption>3. Segmentación</figcaption></figure>
+<figure><img src="figuras/h4_orientacion.png"><figcaption>4. Orientación</figcaption></figure>
+<figure><img src="figuras/h5_gabor.png"><figcaption>5. Gabor</figcaption></figure>
+<figure><img src="figuras/h6_binaria.png"><figcaption>6. Binaria</figcaption></figure>
+<figure><img src="figuras/h7_esqueleto.png"><figcaption>7. Esqueleto</figcaption></figure>
+<figure><img src="figuras/h8_minucias.png"><figcaption>8. Minucias</figcaption></figure>
+</div>
+<p class="pie-nota"><span class="tipo real">Real</span><b>Figura 6.1.</b> Las etapas de <code>pc/pia/huella/</code> sobre la huella pública FVC2002 DB1_B 101_1 (perfil <code>fvc2002</code>), generadas con <code>docs/manual/generar_figuras.py</code>. En la figura 8, círculos verdes = terminaciones, cuadros naranjas = bifurcaciones; la rayita indica la dirección. Resultado: 22 minucias (17 terminaciones y 5 bifurcaciones).</p>
+
+<h3>Fase 2a. Normalización</h3>
+<p>Con el perfil del sensor (<code>as608</code>) primero se aplica <strong>CLAHE</strong> (ecualización adaptativa de histograma con límite de contraste): divide la imagen en una rejilla de 8 × 8 regiones, estira el contraste de cada una por separado y limita cuánto lo estira para no amplificar ruido. Hace falta porque la imagen del AS608 usa en la práctica unos 8 de sus 16 niveles. Después se resta la media y se divide entre la desviación estándar, para que todas las huellas queden en la misma escala sin importar la presión del dedo.</p>
+
+<h3>Fase 2b. Segmentación</h3>
+<p>La imagen se parte en <strong>bloques de 16 × 16 píxeles</strong>. Un bloque con huella tiene crestas y valles, o sea mucha variación de brillo; el fondo es parejo. Se marca como huella el bloque cuya <strong>varianza</strong> supera un umbral (0.004 en el perfil <code>as608</code>, con la imagen en escala 0–1). Un filtro de mayoría 3 × 3 aplicado dos veces quita bloques sueltos. Para las minucias se usan solo los bloques "interiores" (los que tienen huella arriba, abajo y a los lados), porque en el borde aparecen terminaciones falsas donde la huella simplemente se acaba.</p>
+
+<h3>Fase 2c. Campo de orientación</h3>
+<p>En cada zona las crestas corren en una dirección. Para medirla se usan los <strong>gradientes de Sobel</strong> G<sub>x</sub> y G<sub>y</sub> (cuánto cambia el brillo en horizontal y en vertical). El gradiente apunta <em>a través</em> de las crestas; la cresta va a 90° de él. En cada bloque (con una ventana de 16 + 8 píxeles) se calcula:</p>
+<div class="formula">V<sub>x</sub> = Σ (G<sub>x</sub>² − G<sub>y</sub>²) / Σ (G<sub>x</sub>² + G<sub>y</sub>²) &nbsp;&nbsp;&nbsp; V<sub>y</sub> = Σ 2 G<sub>x</sub> G<sub>y</sub> / Σ (G<sub>x</sub>² + G<sub>y</sub>²) &nbsp;&nbsp;&nbsp; θ = ½ · atan2(V<sub>y</sub>, V<sub>x</sub>)</div>
+<div class="clave"><span class="et">Concepto clave: ¿por qué el ángulo doble?</span>
+<p>Una cresta a 0° y una a 180° son la misma cresta (una orientación no tiene sentido de "ida" o "vuelta"). Si se promediaran ángulos directamente, 179° y 1° darían 90°, que es justo la dirección perpendicular. Al trabajar con 2θ, 179° y 1° se vuelven 358° y 2°, que sí están juntos. Por eso las fórmulas usan G<sub>x</sub>² − G<sub>y</sub>² y 2G<sub>x</sub>G<sub>y</sub> (son el coseno y el seno del ángulo doble) y al final se divide entre 2. El campo se suaviza con un núcleo [1 2 1] sobre 2θ, y la longitud del vector promedio es la <strong>coherencia</strong> (0 = zona confusa, 1 = crestas muy ordenadas).</p></div>
+
+<h3>Fase 2d. Realce con filtros de Gabor</h3>
+<p>Un <strong>filtro de Gabor</strong> es una onda coseno recortada por una campana gaussiana: responde fuerte a franjas paralelas de cierta separación y cierta orientación, y casi nada a lo demás. Es ideal para huellas porque las crestas son eso, franjas casi paralelas (Hong, Wan y Jain, 1998).</p>
+<div class="formula">g(x, y) = exp(−(x² + y²) / 2σ²) · cos(2π f (x cos φ + y sin φ))</div>
+<p>En el proyecto: <strong>σ = 4 px</strong> (ancho de la campana), <strong>f = 1/8.9</strong> (las crestas se repiten cada 8.9 px), núcleo de 15 × 15 y un banco de <strong>24 orientaciones</strong> (cada 7.5°). A cada filtro se le resta su media para que una zona pareja dé cero. Cada píxel toma la respuesta del filtro cuya orientación coincide con la de su campo: así se rellenan cortes y se borran manchas que no siguen el flujo de las crestas.</p>
+<figure><img src="figuras/h_gabor_kernels.png" style="max-width:60%;border:none"><figcaption><span class="tipo real">Real</span><b>Figura 6.2.</b> Cuatro de los 24 filtros de Gabor del proyecto (0°, 45°, 90° y 135°), tal como los genera <code>_kernels_gabor</code>.</figcaption></figure>
+
+<h3>Fase 2e. Binarización y adelgazamiento</h3>
+<p><strong>Binarizar</strong> es pasar de grises a solo dos valores: con el filtro de Gabor centrado en cero, las crestas dan respuesta negativa, así que <em>cresta = píxel dentro de la máscara con respuesta &lt; 0</em>. <strong>Adelgazar</strong> (esqueletizar) es quitar píxeles del borde de cada cresta, sin romperla, hasta dejarla de 1 píxel de ancho. Se usa <code>skeletonize</code> de scikit-image (en 2D usa el método de Zhang). Sin este paso no se pueden contar vecinos para encontrar minucias.</p>
+
+<h3>Fase 3. Minucias por número de cruce</h3>
+<p>Una <strong>minucia</strong> es un punto característico de la huella. Las dos que usa el proyecto: <strong>terminación</strong> (una cresta se acaba) y <strong>bifurcación</strong> (una cresta se divide en dos). Para cada píxel del esqueleto se recorren sus 8 vecinos en círculo y se cuenta cuántas veces se pasa de 0 a 1:</p>
+<div class="formula">CN = ½ · Σ<sub>k=1…8</sub> | P<sub>k</sub> − P<sub>k+1</sub> | &nbsp;&nbsp;(con P<sub>9</sub> = P<sub>1</sub>)</div>
+<figure>
+<svg viewBox="0 0 600 150" xmlns="http://www.w3.org/2000/svg" font-family="Inter, Segoe UI" font-size="11">
+  <g transform="translate(20,15)"><text x="0" y="-2" font-weight="600">CN = 1 → terminación</text>
+    <g stroke="#9AA3AD"><rect x="0" y="5" width="30" height="30" fill="#fff"/><rect x="30" y="5" width="30" height="30" fill="#fff"/><rect x="60" y="5" width="30" height="30" fill="#fff"/>
+    <rect x="0" y="35" width="30" height="30" fill="#1D4E89"/><rect x="30" y="35" width="30" height="30" fill="#C0392B"/><rect x="60" y="35" width="30" height="30" fill="#fff"/>
+    <rect x="0" y="65" width="30" height="30" fill="#fff"/><rect x="30" y="65" width="30" height="30" fill="#fff"/><rect x="60" y="65" width="30" height="30" fill="#fff"/></g>
+    <text x="100" y="45">1 vecino:</text><text x="100" y="61">la cresta acaba</text></g>
+  <g transform="translate(220,15)"><text x="0" y="-2" font-weight="600">CN = 2 → cresta normal</text>
+    <g stroke="#9AA3AD"><rect x="0" y="5" width="30" height="30" fill="#fff"/><rect x="30" y="5" width="30" height="30" fill="#fff"/><rect x="60" y="5" width="30" height="30" fill="#fff"/>
+    <rect x="0" y="35" width="30" height="30" fill="#1D4E89"/><rect x="30" y="35" width="30" height="30" fill="#C0392B"/><rect x="60" y="35" width="30" height="30" fill="#1D4E89"/>
+    <rect x="0" y="65" width="30" height="30" fill="#fff"/><rect x="30" y="65" width="30" height="30" fill="#fff"/><rect x="60" y="65" width="30" height="30" fill="#fff"/></g>
+    <text x="100" y="45">entra y sale:</text><text x="100" y="61">no es minucia</text></g>
+  <g transform="translate(420,15)"><text x="0" y="-2" font-weight="600">CN = 3 → bifurcación</text>
+    <g stroke="#9AA3AD"><rect x="0" y="5" width="30" height="30" fill="#fff"/><rect x="30" y="5" width="30" height="30" fill="#fff"/><rect x="60" y="5" width="30" height="30" fill="#1D4E89"/>
+    <rect x="0" y="35" width="30" height="30" fill="#1D4E89"/><rect x="30" y="35" width="30" height="30" fill="#C0392B"/><rect x="60" y="35" width="30" height="30" fill="#fff"/>
+    <rect x="0" y="65" width="30" height="30" fill="#fff"/><rect x="30" y="65" width="30" height="30" fill="#fff"/><rect x="60" y="65" width="30" height="30" fill="#1D4E89"/></g>
+    <text x="100" y="45">3 ramas:</text><text x="100" y="61">se divide</text></g>
+</svg>
+<figcaption><span class="tipo diag">Diagrama explicativo</span><b>Figura 6.3.</b> Número de cruce sobre el esqueleto: rojo = píxel analizado, azul = vecinos que son cresta.</figcaption>
+</figure>
+<p>Cada minucia guarda <strong>x, y, dirección t</strong> (la del campo de orientación más 90°, en [0, π)) y su <strong>tipo</strong>. Se descartan las que están a menos de 12 px del borde, fuera de los bloques interiores, o a menos de 6 px de otra (perfil <code>as608</code>): esos pares suelen ser ruido (espolones, puentes y cortes del esqueleto). Al registrar, una captura con menos de 10 minucias o calidad menor a 0.05 se rechaza y se repite.</p>
+
+<h3>Fase 4. Matching basado en grafos</h3>
+<p>Comparar dos huellas es difícil porque el dedo nunca se pone igual: cambia la posición, el giro y la parte del dedo que toca el sensor. La comparación de <code>huella/matching.py</code> tiene dos pasos:</p>
+<ol>
+<li><strong>Estructuras locales (el grafo).</strong> Cada minucia se une a sus <strong>4 vecinas más cercanas</strong>. De cada unión se guarda la distancia, el ángulo hacia la vecina medido desde la dirección propia, y la diferencia de direcciones. Estas medidas <strong>no cambian si toda la huella se mueve o gira</strong>: son invariantes a traslación y rotación. Así, una minucia de la huella A y una de la B "se parecen" si sus vecindarios se parecen. El costo de cada par (solo entre minucias del mismo tipo) es: Σ|Δd|/8 + Σ|Δángulo|/0.35 + Σ|Δorientación|/0.35.</li>
+<li><strong>Consolidación global.</strong> Se toman los 40 pares de menor costo. Cada uno propone un giro y un desplazamiento (también se prueba el giro de 180°, porque la dirección de una minucia tiene esa ambigüedad). Con esa transformación se lleva toda la huella A sobre la B y se cuentan las minucias que quedan a <strong>menos de 10 px</strong> de una de B y con <strong>dirección parecida (menos de 0.3 rad ≈ 17°)</strong>. Gana la propuesta con más pares, <em>m</em>.</li>
+</ol>
+<div class="formula">puntaje = m² / (n<sub>A</sub> · n<sub>B</sub>)</div>
+<p>Si todas las minucias de A tienen pareja en B y viceversa, el puntaje es 1. En la captura de la app del capítulo 7 hay 14 pares entre 30 y 20 minucias: 14² / (30 · 20) = 196 / 600 = <strong>0.33</strong>, que es lo que muestra la pantalla. Con el código del proyecto, dos huellas del mismo dedo de FVC2002 (101_1 y 101_2) dan <strong>0.480</strong> y dos dedos distintos (101_1 y 102_1) dan <strong>0.026</strong>.</p>
+<div class="ojo"><span class="et">Cuidado en la exposición</span>
+<p>"Basado en grafos" se refiere a que cada minucia se describe por su <strong>vecindario</strong> (un grafo de vecinos más cercanos), y a que esas estructuras locales proponen la alineación. Las líneas que la app dibuja entre minucias de una misma huella son las aristas de ese grafo (vecinas mutuas entre las 3 más cercanas); las líneas entre las dos huellas son los pares que coincidieron. No es un algoritmo de isomorfismo de grafos completo: si el profesor lo pregunta, hay que explicarlo así.</p></div>
+<p><strong>En la verificación</strong>, la captura se compara contra las <strong>5 plantillas</strong> que el usuario dejó al registrarse y se queda el mejor puntaje. Si el puntaje normalizado sale menor a 0.6, el sistema pide otra captura, hasta 3 intentos, sin volver a teclear el PIN.</p>
+
+<h2 id="c6-3">Rostro</h2>
+<p>Hay que distinguir dos problemas: <strong>detectar</strong> un rostro (¿hay una cara y dónde está?) y <strong>reconocerlo</strong> (¿de quién es?). Viola-Jones resuelve lo primero; Eigenfaces, lo segundo.</p>
+<div class="rejilla c3">
+<figure><img src="figuras/r1_deteccion.png"><figcaption>1. Viola-Jones: rostro (verde) y ojos (naranja)</figcaption></figure>
+<figure><img src="figuras/r2_alineada.png"><figcaption>2. Alineada a 64 × 64 (ojos horizontales)</figcaption></figure>
+<figure><img src="figuras/r3_normalizada.png"><figcaption>3. CLAHE y máscara elíptica</figcaption></figure>
+</div>
+<p class="pie-nota"><span class="tipo real">Real</span><b>Figura 6.4.</b> Etapas de <code>pc/pia/rostro/</code> sobre la imagen pública ORL s1/1: la alineación giró la cara −2.4° para dejar los ojos horizontales.</p>
+
+<h3>Fase 1. Captura en vivo</h3>
+<p>Con la caja real, el backend lee el video de IP Webcam, detecta la cara en cada cuadro y manda a la app una vista previa con un <strong>óvalo guía</strong> e indicaciones: "acércate" si la cara ocupa menos del 28 % del ancho, "aléjate" si ocupa más del 62 %, "centra tu cara" si se sale ±12 % del centro, "mira de frente" si no ve los dos ojos. Tras una cuenta regresiva de 3 s, toma la foto cuando la cara lleva <strong>1.5 s seguidos</strong> bien colocada. Si en 30 s no lo logra, niega con mensaje. Esto se agregó porque al principio se tomaba el primer cuadro y salían fotos movidas.</p>
+
+<h3>Fase 2a. Detección con Viola-Jones</h3>
+<p>El detector de Viola y Jones (2001) tiene cuatro ideas:</p>
+<ul>
+<li><strong>Características tipo Haar:</strong> rectángulos claros y oscuros contiguos. Por ejemplo, la zona de los ojos suele ser más oscura que la de las mejillas debajo; una característica mide esa diferencia de brillo.</li>
+<li><strong>Imagen integral:</strong> una tabla donde cada celda guarda la suma de todos los píxeles arriba y a la izquierda. Con ella, la suma de <em>cualquier</em> rectángulo se obtiene con 4 lecturas, así que medir miles de características es rápido.</li>
+<li><strong>AdaBoost:</strong> de cientos de miles de características posibles, un entrenamiento escoge las pocas que mejor separan caras de no-caras y las combina.</li>
+<li><strong>Cascada:</strong> se evalúan por etapas; las primeras son muy simples y descartan casi todas las ventanas que no son cara. Solo las ventanas prometedoras pasan a las etapas costosas. Por eso es rápido.</li>
+</ul>
+<p>El proyecto usa las cascadas ya entrenadas de OpenCV: <code>haarcascade_frontalface_default.xml</code> (con <code>scaleFactor = 1.1</code>: la ventana crece 10 % en cada pasada; <code>minNeighbors = 5</code>: un rostro se acepta si lo detectan al menos 5 ventanas vecinas) y <code>haarcascade_eye.xml</code> dentro de la mitad superior del rostro, ampliada a unos 200 px de ancho porque la cascada falla con ojos de 10 px. Si hay varias caras, se queda con la más grande.</p>
+<div class="ojo"><span class="et">Cuidado en la exposición</span><p>Viola-Jones <strong>no reconoce</strong> a nadie: solo encuentra dónde hay una cara y dónde están los ojos. Y el proyecto no entrenó la cascada: usa la que trae OpenCV. Lo que sí implementa el proyecto es todo lo que sigue.</p></div>
+
+<h3>Fase 2b. Alineación geométrica</h3>
+<p>Eigenfaces compara píxel por píxel, así que la nariz de una foto debe caer donde cae la nariz de la otra. Con los centros de los dos ojos se calcula una <strong>transformación afín</strong> (giro + escala + traslación) que deja los ojos horizontales, a una distancia fija y en posiciones fijas de una imagen de <strong>64 × 64</strong>: los ojos quedan a 40 % de la altura y en 33 % y 67 % del ancho. Si el par de ojos detectado es absurdo (distancia fuera de 25–65 % del ancho del rostro, como una ceja con un ojo) o no hay dos ojos, se usa un <strong>respaldo</strong> documentado: un recorte centrado del rectángulo del rostro.</p>
+
+<h3>Fase 2c. Normalización fotométrica</h3>
+<p>La luz cambia la cara más que la identidad. Se aplica <strong>CLAHE</strong> suave (límite 1.0, rejilla 2 × 2), se estira el contraste usando los percentiles 1 y 99 dentro de una <strong>máscara elíptica</strong>, y fuera de la elipse se pone gris neutro (0.5): así el fondo, el cabello y el cuello no influyen. En ORL, CLAHE suave dio EER de 10.0 % contra 13 % de la ecualización global.</p>
+
+<h3>Fase 3. Eigenfaces (PCA)</h3>
+<p>Una cara de 64 × 64 es un vector de <strong>d = 4096</strong> números. Pero las caras no ocupan todo ese espacio: se parecen mucho entre sí. El <strong>análisis de componentes principales (PCA)</strong> encuentra las pocas direcciones en las que las caras más varían; esas direcciones, vistas como imágenes, son las <strong>eigenfaces</strong> (Turk y Pentland, 1991).</p>
+<ol>
+<li>Se juntan n caras de entrenamiento y se calcula la <strong>cara media</strong> μ.</li>
+<li>Se resta la media a cada cara: matriz A de n × d.</li>
+<li><strong>Truco de la matriz pequeña:</strong> la covarianza Aᵀ·A mide 4096 × 4096 (casi 17 millones de valores). En su lugar se calculan los eigenvectores v de A·Aᵀ, que mide solo n × n (con n = 210 caras, 44 100 valores). Si A·Aᵀ v = λv, entonces Aᵀv es eigenvector de Aᵀ·A con el mismo λ. Se normaliza cada Aᵀv: esas son las eigenfaces.</li>
+<li>Se ordenan por varianza y se toman las <strong>k</strong> primeras que juntas explican el <strong>95 %</strong> de la varianza.</li>
+</ol>
+<div class="formula">pesos: &nbsp;w = U (x − μ) &nbsp;&nbsp;&nbsp;&nbsp; reconstrucción: &nbsp;x̂ = μ + Σ<sub>i=1…k</sub> w<sub>i</sub> u<sub>i</sub></div>
+<div class="rejilla c2" style="grid-template-columns:1fr 4fr">
+<figure><img src="figuras/r4_media.png"><figcaption>Cara media μ</figcaption></figure>
+<figure><img src="figuras/r5_eigenfaces.png"><figcaption>Primeras 6 eigenfaces</figcaption></figure>
+</div>
+<figure><img src="figuras/r6_reconstruccion.png" style="max-width:85%"><figcaption><span class="tipo real">Real</span><b>Figura 6.5.</b> Modelo de ejemplo entrenado con el código del proyecto sobre 200 caras públicas de ORL (k = 96, 95.1 % de varianza). Abajo, la reconstrucción de la cara de la Figura 6.4 con 1, 5, 10, 20 y 96 componentes: con los pesos basta para recuperarla.</figcaption></figure>
+<p><strong>En la caja real</strong>, el modelo del dominio <code>camara</code> se reentrena con cada alta de usuario con <strong>210 caras</strong> (las 90 de los seis usuarios registrados y 120 de fondo de ORL) y queda con <strong>k = 96</strong> componentes. Después se vuelven a proyectar todos los usuarios con el modelo nuevo.</p>
+
+<h3>Fase 4. Distancia euclidiana</h3>
+<p>Cada cara queda reducida a su vector de pesos w (96 números). Para verificar, se calcula la <strong>distancia euclidiana</strong> entre los pesos de la captura y cada vector guardado del usuario, y se toma la mínima:</p>
+<div class="formula">d = min<sub>j</sub> ‖ w − w<sub>j</sub> ‖ = min<sub>j</sub> √( Σ<sub>i</sub> (w<sub>i</sub> − w<sub>j,i</sub>)² )</div>
+<p>Se acepta si <strong>d &lt; umbral</strong> (10.24 en la caja). A menor distancia, más parecido. En el modelo de ejemplo de ORL, dos fotos de la misma persona dieron d = 10.53 y dos de personas distintas d = 15.22 (con otro modelo; los números no se comparan con el umbral de la caja).</p>
+
+<h2 id="c6-4">FAR, FRR, EER y cómo se eligieron los umbrales</h2>
+<table class="t-compacta">
+<thead><tr><th style="width:18%">Término</th><th>Qué es</th><th style="width:34%">Ejemplo</th></tr></thead>
+<tbody>
+<tr><td><strong>Genuino</strong></td><td>Comparación de una persona contra su propio registro.</td><td>Sandra contra la plantilla de Sandra.</td></tr>
+<tr><td><strong>Impostor</strong></td><td>Comparación de una persona contra el registro de otra.</td><td>Sandra contra la plantilla de Nestor.</td></tr>
+<tr><td><strong>FAR</strong> (falsa aceptación)</td><td>Fracción de comparaciones impostoras que el sistema acepta. Es un <strong>falso positivo</strong>: el error de seguridad.</td><td>FAR 7.7 % en rostro: ~8 de cada 100 caras ajenas pasan solo el factor rostro.</td></tr>
+<tr><td><strong>FRR</strong> (falso rechazo)</td><td>Fracción de comparaciones genuinas que el sistema rechaza. Es un <strong>falso negativo</strong>: el error de comodidad.</td><td>FRR 33 % en huella: 1 de cada 3 capturas genuinas sale bajo (por eso hay reintentos).</td></tr>
+<tr><td><strong>EER</strong> (tasa de error igual)</td><td>El punto donde FAR = FRR al mover el umbral. Resume la calidad de un reconocedor con un número: menor es mejor.</td><td>Rostro: 8.0 %. Huella: 16.7 %.</td></tr>
+</tbody></table>
+<p>Al <strong>subir la exigencia</strong> del umbral baja la FAR y sube la FRR, y viceversa. <code>pc/pia/calibracion.py</code> prueba como umbral cada punto medio entre puntajes observados y escoge el de menor |FAR − FRR| (criterio EER); con <code>--criterio far0</code> escoge el que da FAR = 0 con la menor FRR.</p>
+<div class="rejilla c2">
+<figure><img src="figuras/calibracion_huella.png"><figcaption>Huella (banco del AS608)</figcaption></figure>
+<figure><img src="figuras/calibracion_rostro.png"><figcaption>Rostro (salón, 26 nov)</figcaption></figure>
+</div>
+<p class="pie-nota"><span class="tipo real">Real</span><b>Figura 6.6.</b> Calibraciones activas generadas por <code>calibrar.py</code>: barras verdes = genuinos, rojas = impostores; curvas FRR (verde) y FAR (rojo); la línea vertical es el umbral elegido.</p>
+<table class="t-compacta">
+<thead><tr><th>Factor</th><th>Criterio</th><th>Umbral</th><th>FAR</th><th>FRR</th><th>EER</th><th>Datos</th></tr></thead>
+<tbody>
+<tr><td>Huella (AS608)</td><td>FAR = 0</td><td>0.180</td><td>0 %</td><td>33 %</td><td>16.7 %</td><td>6 dedos de una persona × 8 capturas: 18 genuinas, 90 impostoras</td></tr>
+<tr><td>Rostro (cámara)</td><td>EER</td><td>10.24</td><td>7.7 %</td><td>8.3 %</td><td>8.0 %</td><td>Segunda tanda de 6 usuarios: 60 genuinas, 1260 impostoras (incluye 160 caras ORL)</td></tr>
+</tbody></table>
+<div class="hecho"><span class="et">Verificado en el proyecto: por qué el rostro usa EER y no FAR = 0</span>
+<p>Con FAR = 0 el umbral del rostro quedaba en 9.25 y rechazaba al <strong>45 %</strong> de los genuinos, porque las distancias de genuinos e impostores se enciman entre 8.2 y 10.9. Con EER el rostro deja pasar a un 7.7 % de impostores, pero ese impostor todavía tiene que pasar la huella (calibrada con FAR = 0) y la fusión. El perfil <code>as608</code> de la huella se ajustó con una rejilla de 144 combinaciones de parámetros: bajó el EER de 34 % a 16.7 %.</p></div>
+
+<h2 id="c6-5">Fusión y decisión</h2>
+<p>Un puntaje de huella (más es mejor, alrededor de 0.2) y una distancia de rostro (menos es mejor, alrededor de 10) no se pueden sumar tal cual. <code>fusion.py</code> los lleva a una escala común de 0 a 1 donde <strong>cada factor vale exactamente 0.50 en su umbral</strong>:</p>
+<div class="formula">s<sub>h</sub> = clamp( puntaje / (2 · umbral<sub>h</sub>), 0, 1 ) &nbsp;&nbsp;&nbsp;&nbsp; s<sub>r</sub> = clamp( 1 − d / (2 · umbral<sub>r</sub>), 0, 1 )</div>
+<p><strong>Regla de decisión:</strong> se concede el acceso con el nivel del usuario si el PIN es correcto <strong>y</strong> s<sub>h</sub> ≥ 0.50 <strong>y</strong> s<sub>r</sub> ≥ 0.50 <strong>y</strong> 0.5·s<sub>h</sub> + 0.5·s<sub>r</sub> ≥ 0.60. Exigir que cada factor pase su propio mínimo evita que una huella excelente "rescate" una cara ajena (la regla anterior de la maqueta lo permitía).</p>
+<div class="calculo"><h4>Ejemplos reales del 26 de noviembre</h4>
+<ol>
+<li><strong>Usuaria 14, legítima:</strong> s<sub>h</sub> = 1.000; rostro d = 2.75 → s<sub>r</sub> = 1 − 2.75 / (2 · 10.24) = 1 − 0.134 = 0.866 (la bitácora registra 0.865 con la distancia sin redondear). Fusión = 0.5 · 1.000 + 0.5 · 0.865 = <strong>0.932 ≥ 0.60</strong>: concedido, nivel 1.</li>
+<li><strong>Impostora con el ID y PIN del usuario 21:</strong> s<sub>r</sub> = 0.541 (pasa, ≥ 0.50), pero s<sub>h</sub> = 0.356 (no pasa) y la fusión da 0.5 · 0.356 + 0.5 · 0.541 = <strong>0.448</strong>: negado, motivo "la huella no pasa su umbral".</li>
+<li><strong>Usuario 21 con caras registradas en casa</strong> (calibración anterior, umbral de rostro 8.51): huella 0.929, rostro d = 8.60 → s<sub>r</sub> = 1 − 8.60 / 17.02 = 0.495 &lt; 0.50: negado por rostro aunque la fusión (0.712) superaba 0.60. Al registrar las caras en el salón, el mismo usuario entró con s<sub>r</sub> = 0.594.</li>
+</ol></div>
+
+<h2 id="c6-6">Limitaciones y vulnerabilidades</h2>
+<table class="t-compacta">
+<thead><tr><th style="width:24%">Riesgo</th><th>Qué pasa</th><th style="width:30%">Qué hace (o haría) el sistema</th></tr></thead>
+<tbody>
+<tr><td>Luz distinta al registro</td><td>Eigenfaces mide brillo; una sombra cambia más la imagen que la identidad.</td><td>CLAHE, máscara, y registrar en el mismo lugar de la demo.</td></tr>
+<tr><td>Pose y distancia</td><td>Una cara de lado o lejana no se alinea bien.</td><td>Óvalo guía, dos ojos obligatorios, ancho de cara entre 28 % y 62 %.</td></tr>
+<tr><td>Calidad de cámara y red</td><td>Compresión JPEG, enfoque, cortes de WiFi.</td><td>640 × 480 fijo, URL de respaldo por hotspot, mensajes de error.</td></tr>
+<tr><td>Dedo seco, húmedo o mal puesto</td><td>Crestas cortadas o manchadas, pocas minucias.</td><td>CLAHE, Gabor, hasta 3 capturas por verificación.</td></tr>
+<tr><td>Suplantación (<em>spoofing</em>)</td><td>Una foto o un video de la cara, o un molde de huella.</td><td><strong>No hay prueba de vida.</strong> Mejora: parpadeo, movimiento, sensor capacitivo.</td></tr>
+<tr><td>PIN en el cable</td><td>La línea <code>PIN:id:pin</code> viaja sin cifrar por el USB.</td><td>En la base solo hay hash PBKDF2-SHA256 con sal y 200 000 iteraciones; en la app se enmascara.</td></tr>
+<tr><td>Robo de la base</td><td>Las plantillas biométricas no se pueden "cambiar" como una contraseña.</td><td><code>datos/</code> nunca va a git; mejora: cifrar la base.</td></tr>
+<tr><td>Fuerza física</td><td>El cerrojo es un brazo de servo de plástico.</td><td>Es un prototipo didáctico, no una caja fuerte.</td></tr>
+</tbody></table>
+</section>

@@ -1,0 +1,45 @@
+<section class="capitulo">
+<div class="eyebrow">Capítulo 10</div>
+<h1 id="c10">10. Proceso de construcción y desarrollo</h1>
+<p class="lead">La cronología sale del historial de git del repositorio y de los documentos de estado; las fechas son de 2026.</p>
+
+<h2 id="c10-1">Cronología</h2>
+<table class="t-compacta">
+<thead><tr><th style="width:13%">Fecha</th><th style="width:22%">Etapa</th><th>Qué se hizo</th></tr></thead>
+<tbody>
+<tr><td>2 nov</td><td>Planeación</td><td>Avance ante el profesor: idea, alcance (PIN + huella + rostro, dos niveles) y plan de trabajo.</td></tr>
+<tr><td>5–9 nov</td><td>Selección y diseño</td><td>Estado del arte; selección de componentes (ESP32, AS608, SG90, OLED, teclado, celular como cámara); asignación de pines evitando los de arranque; primera versión de la caja generada con CadQuery y pasada a SolidWorks. Documento de contexto con riesgos.</td></tr>
+<tr><td>11–12 nov</td><td>Maqueta de la interfaz</td><td>Maqueta del modo Simular en el navegador (estilo de Apple, vista por etapas) con una prueba de regresión de cinco escenarios.</td></tr>
+<tr><td>13 nov</td><td>Hoja de ruta y núcleo</td><td>Roadmap día por día con compuertas. <strong>Compuerta G1:</strong> se comprobó que el AS608 entrega la imagen cruda (3 de 3 capturas, 288 paquetes sin errores). Se escribieron los pipelines de huella y de rostro en Python, la base de datos, el registro, el orquestador, el backend y la app conectada (bloques N1–N5).</td></tr>
+<tr><td>14 nov</td><td>Firmware e integración</td><td>Firmware completo y "ESP32 falso" para probar sin hardware (N6). Pruebas por módulo del hardware y medición de ángulos de servos (P4). Banco de huellas del AS608 y ajuste del perfil <code>as608</code> (EER de 34 % a 16.7 %) y primera calibración de rostro (N7). Correcciones con la placa real: el PIN que se borraba, la barra de la OLED que perdía bytes, la foto instantánea, la sincronía caja-app. <strong>Compuerta G2:</strong> verificación real con la caja, nivel 2 concedido.</td></tr>
+<tr><td>18–23 nov</td><td>Documentación</td><td>Diagramas de flujo del sistema y esquemático de conexiones.</td></tr>
+<tr><td>25 nov</td><td>Ajustes</td><td>Recableado del teclado y su calibración con <code>test_teclado_crudo</code>; app: opciones de Simular ocultas en modo ESP32 y animaciones de los botones; plan para la laptop; cámara con URL principal y de respaldo.</td></tr>
+<tr><td>26 nov</td><td>Implementación en el salón</td><td>Registro en el salón de la demo de Nestor (de nuevo), Orlando, Sandra, Luis, Santiago e Ivan; recalibración del rostro con caras reales (EER 8.0 %); sección Datos de la app; reporte técnico en Word; primeros intentos de la prueba de aceptación.</td></tr>
+</tbody></table>
+
+<h2 id="c10-2">Cómo se organizó el trabajo</h2>
+<ul>
+<li><strong>Contratos primero.</strong> El protocolo serie (<code>docs/PROTOCOLO.md</code>) y los eventos de la app (<code>docs/EVENTOS.md</code>) se escribieron antes del código. Así el firmware, el backend y la app se pudieron programar por separado sin romperse entre sí.</li>
+<li><strong>Riesgo mayor primero.</strong> Lo primero que se probó fue si el AS608 entregaba la imagen cruda (si no, había que comprar otro sensor y eso tardaba días). Por eso G1 fue una compuerta: sin ella no se avanzaba.</li>
+<li><strong>Construir sin hardware.</strong> Todo el reconocimiento se validó con bancos públicos (FVC2002 y ORL) y con un ESP32 falso que habla el mismo protocolo, mientras llegaban o se armaban las piezas.</li>
+<li><strong>Probar cada módulo con hardware real antes de integrar.</strong> Un entorno de PlatformIO por módulo: teclado, OLED, LEDs, servos, imagen de huella.</li>
+<li><strong>Herramientas de IA para programar.</strong> El código se escribió con Claude Code como asistente, con reglas fijas del PIA en <code>CLAUDE.md</code> (métodos obligatorios, nada de redes neuronales, datos biométricos fuera de git). Las decisiones de diseño, las pruebas con la caja y los registros los hizo el equipo.</li>
+</ul>
+<div class="ojo"><span class="et">Cuidado en la exposición</span><p>Si el profesor pregunta cómo se programó, hay que ser transparentes: se usó un asistente de IA para escribir código, siguiendo una especificación y reglas que el equipo fijó y verificó con pruebas y con la caja. Lo importante es poder explicar cada parte, que es para lo que sirve este manual.</p></div>
+
+<h2 id="c10-3">Problemas reales y cómo se resolvieron</h2>
+<table class="t-compacta">
+<thead><tr><th style="width:24%">Síntoma</th><th style="width:30%">Causa</th><th>Solución</th></tr></thead>
+<tbody>
+<tr><td>El ESP32 borraba el PIN a medio teclear, cada segundo</td><td><code>millis()</code> se leía antes que el <code>PING</code>; la resta sin signo daba la vuelta y parecía que no había PC</td><td>Tomar el tiempo después de leer los comandos (comentado en <code>main.cpp</code>).</td></tr>
+<tr><td>Huellas con "CRC incorrecto"</td><td>Redibujar la OLED por I²C en cada paquete desbordaba el búfer de la UART2</td><td>Barra de progreso cada 32 paquetes y búfer de 4 KB.</td></tr>
+<tr><td>Teclas cambiadas (la 1 salía como D)</td><td>Conector del teclado al revés</td><td>Orden invertido en <code>pines.h</code> (14 nov); recableado y medido con <code>test_teclado_crudo</code> (25 nov).</td></tr>
+<tr><td>Cámara girada 90° y con marca de agua</td><td>Celular en vertical; DroidCam gratuito</td><td><code>rotacion = 90</code> y cambio a IP Webcam.</td></tr>
+<tr><td>Foto del rostro movida o mal encuadrada</td><td>Se tomaba el primer cuadro</td><td>Vista en vivo con óvalo, indicaciones, cuenta regresiva y 1.5 s dentro de la guía.</td></tr>
+<tr><td>Los servos se movían antes de que la pantalla mostrara el resultado</td><td>El backend actuaba en cuanto calculaba</td><td>La caja espera el aviso <code>listo</code> de la app.</td></tr>
+<tr><td>La app mostraba código viejo</td><td>Caché del navegador</td><td>Encabezado <code>Cache-Control: no-cache</code> y Ctrl + F5.</td></tr>
+<tr><td>Usuario legítimo rechazado por rostro</td><td>Caras registradas con la luz de otro lugar</td><td>Registrar en el salón de la demo y recalibrar.</td></tr>
+<tr><td>La cámara no se veía desde la laptop en la escuela</td><td>La WiFi FIME aísla a los equipos entre sí</td><td>Hotspot del celular como URL de respaldo.</td></tr>
+<tr><td>Los scripts <code>.ps1</code> no corrían en la laptop; el puerto 8000 ocupado</td><td>Política de ejecución de Windows; otro programa en el 8000</td><td><code>-ExecutionPolicy Bypass</code> por comando; backend en el puerto 8001.</td></tr>
+</tbody></table>
+</section>

@@ -1,0 +1,120 @@
+<section class="capitulo">
+<div class="eyebrow">Capítulo 5</div>
+<h1 id="c5">5. Diseño mecánico y CAD</h1>
+<p class="lead">La caja convierte una decisión de software en algo que se puede tocar: dos compartimentos con tapa, un cerrojo por servo y un panel frontal con todo lo que el usuario necesita.</p>
+
+<div class="infer"><span class="et">De dónde sale este capítulo</span>
+<p>Hay tres fuentes: (1) los archivos CAD de la carpeta <code>Modelo_3D/</code> (SolidWorks y STEP), (2) el plan de diseño del 9 de noviembre en <code>docs/CONTEXTO_PIA_RDP.md</code> y (3) el estado del 26 de noviembre. <strong>No hay fotos de la caja impresa en el repositorio ni planos acotados de la versión final</strong>, así que las medidas de este capítulo son las del plan; el equipo debe confirmarlas con vernier sobre la caja real antes de citarlas en la exposición.</p></div>
+
+<h2 id="c5-1">Objetivo del diseño mecánico</h2>
+<ul>
+<li>Alojar y proteger toda la electrónica, dejando accesibles el teclado, la pantalla y el sensor.</li>
+<li>Ofrecer <strong>dos compartimentos</strong> que representen los dos niveles de información: 1 = Lector, 2 = Editor (carpeta de "Compras").</li>
+<li>Mantener cada tapa trabada hasta que el sistema conceda el acceso, y liberarla con un movimiento simple de servo.</li>
+<li>Poder desarmarse para cablear y corregir (panel frontal y tapa inferior desmontables).</li>
+<li>Caber en la impresora de la FIME: 200 × 200 mm de base y 250 mm de alto.</li>
+</ul>
+
+<h2 id="c5-2">Distribución y piezas</h2>
+<figure>
+<svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg" font-family="Inter, Segoe UI" font-size="11">
+  <!-- vista lateral -->
+  <text x="20" y="20" font-weight="600">Vista lateral (esquema, sin escala)</text>
+  <polygon points="40,250 300,250 300,90 120,90 40,180" fill="#EEF3FA" stroke="#1D4E89" stroke-width="2"/>
+  <line x1="40" y1="180" x2="120" y2="90" stroke="#1F7A4D" stroke-width="5"/>
+  <text x="18" y="135" fill="#1F7A4D" font-weight="600" transform="rotate(-48 70 140)">PANEL 41°</text>
+  <line x1="120" y1="90" x2="300" y2="90" stroke="#C98B12" stroke-width="5"/>
+  <text x="170" y="82" fill="#8A5A00" font-weight="600">TAPAS (bisagra atrás)</text>
+  <line x1="40" y1="205" x2="300" y2="205" stroke="#1D4E89" stroke-dasharray="4 3"/>
+  <text x="150" y="150" text-anchor="middle" fill="#1D4E89">compartimentos 1 y 2</text>
+  <text x="170" y="230" text-anchor="middle" fill="#1D4E89">cámara de electrónica (ESP32)</text>
+  <rect x="200" y="160" width="26" height="18" fill="#2B3138"/><text x="213" y="194" text-anchor="middle" font-size="9">servo</text>
+  <line x1="40" y1="250" x2="300" y2="250" stroke="#5B6168" stroke-width="4"/>
+  <text x="170" y="270" text-anchor="middle" fill="#5B6168">tapa inferior desmontable (M3)</text>
+  <!-- vista frontal panel -->
+  <text x="350" y="20" font-weight="600">Panel frontal (esquema)</text>
+  <rect x="350" y="35" width="270" height="170" rx="8" fill="#F3F8F5" stroke="#1F7A4D" stroke-width="2"/>
+  <rect x="368" y="55" width="110" height="130" rx="6" fill="#fff" stroke="#3A4048"/>
+  <text x="423" y="124" text-anchor="middle" font-weight="600">Teclado 4×4</text>
+  <rect x="500" y="55" width="100" height="45" rx="4" fill="#111"/><text x="550" y="82" text-anchor="middle" fill="#9FE3BC" font-family="JBM, Consolas">OLED</text>
+  <circle cx="512" cy="118" r="6" fill="#2ECC71"/><circle cx="530" cy="118" r="6" fill="#E74C3C"/><text x="552" y="122" font-size="9" fill="#5B6168">LEDs</text>
+  <rect x="512" y="135" width="76" height="50" rx="6" fill="#DDE3EA" stroke="#3A4048"/><text x="550" y="164" text-anchor="middle" font-weight="600">AS608</text>
+  <text x="485" y="225" text-anchor="middle" fill="#5B6168">teclado a la izquierda; OLED, LEDs y sensor a la derecha</text>
+  <text x="485" y="242" text-anchor="middle" fill="#5B6168">sujeto con lengüeta abajo e imanes arriba</text>
+</svg>
+<figcaption><span class="tipo diag">Diagrama explicativo</span><b>Figura 5.1.</b> Zonas de la caja según el plan de diseño. No es un plano: las proporciones son aproximadas.</figcaption>
+</figure>
+
+<table class="t-compacta">
+<thead><tr><th style="width:22%">Archivo CAD</th><th>Qué es y para qué sirve</th></tr></thead>
+<tbody>
+<tr><td colspan="2"><strong>Piezas a imprimir</strong> (<code>Modelo_3D/IMPRIMIR/*.STEP</code> y <code>Modelo_3D/Piezas/*.SLDPRT</code>)</td></tr>
+<tr><td><code>BASE</code></td><td>El cuerpo: paredes, piso, compartimentos, repisa del panel, postes para la electrónica y el cerrojo de cada servo.</td></tr>
+<tr><td><code>PANEL</code></td><td>El frente inclinado con los huecos del teclado (bolsillo de 0.8 mm y ranura para la cinta), la ventana de la OLED, los barrenos de los LEDs y el hueco del sensor.</td></tr>
+<tr><td><code>TAPA_V2_LECTOR</code></td><td>Tapa del compartimento 1 (segunda versión). Lleva el gancho que baja hacia el brazo del servo.</td></tr>
+<tr><td><code>TAPA_V2_EDITOR</code></td><td>Tapa del compartimento 2 (segunda versión), mismo principio.</td></tr>
+<tr><td><code>Visagra</code></td><td>Bisagra impresa; 2 por tapa, con pasador de tornillo M3 × 16 y tuerca.</td></tr>
+<tr><td colspan="2"><strong>Subensambles</strong> (<code>Modelo_3D/Subensambles/*.SLDASM</code>)</td></tr>
+<tr><td><code>BASE_ELECTRONICA</code></td><td>La base con la electrónica en su lugar, para revisar espacios y salidas de cable.</td></tr>
+<tr><td><code>PANEL_ELECTRONICA</code></td><td>El panel con teclado, OLED y AS608 montados.</td></tr>
+<tr><td><code>PROTO_ESP32</code></td><td>El ESP32 sobre una protoboard de 830 puntos (<code>proto_830</code>).</td></tr>
+<tr><td><code>SERVO_CERRADURA</code></td><td>Un SG90 con su brazo, que forma el cerrojo de una tapa.</td></tr>
+<tr><td colspan="2"><strong>Modelos de referencia</strong> (<code>Modelo_3D/Electronica/</code>): ESP32 WROOM, lector de huella, teclado de membrana, OLED 0.96", protoboard y SG90. Sirven para que los huecos del CAD coincidan con las piezas reales. <code>Modelo_3D/VIDEO/PIA_RDP.STEP</code> es el ensamble completo (54.6 MB) usado para el video de presentación; <code>Trys/</code> guarda intentos anteriores de la caja.</td></tr>
+</tbody></table>
+
+<h2 id="c5-3">Medidas y restricciones del plan de diseño</h2>
+<table class="t-compacta">
+<tbody>
+<tr><td style="width:36%">Medidas exteriores (versión 1)</td><td>Unos 170 × 154 × 116 mm</td></tr>
+<tr><td>Espesor de pared</td><td>2.4 mm (múltiplo del ancho de línea típico de 0.4 mm: 6 líneas)</td></tr>
+<tr><td>Inclinación del panel frontal</td><td>41°: el teclado y la pantalla quedan de frente a la persona de pie frente a la mesa</td></tr>
+<tr><td>Hueco del sensor</td><td>Unos 20.5 × 18 mm, más 10 mm libres detrás para el conector</td></tr>
+<tr><td>Barrenos para tornillo M3 directo</td><td>2.7 mm (el tornillo corta su rosca en el PLA)</td></tr>
+<tr><td>Salida del cable USB</td><td>12 × 8 mm, en la parte trasera</td></tr>
+<tr><td>Paso de cable de cada servo</td><td>Barreno de Ø 10 mm en el piso del compartimento</td></tr>
+</tbody></table>
+<div class="clave"><span class="et">Concepto clave: tolerancias en impresión 3D</span>
+<p>Una impresora FDM deposita un filamento fundido de unos 0.4 mm. Los agujeros tienden a salir más chicos y los ejes más gordos que en el CAD, por la contracción y el aplastamiento del filamento. Por eso un barreno "para M3" se diseña de 2.7 mm cuando se quiere que el tornillo agarre (rosca autoformada) y de unos 3.2–3.4 mm cuando debe pasar libre, como en el pasador de una bisagra. Las medidas de las piezas compradas (sensor, OLED, teclado) se confirman con vernier: las hojas de datos y las tiendas no siempre coinciden (el AS608 dice 16 × 18 mm de ventana en la hoja y 19.5 × 15.5 mm en la tienda).</p></div>
+
+<h2 id="c5-4">Mecanismos</h2>
+<h3>Cerrojo por servo</h3>
+<p>De cada tapa baja un <strong>gancho</strong>. Con la tapa cerrada y el servo en 0°, el brazo del servo queda <strong>debajo</strong> del gancho e impide levantar la tapa. Al conceder el acceso, el servo gira a 90°: el brazo se quita de abajo del gancho y la tapa queda libre. Es un mecanismo de bloqueo, no de transmisión de fuerza: si alguien jala la tapa cerrada, la fuerza la aguanta el eje del servo, no su motor. Así un servo pequeño (1.8 kgf·cm) basta.</p>
+<div class="hecho"><span class="et">Verificado en el proyecto</span><p>Los ángulos se midieron en la caja el 14 de noviembre con la herramienta <code>app/herramientas/servos.html</code>: los dos servos traban el cerrojo a 0° y liberan el gancho a 90° (<code>firmware/src/config.h</code>).</p></div>
+
+<h3>Tapas abatibles</h3>
+<p>Cada tapa gira sobre dos bisagras impresas con pasador M3. Las tapas <strong>no se abren solas</strong>: el plan dejaba abierta la opción de un resorte o un imán que las empuje; mientras tanto, la persona la levanta con la mano después de oír el servo. La app dibuja la tapa levantándose como ilustración.</p>
+
+<h3>Panel frontal desmontable</h3>
+<p>Una lengüeta abajo entra bajo un labio de la base; arriba lo sujetan dos pares de imanes de neodimio de 6 × 3 mm; una repisa perimetral aguanta la presión al teclear. Los cables del panel llegan a la electrónica con conectores, con 8 a 10 cm de holgura, para poder quitar el panel sin desoldar.</p>
+
+<h2 id="c5-5">Fabricación</h2>
+<ul>
+<li><strong>Proceso:</strong> impresión 3D FDM (modelado por deposición fundida) en PLA, en la impresora de la FIME.</li>
+<li><strong>Exportación:</strong> SolidWorks → STL en milímetros y resolución fina (o 3MF si el laminador es PrusaSlicer, Bambu Studio u OrcaSlicer). La carpeta <code>IMPRIMIR/</code> guarda los STEP de las 4 piezas.</li>
+<li><strong>Primera versión:</strong> generada con un script paramétrico de CadQuery (<code>caja_pia.py</code>) y exportada a STEP; se editó en SolidWorks 2025 (el STEP llega sin historial de operaciones, por eso las piezas se rehicieron en SolidWorks).</li>
+</ul>
+<div class="reco"><span class="et">Recomendación (no son datos registrados)</span>
+<p>Los parámetros reales de impresión (altura de capa, relleno, soportes, orientación) no están en el repositorio. Si el profesor pregunta, lo honesto es decir cuáles se usaron en la impresora. Como referencia general para PLA: capa de 0.2 mm, 3 perímetros (los 2.4 mm de pared ya son 6 líneas), relleno de 15–20 %, la base impresa boca arriba sobre su piso y las tapas acostadas sobre su cara exterior para que la superficie visible salga lisa y los ganchos no necesiten soporte.</p></div>
+
+<h2 id="c5-6">Orden de montaje sugerido</h2>
+<ol>
+<li>Imprimir BASE, PANEL, las dos TAPAS y cuatro bisagras; limpiar rebabas y probar tornillos en los barrenos.</li>
+<li>Montar la electrónica en la cámara inferior (ESP32 en su protoboard o placa) y sacar el cable USB por la salida trasera.</li>
+<li>Atornillar cada servo bajo su compartimento, pasar su cable por el barreno de Ø 10 mm y ajustar el brazo a 0° con el servo alimentado (posición "trabado").</li>
+<li>Instalar las bisagras y las tapas; comprobar que el gancho cae sobre el brazo.</li>
+<li>Montar en el panel: teclado pegado en su bolsillo, OLED atornillada por detrás (M2 × 5), sensor en su cuna, LEDs. Conectar al ESP32 con conectores.</li>
+<li>Colocar el panel (lengüeta e imanes) y la tapa inferior (M3).</li>
+<li>Prueba funcional: abrir y cerrar cada servo desde el botón <strong>Servos</strong> de la app antes de una verificación completa.</li>
+</ol>
+
+<h2 id="c5-7">Problemas de diseño y soluciones</h2>
+<table class="t-compacta">
+<thead><tr><th style="width:30%">Problema</th><th>Solución</th></tr></thead>
+<tbody>
+<tr><td>El teclado de membrana falla sin respaldo y sus pistas se agrietan</td><td>Bolsillo de 0.8 mm con superficie completa detrás y ranura para la cinta.</td></tr>
+<tr><td>El AS608 no tiene orejas para tornillo</td><td>Cuna impresa con costillas que entran en las ranuras laterales del módulo; solo la ventana asoma por el panel.</td></tr>
+<tr><td>Hay que cablear y corregir con la caja armada</td><td>Panel y tapa inferior desmontables; conectores en lugar de soldadura.</td></tr>
+<tr><td>Las tapas no se abren solas</td><td>Pendiente: resorte o imán. Por ahora, se levantan a mano.</td></tr>
+<tr><td>El conector del teclado quedó al revés (14 nov) y luego se recableó (25 nov)</td><td>Se corrigió en software (<code>pines.h</code>) y se verificó con <code>test_teclado_crudo</code>.</td></tr>
+</tbody></table>
+</section>

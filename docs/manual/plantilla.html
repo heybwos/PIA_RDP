@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Manual técnico y de capacitación · PIA de Reconocimiento de Patrones</title>
+<style>
+@font-face{font-family:"Inter";font-weight:400;src:url("../../app/fonts/inter-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"Inter";font-weight:500;src:url("../../app/fonts/inter-latin-500-normal.woff2") format("woff2")}
+@font-face{font-family:"Inter";font-weight:600;src:url("../../app/fonts/inter-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"JBM";font-weight:400;src:url("../../app/fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"JBM";font-weight:600;src:url("../../app/fonts/jetbrains-mono-latin-600-normal.woff2") format("woff2")}
+:root{--verde:#1F7A4D;--verde-2:#E7F3EC;--azul:#1D4E89;--azul-2:#E8EFF8;--ambar:#8A5A00;--ambar-2:#FBF2DF;
+  --rojo:#A3262A;--rojo-2:#FBE9E9;--gris:#5B6168;--gris-2:#F3F4F6;--linea:#D9DCE1;--tinta:#16191D}
+@page{size:Letter;margin:17mm 16mm 19mm 16mm;
+  @bottom-left{content:"PIA de Reconocimiento de Patrones · Manual técnico";font:400 8pt Inter,"Segoe UI";color:#8A9099}
+  @bottom-right{content:counter(page);font:600 9pt Inter,"Segoe UI";color:#5B6168}}
+@page portada{margin:0;@bottom-left{content:none}@bottom-right{content:none}}
+*{box-sizing:border-box}
+html{font-family:Inter,"Segoe UI",Arial,sans-serif;font-size:10pt;line-height:1.5;color:var(--tinta);
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0}
+p{margin:0 0 7pt;text-align:left;orphans:3;widows:3}
+ul,ol{margin:0 0 8pt;padding-left:16pt} li{margin:0 0 2.5pt}
+strong{font-weight:600}
+code,.mono{font-family:JBM,Consolas,monospace;font-size:8.6pt}
+code{background:var(--gris-2);border-radius:3px;padding:0 3px}
+a{color:var(--azul);text-decoration:none}
+
+/* portada */
+.portada{page:portada;height:279.4mm;position:relative;overflow:hidden;background:#0F1F17;color:#fff;break-after:page}
+.portada .franja{position:absolute;left:0;right:0;top:0;height:9mm;background:var(--verde)}
+.portada .logos{position:absolute;top:20mm;left:20mm;right:20mm;display:flex;justify-content:space-between;align-items:center}
+.portada .logos img{height:26mm;background:#fff;border-radius:6px;padding:3mm}
+.portada .titulo{position:absolute;left:20mm;right:20mm;top:78mm}
+.portada .eyebrow{font-size:11pt;letter-spacing:.14em;text-transform:uppercase;color:#8FD3AE;font-weight:600}
+.portada h1{font-size:30pt;line-height:1.12;margin:6mm 0 5mm;font-weight:600;color:#fff;border:none;padding:0}
+.portada .sub{font-size:13pt;color:#D2E5DA;max-width:150mm}
+.portada .datos{position:absolute;left:20mm;right:20mm;bottom:22mm;display:grid;grid-template-columns:1fr 1fr;gap:4mm 10mm;font-size:9.5pt;color:#D2E5DA}
+.portada .datos b{display:block;color:#fff;font-weight:600;font-size:10.5pt}
+.portada .marca{position:absolute;right:-30mm;top:120mm;width:150mm;height:150mm;border-radius:50%;border:1.5mm solid rgba(143,211,174,.16)}
+.portada .marca::after{content:"";position:absolute;inset:14mm;border-radius:50%;border:1.5mm solid rgba(143,211,174,.12)}
+
+/* índice */
+.indice{break-after:page}
+.indice h1{font-size:20pt;margin:0 0 6mm;color:var(--verde)}
+.indice ol{list-style:none;padding:0;margin:0}
+.indice li{display:flex;justify-content:space-between;gap:6pt;border-bottom:1px dotted var(--linea);padding:2.2pt 0}
+.indice .toc-cap{font-weight:600;margin-top:5pt;font-size:10.5pt}
+.indice .toc-sub{padding-left:12pt;font-size:9pt;color:#3A4048}
+.indice a{color:inherit}
+.leyenda{margin-top:8mm;padding:4mm;border:1px solid var(--linea);border-radius:6px;font-size:9pt}
+.leyenda .fila{display:flex;gap:6pt;align-items:center;margin:2pt 0}
+
+/* capítulos */
+.capitulo{break-before:page}
+.eyebrow{font-size:9pt;letter-spacing:.14em;text-transform:uppercase;color:var(--verde);font-weight:600;margin:0 0 1mm}
+h1{font-size:21pt;line-height:1.15;margin:0 0 5mm;font-weight:600;color:var(--tinta);border-bottom:2.5pt solid var(--verde);padding-bottom:2.5mm}
+h2{font-size:13.5pt;margin:8mm 0 3mm;font-weight:600;color:var(--verde);break-after:avoid}
+h3{font-size:11pt;margin:5mm 0 2mm;font-weight:600;break-after:avoid}
+h4{font-size:10pt;margin:4mm 0 1.5mm;font-weight:600;color:var(--azul);break-after:avoid}
+.lead{font-size:11pt;color:#2E343B;margin-bottom:5mm}
+
+/* tablas */
+table{width:100%;border-collapse:collapse;margin:2mm 0 5mm;font-size:8.8pt;break-inside:auto}
+thead{display:table-header-group}
+tr{break-inside:avoid}
+th{background:var(--verde);color:#fff;text-align:left;font-weight:600;padding:4pt 5pt;vertical-align:bottom}
+td{padding:3.6pt 5pt;border-bottom:1px solid var(--linea);vertical-align:top}
+tbody tr:nth-child(even) td{background:#FAFBFC}
+.t-compacta td,.t-compacta th{padding:2.6pt 4pt;font-size:8.4pt}
+
+/* recuadros */
+.caja,.clave,.hecho,.infer,.reco,.ojo,.analogia{display:flow-root;border-radius:6px;padding:3.2mm 4mm;margin:3mm 0 5mm;break-inside:avoid;page-break-inside:avoid;border-left:4px solid}
+.caja>.et{font-size:8pt;letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-bottom:1.5mm;display:block}
+.caja p:last-child,.caja ul:last-child{margin-bottom:0}
+.clave{background:var(--verde-2);border-color:var(--verde)} .clave>.et{color:var(--verde)}
+.hecho{background:var(--azul-2);border-color:var(--azul)} .hecho>.et{color:var(--azul)}
+.infer{background:var(--ambar-2);border-color:#C98B12} .infer>.et{color:var(--ambar)}
+.reco{background:var(--gris-2);border-color:#8A9099} .reco>.et{color:var(--gris)}
+.ojo{background:var(--rojo-2);border-color:var(--rojo)} .ojo>.et{color:var(--rojo)}
+.analogia{background:#F4F0FA;border-color:#6B4FA0} .analogia>.et{color:#6B4FA0}
+.chip{display:inline-block;width:9pt;height:9pt;border-radius:2px;border-left:3px solid;vertical-align:-1pt}
+
+/* figuras */
+figure{margin:3mm 0 5mm;break-inside:avoid;text-align:center}
+figure img{max-width:100%;border:1px solid var(--linea);border-radius:4px}
+figure svg{max-width:100%;height:auto}
+figcaption{font-size:8.6pt;color:var(--gris);margin-top:1.8mm;text-align:left}
+figcaption b{color:var(--tinta)}
+.tipo{display:inline-block;font-size:7.4pt;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:0 4pt;border-radius:3px;margin-right:4pt}
+.tipo.real{background:var(--azul-2);color:var(--azul)} .tipo.diag{background:var(--ambar-2);color:var(--ambar)}
+.rejilla{display:grid;gap:3mm;margin:3mm 0 1mm}
+.rejilla.c4{grid-template-columns:repeat(4,1fr)} .rejilla.c3{grid-template-columns:repeat(3,1fr)} .rejilla.c2{grid-template-columns:repeat(2,1fr)}
+.rejilla figure{margin:0}
+.rejilla figcaption{text-align:center;margin-top:1mm}
+
+/* código */
+.codigo{margin:3mm 0 4mm;border:1px solid #2B3138;border-radius:5px;overflow:hidden;break-inside:auto}
+.codigo-cab{display:flex;justify-content:space-between;background:#2B3138;color:#C9D1D9;font:600 7.6pt JBM,Consolas,monospace;padding:2.2pt 6pt}
+.codigo pre{margin:0;padding:4pt 6pt;background:#161B22;color:#E6EDF3;font:400 7.6pt/1.42 JBM,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+.codigo .ln{display:inline-block;width:22pt;color:#6E7681;user-select:none}
+.explica{margin:-1mm 0 4mm;padding-left:3mm;border-left:2px solid var(--linea)}
+.explica dt{font-weight:600;font-size:9pt;margin-top:2pt}
+.explica dd{margin:0 0 2pt 0;font-size:9pt}
+
+/* fórmulas y cálculos */
+.formula{font-family:"Cambria Math","Segoe UI",serif;font-size:11pt;text-align:center;margin:2mm 0 3mm;padding:2mm;background:#FAFBFC;border-radius:4px}
+.calculo{border:1px solid var(--linea);border-radius:6px;padding:3mm 4mm;margin:3mm 0 5mm;break-inside:avoid}
+.calculo ol{margin:0;padding-left:14pt}
+
+/* preguntas */
+.pregunta{border:1px solid var(--linea);border-radius:6px;padding:3mm 4mm;margin:0 0 3mm;break-inside:avoid}
+.pregunta .q{font-weight:600;color:var(--azul);margin-bottom:1.5mm}
+.pregunta .q span{color:var(--gris);font-weight:500;font-size:8.4pt;text-transform:uppercase;letter-spacing:.06em;margin-right:4pt}
+.pregunta p:last-child{margin-bottom:0}
+
+/* glosario */
+.glosario dt{font-weight:600;font-size:10pt;margin-top:3.5mm;color:var(--verde);break-after:avoid}
+.glosario dd{margin:0 0 0 0;font-size:9pt;break-inside:avoid}
+.glosario dd span{display:block}
+.glosario dd .s{color:#2E343B} .glosario dd .e{color:var(--gris);font-style:italic}
+
+.dos{display:grid;grid-template-columns:1fr 1fr;gap:5mm}
+.pie-nota{font-size:8.4pt;color:var(--gris)}
+.refs li{font-size:8.8pt;margin-bottom:3pt}
+</style>
+</head>
+<body>
+
+<section class="portada">
+  <div class="franja"></div>
+  <div class="logos"><img src="figuras/logo_uanl.png" alt="UANL"><img src="figuras/logo_fime.png" alt="FIME"></div>
+  <div class="marca"></div>
+  <div class="titulo">
+    <div class="eyebrow">Manual técnico y de capacitación</div>
+    <h1>Control de acceso biométrico con PIN, huella y rostro</h1>
+    <div class="sub">Cómo funciona, cómo se construyó y cómo defenderlo: guía de estudio del equipo para el Producto Integrador de Aprendizaje de Reconocimiento de Patrones.</div>
+  </div>
+  <div class="datos">
+    <div><b>Universidad Autónoma de Nuevo León</b>Facultad de Ingeniería Mecánica y Eléctrica</div>
+    <div><b>Reconocimiento de Patrones</b>Grupo 003 · Frecuencia LMV · Prof. Antonio Juárez Alonso</div>
+    <div><b>Equipo</b>Nestor A. Jiménez Barragán, Orlando, Sandra, Luis, Santiago e Ivan</div>
+    <div><b>Versión</b>27 de noviembre de 2026 · estado del repositorio al 26 de noviembre</div>
+  </div>
+</section>
+
+<section class="indice">
+  <h1>Índice</h1>
+  <ol>
+{{INDICE}}
+  </ol>
+  <div class="leyenda">
+    <b>Cómo leer este manual.</b> Cada recuadro de color dice qué tan seguro es lo que contiene:
+    <div class="fila"><span class="chip" style="background:var(--azul-2);border-color:var(--azul)"></span><b>Verificado en el proyecto</b>: está en el código, en los documentos del repositorio o se midió con la caja.</div>
+    <div class="fila"><span class="chip" style="background:var(--ambar-2);border-color:#C98B12"></span><b>Inferencia</b>: se deduce de lo anterior, pero nadie lo midió.</div>
+    <div class="fila"><span class="chip" style="background:var(--gris-2);border-color:#8A9099"></span><b>Recomendación</b>: algo que convendría hacer; no está hecho.</div>
+    <div class="fila"><span class="chip" style="background:var(--verde-2);border-color:var(--verde)"></span><b>Concepto clave</b>: lo mínimo que hay que saber explicar.</div>
+    <div class="fila"><span class="chip" style="background:var(--rojo-2);border-color:var(--rojo)"></span><b>Cuidado en la exposición</b>: afirmaciones que suelen salir mal o provocar preguntas difíciles.</div>
+    <div class="fila"><span class="chip" style="background:#F4F0FA;border-color:#6B4FA0"></span><b>Analogía</b>: ayuda a explicar, con el punto donde deja de ser exacta.</div>
+    Las figuras marcadas <span class="tipo real">real</span> salen del sistema (capturas de la app o etapas calculadas por el código del proyecto con bancos públicos); las marcadas <span class="tipo diag">diagrama explicativo</span> se dibujaron para este manual. Todos los fragmentos de código se copian automáticamente de los archivos del repositorio, con su ruta y números de línea.
+  </div>
+</section>
+
+{{CUERPO}}
+
+</body>
+</html>

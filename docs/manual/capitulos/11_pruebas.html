@@ -1,0 +1,73 @@
+<section class="capitulo">
+<div class="eyebrow">Capítulo 11</div>
+<h1 id="c11">11. Pruebas, validación y errores</h1>
+<p class="lead">Aquí se separa con cuidado lo que se probó y midió, lo que solo se observó, y lo que conviene probar. Un resultado sin muestra suficiente no se presenta como tasa.</p>
+
+<h2 id="c11-1">Pruebas por componente (con hardware)</h2>
+<table class="t-compacta">
+<thead><tr><th style="width:20%">Prueba</th><th style="width:34%">Cómo</th><th>Resultado documentado</th></tr></thead>
+<tbody>
+<tr><td>TX del AS608</td><td>Multímetro: TX contra GND con el sensor a 5 V</td><td>≈ 3.3 V: conexión directa, sin divisor (13 nov).</td></tr>
+<tr><td>Imagen cruda (G1)</td><td>Firmware <code>test_huella_imagen</code> + <code>bajar_huella.py</code></td><td>3 de 3 capturas completas: 288 paquetes de 128 bytes, 36 864 bytes en ~7.7 s, sin errores de suma; nibble alto primero.</td></tr>
+<tr><td>OLED</td><td>Entorno <code>test_oled</code></td><td>Responde en 0x3C.</td></tr>
+<tr><td>Teclado</td><td><code>test_teclado</code> y <code>test_teclado_crudo</code></td><td>16 teclas correctas tras corregir el orden (14 nov) y tras el recableado (25 nov).</td></tr>
+<tr><td>Servos</td><td><code>test_servos</code> y <code>app/herramientas/servos.html</code></td><td>Cerrado 0°, abierto 90°; uno a la vez sin brownout con 5 V / 0.9 A y tierra común.</td></tr>
+<tr><td>LEDs</td><td><code>test_leds</code></td><td>Pendiente: no están conectados.</td></tr>
+<tr><td>Cámara</td><td><code>probar_camara.py</code> (prueba las 4 rotaciones)</td><td>IP Webcam a 640 × 480, mejor orientación 90°.</td></tr>
+</tbody></table>
+
+<h2 id="c11-2">Pruebas automáticas del software</h2>
+<ul>
+<li><strong>38 pruebas con pytest</strong> (<code>pc/tests/</code>): hash del PIN, regla de fusión, EER, almacén de usuarios y minucias, lectura de la cámara con un DroidCam falso, la guía del rostro en vivo, que la cámara caída no invente una imagen, los cinco escenarios de Simular con bitácora, que la caja espere a la app y reintente la huella, el servidor WebSocket, el módulo de servos, el protocolo serie y los pipelines de huella y rostro.</li>
+<li><strong>Regresión de la app</strong> (<code>app/pruebas/regresion.js</code>, Playwright con Edge): corre los cinco escenarios y verifica el veredicto esperado, cero errores de consola y cero peticiones fuera de la computadora.</li>
+<li><strong>Regresión del modo ESP32</strong> (<code>regresion_esp32.js</code>): con el ESP32 falso, verifica "concedido nivel 2" y que "Intentar de nuevo" cierre los servos.</li>
+</ul>
+<table class="t-compacta">
+<thead><tr><th>Escenario de Simular</th><th>Esperado</th><th>Qué comprueba</th></tr></thead>
+<tbody>
+<tr><td>Usuario legítimo nivel 1 (ID 07)</td><td>Concedido, nivel 1</td><td>Flujo completo y apertura de un compartimento.</td></tr>
+<tr><td>Usuario legítimo nivel 2 (ID 12)</td><td>Concedido, nivel 2</td><td>Los dos compartimentos, uno tras otro.</td></tr>
+<tr><td>Impostor de huella (dice ser 12)</td><td>Negado: huella</td><td>Una huella ajena no pasa su umbral.</td></tr>
+<tr><td>Impostor de rostro (dice ser 07)</td><td>Negado: rostro</td><td>Una cara ajena no pasa su umbral.</td></tr>
+<tr><td>PIN incorrecto (07)</td><td>Negado: PIN</td><td>No se piden huella ni rostro.</td></tr>
+</tbody></table>
+
+<h2 id="c11-3">Pruebas de precisión (calibración)</h2>
+<p>Las tasas de cada factor (capítulo 6) se midieron con muchas comparaciones: huella con 18 genuinas y 90 impostoras (banco de una persona), rostro con 60 genuinas y 1260 impostoras (seis personas en el salón y caras de ORL). En modo Simular: huella FVC2002 con EER 0.2 % y rostro ORL con EER 8.2 %.</p>
+
+<h2 id="c11-4">Pruebas funcionales con la caja (26 de noviembre)</h2>
+<table class="t-compacta">
+<thead><tr><th>Intento</th><th>s<sub>h</sub></th><th>Rostro d (s<sub>r</sub>)</th><th>Fusión</th><th>Resultado</th></tr></thead>
+<tbody>
+<tr><td>ID 21, caras registradas en casa</td><td>0.929</td><td>8.60 (0.495)</td><td>0.712</td><td>Negado: rostro</td></tr>
+<tr><td>ID 21, caras registradas en el salón</td><td>1.000</td><td>7.82 (0.594)</td><td>0.797</td><td>Concedido, nivel 2</td></tr>
+<tr><td>ID 14, usuaria legítima</td><td>1.000</td><td>2.75 (0.865)</td><td>0.932</td><td>Concedido, nivel 1</td></tr>
+<tr><td>ID 21 tecleado por la usuaria 14</td><td>0.356</td><td>9.35 (0.541)</td><td>0.448</td><td>Negado: huella</td></tr>
+</tbody></table>
+<table class="t-compacta">
+<thead><tr><th>Usuario</th><th>Genuinos aceptados</th><th>Impostores rechazados</th><th>Observaciones</th></tr></thead>
+<tbody>
+<tr><td>14 (Sandra)</td><td>1 / 1</td><td>—</td><td></td></tr>
+<tr><td>15 (Luis)</td><td>1 / 1</td><td>—</td><td></td></tr>
+<tr><td>21 (Nestor)</td><td>2 / 2</td><td>2 / 2</td><td>Un impostor pasó el rostro (0.541); lo detuvo la huella.</td></tr>
+<tr><td>33 (Orlando)</td><td>—</td><td>—</td><td>Sin intentos registrados.</td></tr>
+<tr><td>88 (Ivan)</td><td>1 / 1</td><td>1 / 1</td><td>El impostor pasó el rostro (0.520); lo detuvo la huella.</td></tr>
+<tr><td>99 (Santiago)</td><td>—</td><td>—</td><td>3 intentos con PIN incorrecto, negados antes de la biometría.</td></tr>
+<tr><td><strong>Sistema</strong></td><td><strong>5 / 5</strong></td><td><strong>3 / 3</strong></td><td>Muestra pequeña: 8 intentos.</td></tr>
+</tbody></table>
+<div class="ojo"><span class="et">Cuidado en la exposición</span><p>No decir "el sistema tiene 0 % de error". Con 8 intentos, 0 errores solo significa que no hubo errores en esa muestra. Lo defendible: cada factor tiene su EER medido con cientos de comparaciones, y en las pruebas con la caja la combinación detuvo a los impostores que sí pasaban el rostro.</p></div>
+
+<h2 id="c11-5">Pruebas de fallos y seguridad</h2>
+<table class="t-compacta">
+<thead><tr><th style="width:30%">Caso</th><th style="width:16%">Estado</th><th>Comportamiento</th></tr></thead>
+<tbody>
+<tr><td>Tecla D, tiempo agotado al teclear</td><td>Probado</td><td>Cancela y vuelve a "Listo".</td></tr>
+<tr><td>Huella débil</td><td>Probado</td><td>Hasta 3 capturas.</td></tr>
+<tr><td>Cámara caída</td><td>Probado (prueba automática)</td><td>Error con qué revisar; no inventa imagen.</td></tr>
+<tr><td>Imagen con CRC malo</td><td>Probado (prueba de protocolo)</td><td>Se descarta.</td></tr>
+<tr><td>Sin PC (backend cerrado)</td><td>Diseñado y probado en P5</td><td>Servos cerrados, OLED "Sin conexion".</td></tr>
+<tr><td>Foto impresa o pantalla frente a la cámara</td><td><strong>No probado</strong></td><td>Probablemente pasaría el rostro (no hay prueba de vida); la huella lo seguiría deteniendo.</td></tr>
+<tr><td>Cable desconectado y reconectado en plena demo</td><td>Recomendado ensayarlo</td><td>Error "Se perdió la conexión"; volver a pulsar Buscar ESP32.</td></tr>
+</tbody></table>
+<div class="reco"><span class="et">Recomendación</span><p>Completar la prueba de aceptación planeada (10 intentos genuinos y 10 de impostor por persona) y medir el tiempo total de una verificación (teclear, huella de ~8 s, rostro, decisión) para poder responder "¿cuánto tarda?" con un número propio.</p></div>
+</section>

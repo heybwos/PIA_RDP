@@ -1,0 +1,114 @@
+<section class="capitulo">
+<div class="eyebrow">Capítulo 4</div>
+<h1 id="c4">4. Electrónica y conexiones</h1>
+<p class="lead">Todo el circuito gira alrededor del ESP32: cada periférico usa un tipo de señal distinto, y los pines se escogieron para no chocar con los que el chip usa al arrancar.</p>
+
+<h2 id="c4-1">Tabla de conexiones</h2>
+<p>Fuente: <code>docs/CABLEADO.md</code> y <code>firmware/src/pines.h</code>, que deben coincidir siempre (el firmware lee los pines de <code>pines.h</code>).</p>
+<table class="t-compacta">
+<thead><tr><th>Componente</th><th>Pin o terminal</th><th>Conexión (ESP32)</th><th>Función</th><th>Consideraciones</th></tr></thead>
+<tbody>
+<tr><td rowspan="4"><strong>AS608</strong></td><td>Vi</td><td>5 V (pin VIN con USB)</td><td>Alimentación</td><td>Hasta 150 mA</td></tr>
+<tr><td>GND</td><td>GND</td><td>Referencia común</td><td>Todas las tierras unidas</td></tr>
+<tr><td>TXD</td><td>GPIO16 (RX2)</td><td>Datos del sensor al ESP32</td><td>Medido a 3.3 V: va directo, sin divisor</td></tr>
+<tr><td>RXD</td><td>GPIO17 (TX2)</td><td>Comandos del ESP32 al sensor</td><td>3.3 V del ESP32 bastan</td></tr>
+<tr><td rowspan="2"><strong>Teclado 4 × 4</strong></td><td>Pines 1–4 (filas)</td><td>GPIO13, 14, 27, 26</td><td>Filas 1 2 3 A / 4 5 6 B / 7 8 9 C / * 0 # D</td><td>Sin alimentación ni GND</td></tr>
+<tr><td>Pines 5–8 (columnas)</td><td>GPIO25, 33, 32, 4</td><td>Columnas 1 4 7 * / 2 5 8 0 / 3 6 9 # / A B C D</td><td>Recableado y medido el 25 nov</td></tr>
+<tr><td rowspan="2"><strong>OLED SSD1306</strong></td><td>SDA / SCL</td><td>GPIO21 / GPIO22</td><td>Bus I²C (datos / reloj)</td><td>Pines I²C por defecto del ESP32</td></tr>
+<tr><td>VCC / GND</td><td>3.3 V / GND</td><td>Alimentación</td><td>Dirección 0x3C</td></tr>
+<tr><td><strong>Servo 1</strong> (Lector)</td><td>Señal (naranja)</td><td>GPIO18</td><td>PWM 50 Hz</td><td>V+ a 5 V, nunca a 3.3 V</td></tr>
+<tr><td><strong>Servo 2</strong> (Editor)</td><td>Señal (naranja)</td><td>GPIO19</td><td>PWM 50 Hz</td><td>Uno a la vez, 300 ms entre ellos</td></tr>
+<tr><td><strong>LED verde</strong></td><td>Ánodo con 220 Ω</td><td>GPIO23</td><td>Acceso concedido</td><td>Sin conectar</td></tr>
+<tr><td><strong>LED rojo</strong></td><td>Ánodo con 220 Ω</td><td>GPIO5</td><td>Acceso negado / sin PC</td><td>Sin conectar; GPIO5 es de arranque</td></tr>
+</tbody></table>
+
+<h3>Por qué esos pines</h3>
+<ul>
+<li><strong>Pines de arranque (<em>strapping</em>): 0, 2, 5, 12 y 15.</strong> El ESP32 lee su nivel en el instante de encender para decidir cómo arrancar (por ejemplo, GPIO0 en bajo lo pone en modo de carga de firmware; GPIO12 fija el voltaje de la flash). Si un periférico los fuerza a un nivel equivocado, la placa no arranca. Por eso se evitan; GPIO5 solo maneja un LED, que no altera el arranque.</li>
+<li><strong>GPIO 6 a 11:</strong> están conectados a la memoria flash interna. Usarlos cuelga la placa.</li>
+<li><strong>GPIO 1 y 3:</strong> son la UART0, que va al convertidor USB. Ahí viaja el protocolo con la PC.</li>
+<li><strong>GPIO 34 a 39:</strong> solo entrada y sin pull-up; el teclado necesita pull-ups internas, así que no se usan para él.</li>
+<li><strong>GPIO16 y 17:</strong> son la UART2 por defecto. Libres en WROOM-32; en WROVER los ocupa la PSRAM.</li>
+</ul>
+
+<h2 id="c4-2">Cómo se lee el teclado matricial</h2>
+<figure>
+<svg viewBox="0 0 640 250" xmlns="http://www.w3.org/2000/svg" font-family="Inter, Segoe UI" font-size="11">
+  <g stroke="#1D4E89" stroke-width="2">
+    <line x1="120" y1="45" x2="420" y2="45"/><line x1="120" y1="95" x2="420" y2="95"/><line x1="120" y1="145" x2="420" y2="145"/><line x1="120" y1="195" x2="420" y2="195"/></g>
+  <g stroke="#1F7A4D" stroke-width="2"><line x1="170" y1="25" x2="170" y2="215"/><line x1="240" y1="25" x2="240" y2="215"/><line x1="310" y1="25" x2="310" y2="215"/><line x1="380" y1="25" x2="380" y2="215"/></g>
+  <g font-weight="600" text-anchor="middle">
+    <text x="60" y="49" fill="#1D4E89">F1 · GPIO13</text><text x="60" y="99" fill="#1D4E89">F2 · GPIO14</text><text x="60" y="149" fill="#1D4E89">F3 · GPIO27</text><text x="60" y="199" fill="#1D4E89">F4 · GPIO26</text>
+    <text x="170" y="237" fill="#1F7A4D">C1·25</text><text x="240" y="237" fill="#1F7A4D">C2·33</text><text x="310" y="237" fill="#1F7A4D">C3·32</text><text x="380" y="237" fill="#1F7A4D">C4·4</text></g>
+  <g font-family="JBM, Consolas" font-size="12" text-anchor="middle">
+    <text x="182" y="40">1</text><text x="252" y="40">2</text><text x="322" y="40">3</text><text x="392" y="40">A</text>
+    <text x="182" y="90">4</text><text x="252" y="90">5</text><text x="322" y="90">6</text><text x="392" y="90">B</text>
+    <text x="182" y="140">7</text><text x="252" y="140">8</text><text x="322" y="140">9</text><text x="392" y="140">C</text>
+    <text x="182" y="190">*</text><text x="252" y="190">0</text><text x="322" y="190">#</text><text x="392" y="190">D</text></g>
+  <circle cx="240" cy="95" r="9" fill="none" stroke="#C0392B" stroke-width="2.5"/>
+  <text x="455" y="70" font-weight="600">Al presionar "5":</text>
+  <text x="455" y="90">la fila F2 (GPIO14) queda unida</text><text x="455" y="106">con la columna C2 (GPIO33).</text>
+  <text x="455" y="132">El programa pone una columna</text><text x="455" y="148">a la vez en 0 V y lee las filas</text><text x="455" y="164">(con pull-up internas): la fila</text><text x="455" y="180">que baja a 0 V delata la tecla.</text>
+</svg>
+<figcaption><span class="tipo diag">Diagrama explicativo</span><b>Figura 4.1.</b> Matriz del teclado con los GPIO reales. 16 teclas con solo 8 pines: 4 + 4 en lugar de 16.</figcaption>
+</figure>
+<p>La biblioteca <code>Keypad</code> hace este barrido cada vez que el programa llama a <code>getKey()</code> y aplica un <strong>antirrebote</strong> de 30 ms: el contacto mecánico de una tecla "rebota" (se abre y cierra varias veces en milisegundos) y, sin ese filtro, una pulsación contaría como varias. Para calibrar el cableado, el equipo escribió el programa de prueba <code>test_teclado_crudo</code>, que pone cada GPIO en bajo y reporta qué otro GPIO cae: así se midió qué par de pines une cada tecla, sin depender de <code>pines.h</code>.</p>
+
+<h2 id="c4-3">Señales y protocolos que usa cada módulo</h2>
+<table class="t-compacta">
+<thead><tr><th style="width:16%">Señal</th><th>Qué es</th><th style="width:30%">Dónde se usa</th></tr></thead>
+<tbody>
+<tr><td><strong>Digital</strong></td><td>Solo dos niveles: 0 V (bajo, 0) y 3.3 V (alto, 1).</td><td>Teclado, LEDs, todas las líneas de datos.</td></tr>
+<tr><td><strong>UART</strong></td><td>Serie asíncrona: dos cables (TX y RX), cada byte va precedido de un bit de inicio y seguido de uno de parada (formato 8N1: 8 datos, sin paridad, 1 parada). Ambos lados acuerdan la velocidad en baudios porque no hay reloj compartido.</td><td>ESP32 ↔ AS608 a 57 600 bps (UART2). ESP32 ↔ PC a 921 600 bps (UART0 por el USB).</td></tr>
+<tr><td><strong>I²C</strong></td><td>Bus de dos cables (SDA datos, SCL reloj) donde un maestro habla con varios esclavos, cada uno con su dirección de 7 bits.</td><td>OLED en 0x3C. El firmware prueba 0x3C y 0x3D al arrancar.</td></tr>
+<tr><td><strong>PWM</strong></td><td>Modulación por ancho de pulso: una onda cuadrada de frecuencia fija donde lo que importa es cuánto tiempo está en alto.</td><td>Servos: 50 Hz; el ancho del pulso fija el ángulo.</td></tr>
+<tr><td><strong>Analógica</strong></td><td>Voltaje continuo.</td><td>No se usa ninguna entrada analógica.</td></tr>
+</tbody></table>
+
+<h2 id="c4-4">Cálculos eléctricos</h2>
+<div class="calculo"><h4>Cálculo 1. ¿Hace falta un divisor de voltaje en el TX del sensor?</h4>
+<ol>
+<li><strong>Qué se quiere saber:</strong> si el AS608, alimentado a 5 V, saca 5 V por su TX, el ESP32 (3.3 V) se puede dañar. El plan era un divisor de 1 kΩ en serie y 2 kΩ a tierra.</li>
+<li><strong>Fórmula del divisor:</strong> <span class="formula" style="display:block">V<sub>sal</sub> = V<sub>ent</sub> · R<sub>2</sub> / (R<sub>1</sub> + R<sub>2</sub>)</span> con R<sub>1</sub> = 1 kΩ (serie) y R<sub>2</sub> = 2 kΩ (a tierra).</li>
+<li><strong>Si el TX fuera de 5 V:</strong> 5 · 2 / (1 + 2) = <strong>3.33 V</strong>. Seguro para el ESP32.</li>
+<li><strong>Pero el TX se midió en 3.3 V</strong> (13 de noviembre). Con divisor: 3.3 · 2 / 3 = <strong>2.2 V</strong>.</li>
+<li><strong>Umbral de entrada del ESP32:</strong> V<sub>IH</sub> = 0.75 · 3.3 V = <strong>2.48 V</strong>.</li>
+<li><strong>Interpretación:</strong> 2.2 V &lt; 2.48 V, así que con divisor el ESP32 podría no reconocer los unos. Por eso la regla fue "mide primero; no pongas el divisor sin medir". Se conectó directo.</li>
+</ol></div>
+
+<div class="calculo"><h4>Cálculo 2. ¿Cuánto tarda en llegar la imagen de la huella?</h4>
+<ol>
+<li><strong>Datos:</strong> 36 864 bytes de imagen, enviados en paquetes de 128 bytes (288 paquetes). Cada paquete agrega 11 bytes de cabecera y suma (2 inicio + 4 dirección + 1 tipo + 2 longitud + 2 suma). UART 8N1 = 10 bits por byte.</li>
+<li><strong>Bytes totales:</strong> 36 864 + 288 · 11 = 40 032 bytes.</li>
+<li><strong>Velocidad útil:</strong> 57 600 bps / 10 = 5 760 bytes/s.</li>
+<li><strong>Tiempo:</strong> 40 032 / 5 760 ≈ <strong>6.95 s</strong>.</li>
+<li><strong>Medido:</strong> unos 7.7 s desde <code>UpImage</code>; la diferencia son las pausas internas del sensor entre paquetes.</li>
+<li><strong>De ESP32 a la PC</strong> a 921 600 bps: 36 864 / 92 160 ≈ 0.4 s. El cuello de botella es el sensor, no el USB. Por eso el firmware reenvía cada paquete en cuanto llega y la app dibuja la huella "bajando" fila por fila.</li>
+</ol></div>
+
+<div class="calculo"><h4>Cálculo 3. ¿Qué pulso recibe el servo para abrir?</h4>
+<ol>
+<li><strong>Datos del código:</strong> <code>servos[s].setPeriodHertz(50)</code> y <code>attach(pin, 500, 2400)</code>: periodo de 20 ms; 0° = 500 µs y 180° = 2400 µs.</li>
+<li><strong>Fórmula (lineal):</strong> <span class="formula" style="display:block">t = 500 µs + (2400 − 500) µs · θ / 180°</span></li>
+<li><strong>Abierto (θ = 90°):</strong> 500 + 1900 · 0.5 = <strong>1450 µs</strong>. Ciclo de trabajo: 1.45 / 20 = <strong>7.25 %</strong>.</li>
+<li><strong>Cerrado (θ = 0°):</strong> 500 µs, ciclo de trabajo de 2.5 %.</li>
+<li><strong>Interpretación:</strong> el servo no recibe "cuánta fuerza", sino "a qué ángulo ir". Mientras reciba el pulso, mantiene la posición. Que la tapa jale el brazo no hace girar el servo: solo carga su eje.</li>
+</ol></div>
+
+<div class="calculo"><h4>Cálculo 4. Resistencia de los LEDs (cuando se conecten)</h4>
+<ol>
+<li><strong>Fórmula (ley de Ohm sobre la resistencia):</strong> <span class="formula" style="display:block">I = (V<sub>GPIO</sub> − V<sub>f</sub>) / R</span></li>
+<li><strong>Valores:</strong> V<sub>GPIO</sub> = 3.3 V, R = 220 Ω. La caída del LED V<sub>f</sub> depende del color y del modelo; valores típicos: rojo ≈ 2.0 V, verde ≈ 2.1–3.0 V (dato no medido en el proyecto).</li>
+<li><strong>Rojo:</strong> (3.3 − 2.0) / 220 ≈ <strong>5.9 mA</strong>. <strong>Verde:</strong> entre (3.3 − 3.0)/220 ≈ 1.4 mA y (3.3 − 2.1)/220 ≈ 5.5 mA.</li>
+<li><strong>Interpretación:</strong> corrientes bajas y seguras para un GPIO del ESP32. Un LED verde de alta caída (≈ 3 V) se vería tenue con 3.3 V; si pasa, se baja la resistencia o se usa un LED de menor V<sub>f</sub>.</li>
+</ol></div>
+
+<h2 id="c4-5">Alimentación, corriente y protección</h2>
+<ul>
+<li><strong>Plan principal:</strong> todo del USB de la laptop. La placa recibe 5 V y su regulador da 3.3 V al chip y a la OLED. El sensor y los servos toman los 5 V del pin VIN.</li>
+<li><strong>Riesgo de brownout:</strong> los servos piden picos de corriente al arrancar. Si el voltaje cae, el detector de bajo voltaje del ESP32 lo reinicia ("Brownout detector was triggered" en el monitor serie). Medidas del proyecto: un servo a la vez con 300 ms entre ellos (en firmware) y, si hace falta, cargador de 5 V / 2 A con tierra común.</li>
+<li><strong>Nunca</strong> conectar los 5 V de una fuente externa al VIN mientras el ESP32 está conectado por USB: solo se unen las tierras.</li>
+<li><strong>Estado seguro por software:</strong> servos a cerrado en <code>setup()</code> antes que cualquier otra cosa; sin <code>PING</code> de la PC por 5 s se cierran; ninguna fase espera para siempre.</li>
+</ul>
+<div class="infer"><span class="et">Inferencia</span><p>Presupuesto aproximado de corriente a 5 V: ESP32 sin WiFi del orden de 50–100 mA, sensor hasta 150 mA, OLED unos 20 mA, más los picos de un servo. El ESP32 no usa su radio, que es lo que más consume. No se midió la corriente total; el dato verificado es que funcionó sin reinicios con el USB de un monitor de 0.9 A.</p></div>
+</section>

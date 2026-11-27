@@ -1,0 +1,112 @@
+<section class="capitulo">
+<div class="eyebrow">Capítulo 2</div>
+<h1 id="c2">2. Arquitectura general del sistema</h1>
+<p class="lead">El sistema se reparte en dos "cerebros": el ESP32, que vive en la caja y maneja todo lo físico, y la computadora, que hace todo el reconocimiento. Entre ellos solo viaja texto y una imagen por el cable USB.</p>
+
+<figure>
+<svg viewBox="0 0 760 430" xmlns="http://www.w3.org/2000/svg" font-family="Inter, Segoe UI, sans-serif" font-size="11">
+  <defs><marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#3A4048"/></marker>
+  <marker id="fe" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C0392B"/></marker></defs>
+  <!-- caja -->
+  <rect x="10" y="10" width="330" height="410" rx="12" fill="#F3F8F5" stroke="#1F7A4D" stroke-width="1.5"/>
+  <text x="24" y="32" font-weight="600" font-size="13" fill="#1F7A4D">CAJA (impresa en 3D)</text>
+  <rect x="120" y="170" width="110" height="80" rx="8" fill="#1F7A4D"/>
+  <text x="175" y="200" text-anchor="middle" fill="#fff" font-weight="600" font-size="13">ESP32</text>
+  <text x="175" y="217" text-anchor="middle" fill="#D9F0E3">firmware C++</text>
+  <text x="175" y="232" text-anchor="middle" fill="#D9F0E3">máquina de estados</text>
+  <g fill="#fff" stroke="#1F7A4D"><rect x="25" y="55" width="120" height="44" rx="6"/><rect x="200" y="55" width="125" height="44" rx="6"/>
+  <rect x="25" y="320" width="120" height="44" rx="6"/><rect x="200" y="320" width="125" height="44" rx="6"/><rect x="25" y="186" width="80" height="48" rx="6"/></g>
+  <text x="85" y="74" text-anchor="middle" font-weight="600">Teclado 4×4</text><text x="85" y="89" text-anchor="middle" fill="#5B6168">8 GPIO · matriz</text>
+  <text x="262" y="74" text-anchor="middle" font-weight="600">Sensor AS608</text><text x="262" y="89" text-anchor="middle" fill="#5B6168">UART2 · 57 600 bps</text>
+  <text x="85" y="339" text-anchor="middle" font-weight="600">OLED SSD1306</text><text x="85" y="354" text-anchor="middle" fill="#5B6168">I²C · 0x3C</text>
+  <text x="262" y="339" text-anchor="middle" font-weight="600">2 servos SG90</text><text x="262" y="354" text-anchor="middle" fill="#5B6168">PWM 50 Hz · cerrojos</text>
+  <text x="65" y="206" text-anchor="middle" font-weight="600">LEDs</text><text x="65" y="221" text-anchor="middle" fill="#A3262A">sin conectar</text>
+  <g stroke="#3A4048" stroke-width="1.3" fill="none">
+    <path d="M100 99 L150 170" marker-end="url(#fl)"/><path d="M255 99 L205 170" marker-start="url(#fl)" marker-end="url(#fl)"/>
+    <path d="M150 250 L100 320" marker-end="url(#fl)"/><path d="M205 250 L255 320" marker-end="url(#fl)"/><path d="M120 210 L105 210" marker-end="url(#fl)" stroke-dasharray="3 3"/></g>
+  <text x="24" y="405" fill="#5B6168">5 V del USB (o cargador 5 V / 2 A para los servos)</text>
+  <!-- PC -->
+  <rect x="420" y="10" width="330" height="300" rx="12" fill="#EEF3FA" stroke="#1D4E89" stroke-width="1.5"/>
+  <text x="434" y="32" font-weight="600" font-size="13" fill="#1D4E89">LAPTOP (Windows)</text>
+  <rect x="440" y="50" width="290" height="140" rx="8" fill="#1D4E89"/>
+  <text x="585" y="72" text-anchor="middle" fill="#fff" font-weight="600" font-size="13">Backend en Python (pc/pia)</text>
+  <text font-size="10" x="585" y="92" text-anchor="middle" fill="#DCE6F4">dispositivos/esp32.py · lee y escribe el puerto serie</text>
+  <text font-size="10" x="585" y="108" text-anchor="middle" fill="#DCE6F4">orquestador.py · PIN → huella → rostro → decisión</text>
+  <text font-size="10" x="585" y="124" text-anchor="middle" fill="#DCE6F4">huella/ · Gabor, minucias, grafos</text>
+  <text font-size="10" x="585" y="140" text-anchor="middle" fill="#DCE6F4">rostro/ · Viola-Jones, CLAHE, Eigenfaces</text>
+  <text font-size="10" x="585" y="156" text-anchor="middle" fill="#DCE6F4">fusion.py · calibracion.py · pin.py</text>
+  <text font-size="10" x="585" y="176" text-anchor="middle" fill="#DCE6F4">servidor.py · FastAPI + WebSocket</text>
+  <rect x="440" y="210" width="135" height="80" rx="8" fill="#fff" stroke="#1D4E89"/>
+  <text x="507" y="235" text-anchor="middle" font-weight="600">SQLite + archivos</text><text x="507" y="252" text-anchor="middle" fill="#5B6168">datos/pia.db</text><text x="507" y="268" text-anchor="middle" fill="#5B6168">usuarios, modelos,</text><text x="507" y="282" text-anchor="middle" fill="#5B6168">calibraciones, bitácora</text>
+  <rect x="595" y="210" width="135" height="80" rx="8" fill="#fff" stroke="#1D4E89"/>
+  <text x="662" y="235" text-anchor="middle" font-weight="600">App web</text><text x="662" y="252" text-anchor="middle" fill="#5B6168">navegador</text><text x="662" y="268" text-anchor="middle" fill="#5B6168">solo dibuja</text><text x="662" y="282" text-anchor="middle" fill="#5B6168">http://127.0.0.1:8000</text>
+  <g stroke="#3A4048" stroke-width="1.3" fill="none"><path d="M507 190 L507 210" marker-start="url(#fl)" marker-end="url(#fl)"/><path d="M662 190 L662 210" marker-start="url(#fl)" marker-end="url(#fl)"/></g>
+  <text x="672" y="204" fill="#5B6168" font-size="10">WebSocket</text>
+  <!-- USB -->
+  <path d="M230 205 L440 120" stroke="#1F7A4D" stroke-width="2.4" fill="none" marker-start="url(#fl)" marker-end="url(#fl)"/>
+  <rect x="285" y="138" width="118" height="34" rx="5" fill="#fff" stroke="#1F7A4D"/>
+  <text x="344" y="152" text-anchor="middle" font-weight="600" fill="#1F7A4D">USB · 921 600 bps</text><text x="344" y="166" text-anchor="middle" fill="#5B6168">texto + imagen cruda</text>
+  <!-- celular -->
+  <rect x="470" y="345" width="230" height="70" rx="10" fill="#FBF2DF" stroke="#C98B12" stroke-width="1.5"/>
+  <text x="585" y="368" text-anchor="middle" font-weight="600">Celular con IP Webcam</text><text x="585" y="385" text-anchor="middle" fill="#5B6168">video MJPEG 640×480 por WiFi</text><text x="585" y="401" text-anchor="middle" fill="#5B6168">(hotspot del celular)</text>
+  <path d="M585 345 L585 190" stroke="#C98B12" stroke-width="2" stroke-dasharray="6 4" fill="none" marker-end="url(#fl)"/>
+  <text x="592" y="330" fill="#8A5A00" font-size="10">HTTP :8080/video</text>
+  <!-- persona -->
+  <text x="360" y="300" text-anchor="middle" font-size="22">👤</text><text x="360" y="318" text-anchor="middle" fill="#5B6168" font-size="10">usuario</text>
+  <path d="M345 292 L300 260" stroke="#888" fill="none" stroke-dasharray="2 3"/><path d="M378 300 L465 370" stroke="#888" fill="none" stroke-dasharray="2 3"/>
+</svg>
+<figcaption><span class="tipo diag">Diagrama explicativo</span><b>Figura 2.1.</b> Arquitectura general. Las flechas sólidas son señales eléctricas o datos por cable; la punteada naranja es el video por WiFi. El backend es el único que decide.</figcaption>
+</figure>
+
+<h2 id="c2-1">Por qué se divide así</h2>
+<p>El ESP32 tiene 520 KB de memoria RAM y un procesador de 240 MHz. Una sola huella ocupa 73 728 píxeles y el filtrado de Gabor hace decenas de convoluciones sobre ella; el modelo de Eigenfaces tiene 96 vectores de 4096 valores en coma flotante. Ni la memoria ni la velocidad alcanzan, y además las bibliotecas que usa el proyecto (NumPy, OpenCV, scikit-image) no existen para el ESP32. Por eso el reparto es:</p>
+<table>
+<thead><tr><th>Parte</th><th>Dónde corre</th><th>Qué hace</th></tr></thead>
+<tbody>
+<tr><td><strong>Firmware</strong></td><td>ESP32 (C++ con Arduino)</td><td>Lee el teclado, controla el sensor y reenvía la imagen, maneja la OLED, los servos y los LEDs, y obedece a la PC.</td></tr>
+<tr><td><strong>Backend</strong></td><td>PC (Python)</td><td>Recibe la huella, lee la cámara, ejecuta las fases 2 a 4, decide y le responde al ESP32. Guarda todo en SQLite.</td></tr>
+<tr><td><strong>App web</strong></td><td>Navegador de la PC</td><td>Dibuja lo que el backend calcula. <strong>No calcula nada del reconocimiento.</strong></td></tr>
+<tr><td><strong>Cámara</strong></td><td>Celular Android</td><td>Transmite video MJPEG por WiFi con IP Webcam.</td></tr>
+</tbody></table>
+
+
+
+<h2 id="c2-2">Los subsistemas, uno por uno</h2>
+<table>
+<thead><tr><th style="width:21%">Subsistema</th><th style="width:40%">Qué hace y por qué hace falta</th><th>Con qué se relaciona</th></tr></thead>
+<tbody>
+<tr><td><strong>Adquisición de datos</strong></td><td>Captura las tres entradas: teclas (teclado matricial), imagen de huella (AS608) y video (celular). Sin buenas capturas ningún algoritmo funciona.</td><td>Entrega al ESP32 (teclado, huella) y al backend (video).</td></tr>
+<tr><td><strong>Microcontrolador y firmware</strong></td><td>El ESP32 coordina lo físico con una máquina de estados sin <code>delay()</code>, para no dejar de leer el teclado ni el puerto serie. Tiene tiempos límite y un estado seguro.</td><td>Habla con todos los periféricos de la caja y con la PC por USB.</td></tr>
+<tr><td><strong>Comunicación</strong></td><td>Un protocolo de texto propio (<code>docs/PROTOCOLO.md</code>) sobre USB, el protocolo de paquetes del AS608, I²C para la OLED, HTTP para el video y WebSocket para la app.</td><td>Une los cuatro bloques: caja, backend, app y celular.</td></tr>
+<tr><td><strong>Reconocimiento</strong></td><td>Las fases 2 a 4 de huella y rostro, la normalización de puntajes y la fusión. Es lo que evalúa el PIA.</td><td>Recibe datos de adquisición; entrega puntajes a la decisión.</td></tr>
+<tr><td><strong>Almacenamiento</strong></td><td>SQLite con usuarios, plantillas de minucias, modelos de Eigenfaces, calibraciones y bitácora; las imágenes crudas en archivos PNG.</td><td>Lo usan el registro, la verificación y la calibración.</td></tr>
+<tr><td><strong>Actuación</strong></td><td>Servos que liberan los cerrojos de las tapas, OLED con mensajes, LEDs (programados, no conectados).</td><td>Obedece al ESP32, que obedece a la decisión del backend.</td></tr>
+<tr><td><strong>Mecánico</strong></td><td>Caja en PLA con panel frontal inclinado, dos compartimentos con tapa abatible y bisagras, cerrojo por servo y cámara de electrónica.</td><td>Aloja y protege la electrónica; convierte el giro del servo en "abierto/cerrado".</td></tr>
+<tr><td><strong>Alimentación</strong></td><td>5 V del USB de la laptop para todo; para los servos, opción de un cargador de 5 V / 2 A con tierra común.</td><td>Alimenta caja; el celular y la laptop tienen su batería.</td></tr>
+<tr><td><strong>Interfaz de usuario</strong></td><td>Hacia la persona: teclado, OLED y la guía de la cámara. Hacia el público: la app web, que muestra cada fase.</td><td>Recibe eventos del backend por WebSocket.</td></tr>
+</tbody></table>
+
+<h2 id="c2-3">Flujo de información, energía y acciones</h2>
+<ul>
+  <li><strong>Información hacia arriba:</strong> teclas y la imagen de la huella van del ESP32 a la PC por USB; el video va del celular a la PC por WiFi.</li>
+  <li><strong>Decisiones hacia abajo:</strong> la PC manda texto corto al ESP32 (<code>MSG:</code> para la OLED, <code>PEDIR_HUELLA</code>, <code>ACCESO:n</code>, <code>CERRAR</code>).</li>
+  <li><strong>Señales físicas:</strong> el ESP32 genera pulsos PWM para los servos, escribe por I²C a la OLED, barre las filas del teclado y habla por UART con el sensor.</li>
+  <li><strong>Energía:</strong> el USB de la laptop entrega 5 V a la placa del ESP32; de ahí se toman 5 V para el sensor y los servos y 3.3 V (regulados en la placa) para la OLED.</li>
+  <li><strong>Hacia el público:</strong> el backend emite eventos (<code>docs/EVENTOS.md</code>) por WebSocket y la app los anima a su ritmo. La caja espera a que la app termine de mostrar la huella y el veredicto antes de seguir, para que lo físico y lo que se ve en pantalla vayan sincronizados.</li>
+</ul>
+<div class="clave"><span class="et">Concepto clave</span>
+<p><strong>La app solo dibuja; todo número del reconocimiento lo calcula Python.</strong> Es una regla del repositorio (<code>CLAUDE.md</code>). Si el profesor pregunta "¿esa gráfica la calcula el navegador?", la respuesta es no: el navegador recibe por WebSocket las imágenes de cada etapa, las minucias, los pares del matching, los pesos y los puntajes ya calculados.</p></div>
+
+<h2 id="c2-4">Estructura del repositorio</h2>
+<table class="t-compacta">
+<thead><tr><th>Carpeta</th><th>Contenido</th></tr></thead>
+<tbody>
+<tr><td><code>firmware/</code></td><td>Proyecto de PlatformIO. <code>src/main.cpp</code> (máquina de estados), <code>huella.cpp</code>, <code>teclado.cpp</code>, <code>pantalla.cpp</code>, <code>actuadores.cpp</code>, <code>protocolo.cpp</code>; <code>src/pruebas/</code> con un programa de prueba por módulo.</td></tr>
+<tr><td><code>pc/pia/</code></td><td>Backend: <code>huella/</code>, <code>rostro/</code>, <code>orquestador.py</code>, <code>fusion.py</code>, <code>calibracion.py</code>, <code>almacen.py</code> (SQLite), <code>registro.py</code>, <code>camara.py</code>, <code>dispositivos/</code> (ESP32 real, simulado), <code>servidor.py</code>.</td></tr>
+<tr><td><code>pc/scripts/</code></td><td>Herramientas de consola: instalar, arrancar, registrar, alta de compañeros, calibrar, capturar banco, respaldo, probar cámara.</td></tr>
+<tr><td><code>pc/tests/</code></td><td>38 pruebas automáticas con pytest.</td></tr>
+<tr><td><code>app/</code></td><td>App web: <code>index.html</code>, <code>js/principal.js</code> (eventos), <code>js/dibujo.js</code> (lienzos), <code>js/movimiento.js</code> (animaciones), <code>datos.html</code> (consulta de lo registrado).</td></tr>
+<tr><td><code>docs/</code></td><td>Protocolo, eventos, cableado, estado del proyecto, plan, reporte técnico y este manual.</td></tr>
+<tr><td><code>datos/</code></td><td><strong>Fuera de git</strong>: base de datos, huellas y caras reales, modelos, calibraciones, datasets públicos. Viaja en un ZIP por USB.</td></tr>
+</tbody></table>
+</section>

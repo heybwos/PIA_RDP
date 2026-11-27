@@ -1,0 +1,88 @@
+<section class="capitulo">
+<div class="eyebrow">Capítulo 3</div>
+<h1 id="c3">3. Lista de materiales y componentes</h1>
+<p class="lead">No basta con saber qué piezas lleva la caja: hay que saber por qué está cada una, cómo funciona por dentro y qué pasa si falla. Las especificaciones vienen de las hojas de datos de los fabricantes y de las mediciones del equipo; donde un dato sale solo del plan de diseño, se indica.</p>
+
+<h2 id="c3-1">Microcontrolador: ESP32 DevKit V1 (módulo ESP32-WROOM-32)</h2>
+<table class="t-compacta">
+<tbody>
+<tr><td style="width:24%"><strong>Nombre común</strong></td><td>"El ESP32", la plaquita negra con dos filas de 15 pines, un puerto micro-USB y los botones EN (reinicio) y BOOT.</td></tr>
+<tr><td><strong>Función</strong></td><td>Coordina todo lo físico de la caja y habla con la laptop por USB.</td></tr>
+<tr><td><strong>Principio</strong></td><td>Un microcontrolador es una computadora completa en un chip (procesador, memoria, periféricos) que ejecuta un solo programa grabado en su memoria flash. Sus pines GPIO (<em>General Purpose Input/Output</em>) se configuran como entradas o salidas digitales, o se conectan a periféricos internos: UART, I²C, PWM.</td></tr>
+<tr><td><strong>Datos técnicos</strong></td><td>Procesador Xtensa LX6 de doble núcleo a 240 MHz, 520 KB de SRAM, 4 MB de flash en el módulo WROOM-32, WiFi y Bluetooth integrados (no se usan), lógica de <strong>3.3 V</strong>. Un nivel alto de entrada se reconoce desde 0.75 × VDD ≈ 2.48 V. Los GPIO 34 a 39 son solo de entrada y no tienen resistencias de pull-up (Espressif, 2023).</td></tr>
+<tr><td><strong>Interfaz con la PC</strong></td><td>Convertidor USB-serie <strong>CH340</strong> en la placa (aparece como COM4 en la PC de escritorio y COM3 o COM8 en la laptop).</td></tr>
+<tr><td><strong>Por qué se eligió</strong></td><td>Barato, con suficientes GPIO para teclado (8), sensor (2), OLED (2), servos (2) y LEDs (2); tiene tres UART por hardware (una para el USB y otra libre para el sensor) y PWM por hardware para los servos.</td></tr>
+<tr><td><strong>Si falla o se desconecta</strong></td><td>La app muestra "ESP32 · sin conexión". Si el ESP32 deja de recibir <code>PING</code> de la PC por 5 s, entra en estado seguro: servos cerrados, OLED "Sin conexion con la PC" y teclado ignorado.</td></tr>
+<tr><td><strong>Alternativas</strong></td><td>Arduino Mega (5 V, más lento, sin WiFi), Raspberry Pi Pico (2 núcleos, 264 KB). Una Raspberry Pi 4 podría hacer el reconocimiento ella misma, pero el PIA no lo requiere y cuesta más.</td></tr>
+</tbody></table>
+<div class="ojo"><span class="et">Cuidado en la exposición</span><p>El ESP32 <strong>no tolera 5 V en sus pines</strong>. Por eso el equipo midió el TX del sensor antes de conectarlo (capítulo 4). Y si la placa fuera WROVER (con memoria PSRAM), los GPIO 16 y 17 estarían ocupados; la placa usada es WROOM-32.</p></div>
+
+<h2 id="c3-2">Sensores</h2>
+<h3>Sensor óptico de huella AS608</h3>
+<table class="t-compacta">
+<tbody>
+<tr><td style="width:24%"><strong>Nombre común</strong></td><td>"El lector de huella": bloque con una ventana de vidrio en cuña y un conector de 8 pines.</td></tr>
+<tr><td><strong>Principio</strong></td><td>Óptico por reflexión interna total: un LED ilumina un prisma; donde la piel (cresta) toca el vidrio, la luz se dispersa y se ve oscuro; donde hay aire (valle), la luz se refleja y llega a la cámara del módulo. Así se forma una imagen en grises de la huella.</td></tr>
+<tr><td><strong>Datos técnicos</strong></td><td>Interfaz UART TTL a 57 600 baudios por defecto. Imagen de 256 × 288 píxeles; por UART la entrega a 4 bits por píxel (36 864 bytes) con el comando <code>UpImage</code> (0x0A). Consumo hasta 120–150 mA. Alimentación: la hoja dice 3.3–5 V y la tienda 3.6–6 V; se alimenta a 5 V, que entra en los dos rangos. Ventana de lectura de unos 16 × 18 mm.</td></tr>
+<tr><td><strong>Conexión</strong></td><td>De sus 8 pines (D−, D+, Vt, WAK, GND, RXD, TXD, Vi) solo se usan Vi, GND, TXD y RXD. Se conecta por la serigrafía de la placa, nunca por el color de los cables: la propia hoja de datos se contradice en los colores.</td></tr>
+<tr><td><strong>Por qué se eligió</strong></td><td>Barato y permite bajar la imagen cruda, que es lo que exige el PIA. Se verificó antes que nada (compuerta G1, 13 de noviembre: 3 de 3 capturas completas).</td></tr>
+<tr><td><strong>Si falla</strong></td><td>El ESP32 saluda con <code>HOLA:1.0:ERR:…</code> y la app muestra "sensor ERR"; ante <code>PEDIR_HUELLA</code> responde <code>HUELLA:ERR:SENSOR</code>. Sin dedo en 15 s: <code>HUELLA:ERR:TIEMPO</code>.</td></tr>
+<tr><td><strong>Alternativas</strong></td><td>R307 o FPM10 (mismo protocolo), sensores capacitivos (más caros, más resolución).</td></tr>
+</tbody></table>
+
+<h3>Cámara: celular Android con IP Webcam</h3>
+<p>El celular transmite video MJPEG (una secuencia de imágenes JPEG) por HTTP en <code>http://&lt;IP&gt;:8080/video</code> a 640 × 480, con el teléfono en vertical (por eso el programa gira el cuadro 90°, <code>rotacion = 90</code>). Se eligió porque una cámara de celular es mejor que una webcam barata y no requiere cables. Al principio se usó DroidCam, pero la versión gratuita pone marca de agua y acepta un solo cliente; por eso se cambió a IP Webcam. <strong>Si falla</strong>, la verificación se detiene con "La cámara no responde" y qué revisar; el backend prueba primero la URL principal y, si no contesta en 1.5 s, la de respaldo (hotspot).</p>
+
+<h2 id="c3-3">Entradas, pantalla y actuadores</h2>
+<table class="t-compacta">
+<thead><tr><th style="width:17%">Componente</th><th style="width:30%">Qué es y cómo funciona</th><th style="width:27%">Datos relevantes</th><th>Si falla / alternativas</th></tr></thead>
+<tbody>
+<tr><td><strong>Teclado matricial 4 × 4 de membrana</strong></td><td>16 botones en una rejilla de 4 filas y 4 columnas. Cada tecla, al presionarse, une eléctricamente una fila con una columna. Es pasivo: no lleva alimentación.</td><td>8 pines (1–4 filas, 5–8 columnas). Teclas 0–9, A–D, <code>*</code>, <code>#</code>. Se pega sobre una superficie completa: sin respaldo, las pistas de plata se agrietan.</td><td>Teclas cambiadas si el conector se invierte (pasó el 14 de noviembre). Alternativa: teclado de botones mecánicos.</td></tr>
+<tr><td><strong>OLED 0.96" SSD1306</strong></td><td>Pantalla de diodos orgánicos: cada píxel emite su propia luz, así que no necesita luz de fondo y se lee bien en oscuro. El chip SSD1306 guarda la imagen y la refresca.</td><td>128 × 64 píxeles, I²C en la dirección 0x3C (verificada), alimentación 3.3 V. El módulo rotula SCL como "SCK".</td><td>Si no responde, el firmware sigue funcionando y reporta "OLED ERR". Sin acentos: la fuente del módulo no los trae.</td></tr>
+<tr><td><strong>2 servomotores SG90</strong></td><td>Motor de CD con engranes y un potenciómetro que mide el ángulo; un circuito interno compara el ángulo pedido (ancho del pulso PWM) con el medido y mueve el motor hasta igualarlos.</td><td>4.8–6 V, par de bloqueo de unos 1.8 kgf·cm, 0.1 s por 60°, 9 g (TowerPro). Cerrado 0°, abierto 90° (medido en la caja el 14 de noviembre).</td><td>Picos de corriente pueden reiniciar el ESP32 (<em>brownout</em>); por eso se mueven uno a la vez, con 300 ms entre ellos. Alternativa: solenoide de cerradura (necesita transistor y 12 V).</td></tr>
+<tr><td><strong>LED verde y rojo de 5 mm con 220 Ω</strong></td><td>Diodos que emiten luz cuando conducen; la resistencia limita la corriente.</td><td>Verde en GPIO23, rojo en GPIO5.</td><td><strong>Programados pero no conectados</strong> en la caja (pendiente del estado del proyecto).</td></tr>
+</tbody></table>
+
+<h2 id="c3-4">Alimentación y montaje electrónico</h2>
+<table class="t-compacta">
+<thead><tr><th style="width:24%">Elemento</th><th>Función y estado</th></tr></thead>
+<tbody>
+<tr><td><strong>Cable USB (datos)</strong></td><td>Alimenta la placa con los 5 V de la laptop y lleva los datos. Debe ser de datos, no solo de carga, o el puerto COM no aparece.</td></tr>
+<tr><td><strong>Fuente de 5 V para servos</strong></td><td>Verificado: servos sin brownout alimentados con 5 V de un USB de monitor (0.9 A) con tierra común. Para la demo se recomienda un cargador de 5 V / 2 A o power bank, uniendo su GND con el del ESP32.</td></tr>
+<tr><td><strong>Capacitor 470 µF, 10 V o más</strong></td><td>En el plan de diseño: entre 5 V y GND cerca de los servos, para amortiguar los picos de corriente. No está confirmado que se haya instalado.</td></tr>
+<tr><td><strong>Protoboard / placa perforada y cables Dupont</strong></td><td>El plan original era placa perforada con zócalos hembra 1 × 15 para poder retirar el ESP32; en el CAD aparece un subensamble <code>PROTO_ESP32</code> con una protoboard de 830 puntos (<code>proto_830</code>). Los cables del panel deben llegar con conectores (Dupont o JST), no soldados.</td></tr>
+</tbody></table>
+
+<h2 id="c3-5">Materiales y elementos mecánicos</h2>
+<table class="t-compacta">
+<thead><tr><th style="width:24%">Elemento</th><th>Función (según el plan de diseño del 9 de noviembre; confirmar en la caja)</th></tr></thead>
+<tbody>
+<tr><td><strong>PLA</strong> (ácido poliláctico)</td><td>Plástico de impresión 3D: fácil de imprimir, rígido, se ablanda cerca de 60 °C. Toda la caja va en PLA en la impresora de la FIME (200 × 200 mm de base, 250 mm de alto).</td></tr>
+<tr><td><strong>Tornillos M3 × 16 con tuerca</strong></td><td>Pasadores de las bisagras de cada tapa (2 por tapa).</td></tr>
+<tr><td><strong>Tornillos M3 directos al plástico</strong></td><td>Tapa inferior y placa de electrónica, en barrenos de 2.7 mm (el tornillo forma su propia rosca, sin insertos).</td></tr>
+<tr><td><strong>Tornillos M2 × 5</strong></td><td>Sujetan la OLED por detrás del panel.</td></tr>
+<tr><td><strong>Imanes de neodimio 6 × 3 mm</strong></td><td>Dos pares para sujetar el panel frontal desmontable.</td></tr>
+<tr><td><strong>Cinta doble cara removible</strong></td><td>Para el teclado, si se quiere poder despegar sin romperlo.</td></tr>
+</tbody></table>
+
+<h2 id="c3-6">Herramientas</h2>
+<p><strong>Multímetro</strong> (medir el TX del sensor y la continuidad del teclado), <strong>vernier</strong> (medidas reales de las piezas antes de imprimir), <strong>impresora 3D</strong> de la FIME, <strong>SolidWorks 2025</strong> (diseño; la primera versión se generó con un script paramétrico de CadQuery), <strong>VS Code</strong> con <strong>PlatformIO</strong> (firmware), <strong>Python 3.14</strong> (backend), <strong>Edge</strong> (app y pruebas automáticas con Playwright), <strong>Claude Code</strong> (asistente de programación usado en el desarrollo).</p>
+
+<h2 id="c3-7">Software y bibliotecas</h2>
+<table class="t-compacta">
+<thead><tr><th style="width:24%">Biblioteca (versión)</th><th>Para qué se usa en el proyecto</th></tr></thead>
+<tbody>
+<tr><td colspan="2"><strong>Firmware (PlatformIO, <code>espressif32@6.9.0</code>, framework Arduino)</strong></td></tr>
+<tr><td><code>Keypad</code> 3.1.1</td><td>Barre la matriz del teclado y entrega la tecla presionada con antirrebote de 30 ms.</td></tr>
+<tr><td><code>Adafruit SSD1306</code> 2.5.13 + <code>Adafruit GFX</code> 1.11.11 + <code>BusIO</code> 1.16.2</td><td>Dibujo de texto, líneas y barra de progreso en la OLED por I²C.</td></tr>
+<tr><td><code>ESP32Servo</code> 3.0.6</td><td>Genera el PWM de 50 Hz para los servos con los temporizadores del ESP32.</td></tr>
+<tr><td colspan="2"><strong>Backend (Python, <code>pc/requirements.txt</code>)</strong></td></tr>
+<tr><td><code>numpy</code> 2.5.4</td><td>Toda la matemática con arreglos: normalización, PCA de Eigenfaces, distancias, minucias.</td></tr>
+<tr><td><code>opencv-python</code> 4.14.0.94</td><td>Cascadas de Haar (Viola-Jones), CLAHE, Sobel, filtros (Gabor), transformaciones afines, lectura de video. Se fijó la versión 4 porque OpenCV 5 ya no trae <code>CascadeClassifier</code>.</td></tr>
+<tr><td><code>scikit-image</code> 0.26.0</td><td>Solo <code>skeletonize</code> (adelgazamiento de crestas).</td></tr>
+<tr><td><code>pyserial</code> 3.5</td><td>Puerto serie con el ESP32 (y <code>socket://</code> para el ESP32 falso de pruebas).</td></tr>
+<tr><td><code>fastapi</code> 0.162.7 + <code>uvicorn</code> 0.54.0</td><td>Servidor web: sirve la app, la API de bitácora y el WebSocket de eventos.</td></tr>
+<tr><td><code>pillow</code>, <code>httpx</code>, <code>pytest</code></td><td>Imágenes, cliente HTTP para pruebas y ejecución de las 38 pruebas automáticas.</td></tr>
+<tr><td><code>sqlite3</code>, <code>hashlib</code>, <code>zlib</code></td><td>De la biblioteca estándar: base de datos, hash PBKDF2 del PIN y CRC-32 de la imagen.</td></tr>
+</tbody></table>
+</section>
