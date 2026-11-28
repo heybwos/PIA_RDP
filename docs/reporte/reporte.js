@@ -104,7 +104,14 @@ const celdaPortada = (texto, ancho, { enc = false, centro = true } = {}) => new 
     children: [new TextRun({ text: texto, font: "Century Gothic", size: 19, bold: enc, color: enc ? AZUL : "000000" })] })],
 });
 const colsAlumno = [3972, 1250, 1100, 1050, 1350, 1250]; // suma = 9972
-const integrantes = [["NESTOR ALEJANDRO JIMENEZ BARRAGAN", "2132189", "9", "IMC", "LMV", "003"], ...Array.from({ length: 5 }, () => ["", "", "", "", "", ""])];
+const integrantes = [
+  ["NESTOR ALEJANDRO JIMENEZ BARRAGAN", "2132189", "9", "IMC", "LMV", "003"],
+  ["ORLANDO ALDAIR BELTRAN LUNA", "1878812", "", "IMC", "LMV", "003"],
+  ["LUIS CARLOS MANRIQUE OSORIO", "1994165", "", "IMC", "LMV", "003"],
+  ["IVAN ALEJANDRO ALVARADO SEGOVIA", "1992270", "", "IMC", "LMV", "003"],
+  ["SANDRA NICOLE ORTIZ DE LA RIVA", "2037056", "", "IMC", "LMV", "003"],
+  ["SANTIAGO CISNEROS", "2023472", "", "IMC", "LMV", "003"],
+];
 const tablaAlumnos = new Table({
   width: { size: ANCHO_PORTADA, type: WidthType.DXA }, columnWidths: colsAlumno, layout: TableLayoutType.FIXED,
   rows: [

@@ -21,7 +21,7 @@ Cuando el usuario diga "ya estoy en la laptop", Claude Code sigue este documento
       Rostro con 6 usuarios: umbral 10.24, EER 8.0 %.
 - [ ] Prueba de aceptación: parcial (5 genuinos aceptados, 3 impostores rechazados; Tabla 6 del reporte).
       Completar a 10 y 10 por persona si da tiempo y actualizar la tabla con la bitácora.
-- [x] Reporte en Word: `docs/reporte/Reporte_PIA_RDP.docx`. Faltan los integrantes en la portada.
+- [x] Reporte en Word: `docs/reporte/Reporte_PIA_RDP.docx`. Portada con los 6 integrantes.
 - [ ] Copiar el respaldo más reciente (`datos\respaldos\pia_20261126_*.zip`) a la USB.
 - La huella **no** se recalibró: el banco sigue siendo de los 6 dedos de Nestor (paso 2.3.2 omitido por tiempo).
 
