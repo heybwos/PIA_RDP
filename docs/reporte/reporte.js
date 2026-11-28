@@ -12,7 +12,7 @@ const {
 const AQUI = __dirname;
 const FIG = (f) => path.join(AQUI, "figuras", f);
 const FUENTE = "Arial";
-const AZUL = "2E74B5", FRANJA_AZUL = "DAE3F3", FRANJA_VERDE = "E2EFDA", GRIS = "F2F2F2";
+const AZUL = "2E74B5", FRANJA_AZUL = "DAE3F3", FRANJA_VERDE = "E2EFDA";
 // Contenido en carta con márgenes de 1 in: 9360 DXA de ancho útil (las tablas suman eso)
 
 // ------------------------------------------------------------ ayudantes de texto
@@ -74,25 +74,6 @@ function imagen(f, anchoPx) {
 }
 const figura = (archivo, anchoPx, pie) => [
   new Paragraph({ alignment: AlignmentType.CENTER, keepNext: true, spacing: { before: 120, after: 0 }, children: [imagen(FIG(archivo), anchoPx)] }),
-  pieFigura(pie),
-];
-// Recuadro para una captura que hay que tomar e insertar a mano
-const hueco = (archivo, queCapturar, pie, alto = 2600) => [
-  new Table({
-    width: { size: 7000, type: WidthType.DXA }, columnWidths: [7000], alignment: AlignmentType.CENTER,
-    rows: [new TableRow({
-      height: { value: alto, rule: "atLeast" }, children: [new TableCell({
-        width: { size: 7000, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER,
-        shading: { fill: GRIS, type: ShadingType.CLEAR, color: "auto" },
-        borders: Object.fromEntries(["top", "bottom", "left", "right"].map((k) => [k, { style: BorderStyle.DASHED, size: 6, color: "7F7F7F" }])),
-        children: [
-          new Paragraph({ alignment: AlignmentType.CENTER, children: [t("INSERTAR IMAGEN", { bold: true, color: "7F7F7F", size: 20 })] }),
-          new Paragraph({ alignment: AlignmentType.CENTER, children: [t(archivo, { color: "7F7F7F", size: 18 })] }),
-          new Paragraph({ alignment: AlignmentType.CENTER, children: [t(queCapturar, { italics: true, color: "7F7F7F", size: 18 })] }),
-        ],
-      })],
-    })],
-  }),
   pieFigura(pie),
 ];
 
@@ -181,7 +162,6 @@ const contenido = [
     ["Cámara", "Celular Android con IP Webcam", "Video MJPEG de 640 × 480 por WiFi hacia la PC."],
     ["Procesamiento", "PC con Python (NumPy, OpenCV, scikit-image, FastAPI)", "Reconocimiento, decisión, base de datos SQLite y aplicación web."],
   ]),
-  ...hueco("foto01_caja.jpg", "Foto de la caja armada: teclado, AS608, OLED y compartimentos.", "Caja de control de acceso."),
 
   h2("3.2 Flujo de una verificación"),
   p("Cada verificación sigue los pasos de la lista y queda registrada en una bitácora con todos sus puntajes:"),
@@ -191,7 +171,6 @@ const contenido = [
     "Mira a la cámara. La PC toma el cuadro cuando el rostro lleva 1.5 s dentro del óvalo guía.",
     "La PC decide (sección 6) y el ESP32 muestra el resultado y mueve los servos: el nivel 1 (Lector) abre el compartimento 1 y el nivel 2 (Editor) abre los dos, uno a la vez con 300 ms entre ellos.",
   ], "numeros"),
-  ...hueco("cap01_app_etapas.png", "Captura de la app en la vista por etapas (huella o rostro de una verificación real).", "Aplicación web: cada fase con los datos del proceso."),
 
   h1("4. Reconocimiento de huella"),
   p("La Tabla 2 muestra las fases. Al registrarse, cada usuario deja 5 capturas; al verificar, la huella se compara con las 5 plantillas y se conserva el mejor puntaje."),
@@ -233,7 +212,7 @@ const contenido = [
     ["Huella (AS608)", "FAR = 0", "0.180", "0 %", "33 %", "16.7 %", "18 genuinas, 90 impostoras"],
     ["Rostro (cámara)", "EER", "10.24", "7.7 %", "8.3 %", "8.0 %", "60 genuinas, 1260 impostoras"],
   ]),
-  p("Para el rostro se probó primero el criterio FAR = 0: con tres usuarios el umbral quedaba en 9.25 y rechazaba al 45 % de los usuarios legítimos, porque las distancias de genuinos e impostores se enciman. Por eso se usó el EER, que fue de 6.7 %, 10 %, 8 % y 8.0 % con tres, cuatro, cinco y seis usuarios. El 7.7 % de impostores que el rostro acepta todavía tiene que pasar la huella y la fusión. Las Figuras 3 y 4 muestran las distribuciones y las curvas FAR y FRR."),
+  p("Para el rostro se probó primero el criterio FAR = 0: con tres usuarios el umbral quedaba en 9.25 y rechazaba al 45 % de los usuarios legítimos, porque las distancias de genuinos e impostores se enciman. Por eso se usó el EER, que fue de 6.7 %, 10 %, 8 % y 8.0 % con tres, cuatro, cinco y seis usuarios. El 7.7 % de impostores que el rostro acepta todavía tiene que pasar la huella y la fusión. Las Figuras 1 y 2 muestran las distribuciones y las curvas FAR y FRR."),
   ...figura("calibracion_huella.png", 520, "Calibración de la huella: distribuciones de puntajes y curvas FAR (rojo) y FRR (verde)."),
   ...figura("calibracion_rostro.png", 520, "Calibración del rostro: distribuciones de distancias y curvas FAR y FRR."),
   p("Para el modo de simulación (sin hardware) se usan los bancos públicos FVC2002 DB1_B para huella y ORL para rostro (Maio et al., 2002; Samaria y Harter, 1994), con un EER de 0.2 % y 8.2 % respectivamente."),
